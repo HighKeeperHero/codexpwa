@@ -1,3 +1,4 @@
+import './index.css';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/AuthContext';
 import { SplashScreen }    from '@/screens/SplashScreen';
