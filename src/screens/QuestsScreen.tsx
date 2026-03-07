@@ -41,10 +41,85 @@ const ALIGNMENT_META: Record<string, { color: string; label: string; realm: stri
   DARK:  { color: '#7A5888', label: 'Dark',   realm: 'The Realm of Shadow',    icon: '☽'  },
 };
 
+// ── Abandon button ─────────────────────────────────────────────────────────────
+
+function AbandonButton({ quest, rootId, onAbandoned }: {
+  quest: Quest; rootId: string; onAbandoned: () => void;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
+
+  const abandon = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await fetch(`${BASE}/api/quests/abandon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ root_id: rootId, quest_id: quest.quest_id }),
+      });
+      const json = await resp.json();
+      if (!resp.ok) throw new Error(json?.message ?? 'Failed to abandon quest');
+      onAbandoned();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Something went wrong');
+      setConfirming(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!confirming) {
+    return (
+      <button
+        onClick={e => { e.stopPropagation(); setConfirming(true); }}
+        style={{
+          width: '100%', padding: '9px', borderRadius: 8,
+          background: 'transparent',
+          border: '1px solid rgba(200,94,40,0.25)',
+          color: 'rgba(200,94,40,0.6)', fontSize: 11,
+          letterSpacing: '0.08em', cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(200,94,40,0.5)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--ember)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(200,94,40,0.25)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(200,94,40,0.6)'; }}
+      >
+        Abandon Hunt
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ padding: '12px 14px', borderRadius: 8, background: 'rgba(200,94,40,0.08)', border: '1px solid rgba(200,94,40,0.3)' }}>
+      {error && <p style={{ fontSize: 11, color: 'var(--ember)', marginBottom: 8 }}>{error}</p>}
+      <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 10, lineHeight: 1.5 }}>
+        Abandon <strong style={{ color: 'var(--ember)' }}>{quest.name}</strong>? All progress will be lost.
+      </p>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={e => { e.stopPropagation(); setConfirming(false); }}
+          disabled={loading}
+          style={{ flex: 1, padding: '8px', borderRadius: 6, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-3)', fontSize: 11, cursor: 'pointer' }}
+        >
+          Keep It
+        </button>
+        <button
+          onClick={e => { e.stopPropagation(); abandon(); }}
+          disabled={loading}
+          style={{ flex: 1, padding: '8px', borderRadius: 6, background: 'rgba(200,94,40,0.15)', border: '1px solid rgba(200,94,40,0.4)', color: 'var(--ember)', fontSize: 11, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}
+        >
+          {loading ? 'Abandoning…' : 'Abandon'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Accept button ──────────────────────────────────────────────────────────────
 
-function AcceptButton({ quest, rootId, onAccepted }: {
-  quest: Quest; rootId: string; onAccepted: () => void;
+function AcceptButton({ quest, rootId, onAccepted, onAbandoned }: {
+  quest: Quest; rootId: string; onAccepted: () => void; onAbandoned: () => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
@@ -77,8 +152,11 @@ function AcceptButton({ quest, rootId, onAccepted }: {
   }
   if (quest.status === 'active') {
     return (
-      <div style={{ padding: '8px 14px', borderRadius: 6, background: 'rgba(200,160,78,0.08)', border: '1px solid rgba(200,160,78,0.2)', textAlign: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 700 }}>⚔ IN PROGRESS — {quest.progress} objectives</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ padding: '8px 14px', borderRadius: 6, background: 'rgba(200,160,78,0.08)', border: '1px solid rgba(200,160,78,0.2)', textAlign: 'center' }}>
+          <span style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 700 }}>⚔ IN PROGRESS — {quest.progress} objectives</span>
+        </div>
+        <AbandonButton quest={quest} rootId={rootId} onAbandoned={onAbandoned} />
       </div>
     );
   }
@@ -244,7 +322,7 @@ export function QuestsScreen() {
                 )}
 
                 <div style={{ marginTop: 12 }}>
-                  <AcceptButton quest={quest} rootId={hero.root_id} onAccepted={loadBoard} />
+                  <AcceptButton quest={quest} rootId={hero.root_id} onAccepted={loadBoard} onAbandoned={loadBoard} />
                 </div>
               </div>
             )}
