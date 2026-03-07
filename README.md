@@ -1,62 +1,46 @@
-# Codex PWA — Heroes' Veritas
+# Codex — Sprint 5: Splash · Landing · Registration · Alignment
 
-The official record of your heroic journey. A mobile-first PWA deployable to Vercel in minutes.
+## Files in this sprint
 
-## Local Development
+### NEW files (create these)
+- src/screens/SplashScreen.tsx    — Cinematic CSS splash, auto-advances at 3.5s, tap-to-skip
+- src/screens/LandingScreen.tsx   — "New to the Codex" vs "I Have a Fate ID" landing
+- src/screens/RegisterScreen.tsx  — Hero name enrollment: uniqueness check + POST /api/users/enroll
+- src/screens/AlignmentModal.tsx  — ORDER / CHAOS / LIGHT / DARK pledge modal
 
-```bash
-npm install
-npm run dev
-# Opens at http://localhost:5173
-```
+### REPLACE files (overwrite these)
+- src/App.tsx                     — New routing: splash → landing → register/login → dashboard
+- src/AuthContext.tsx              — Alignment localStorage, signIn accepts new registrants
+- src/screens/LoginScreen.tsx     — Added onBack prop for back-navigation from landing
+- src/screens/QuestsScreen.tsx    — Full alignment-gated hunt system (4 hunts × 4 alignments)
 
-## Deploy to Vercel (5 minutes)
+### UNTOUCHED (keep your sprint 4 versions)
+- src/index.css                   — DO NOT REPLACE
+- src/main.tsx                    — DO NOT REPLACE
+- src/api/pik.ts                  — DO NOT REPLACE (sprint 4 version still used)
+- src/screens/HomeScreen.tsx      — DO NOT REPLACE
+- src/screens/ProfileScreen.tsx   — DO NOT REPLACE
+- src/screens/LeaderboardScreen.tsx — DO NOT REPLACE
 
-**Option A — Vercel CLI (fastest):**
-```bash
-npm install -g vercel
-vercel login
-vercel --prod
-```
-That's it. Vercel auto-detects Vite. Your app is live at a `*.vercel.app` URL.
+## Deploy
+git add .
+git commit -m "Sprint 5: splash, landing, registration, alignment system"
+git push
 
-**Option B — Vercel Dashboard:**
-1. Push this folder to a GitHub repo
-2. Go to vercel.com → New Project → Import the repo
-3. Framework: Vite (auto-detected)
-4. Click Deploy
+## Alignment note
+PUT /api/users/:root_id/profile requires SessionGuard in PIK-PRD.
+Alignment is stored in localStorage keyed as:  codex_alignment_<root_id>
+It reads PIK-stored alignment first; falls back to local.
+When you implement passkey sessions, wire setAlignment() to also PATCH the backend.
 
-## Install as iPhone App (PWA)
+## New user flow
+POST /api/users/enroll  —  no auth required
+Body: { hero_name, fate_alignment: "", enrolled_by: "self:codex-pwa" }
+Response: { status: "ok", data: { root_id, persona_id, hero_name, ... } }
 
-1. Open your Vercel URL in **Safari** on iPhone
-2. Tap the **Share** button (box with arrow)
-3. Tap **"Add to Home Screen"**
-4. Tap **Add**
-
-The app icon appears on your home screen and opens full-screen, indistinguishable from a native app.
-
-## Project Structure
-
-```
-src/
-├── api/pik.ts              # PIK API client + mappers + mock data
-├── AuthContext.tsx         # Hero session (localStorage)
-├── utils/questEngine.ts   # Dynamic quest generation from progression
-├── screens/
-│   ├── LoginScreen.tsx     # Hero selection
-│   ├── HomeScreen.tsx      # Identity card + XP + chronicle
-│   ├── QuestsScreen.tsx    # Quest board with filter + expand
-│   ├── LeaderboardScreen.tsx # Live rankings
-│   └── ProfileScreen.tsx   # Titles, relics, venues, wristband
-├── App.tsx                 # Shell + tab navigation
-├── index.css               # Design tokens + global styles
-└── main.tsx                # Entry point
-```
-
-## Design System
-
-All tokens live in `index.css` as CSS variables:
-- `--gold` `--ember` `--sapphire` — primary accent colors
-- `--bg` `--surface` `--border` — surface hierarchy
-- `--text-primary` `--text-secondary` `--text-dim` — type hierarchy
-- Cinzel serif for ceremonial text, system sans for UI
+## Alignment unlock
+Triggers automatically on HomeScreen mount when:
+  - fate_level >= 20
+  - No alignment in PIK-PRD (NONE / empty)
+  - No alignment in localStorage
+Will re-prompt on next login until confirmed.
