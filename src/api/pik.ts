@@ -96,6 +96,20 @@ export const ALIGNMENT_COLOR: Record<string, string> = {
   WILD:  '#486E48', NONE:  '#5A4E3C', '': '#5A4E3C',
 };
 
+// ── Tiers ──────────────────────────────────────────────
+export interface Tier { name: string; color: string; min: number; max: number; }
+export const TIERS: Tier[] = [
+  { name: 'Bronze',     color: '#cd7f32', min: 1,  max: 6  },
+  { name: 'Copper',     color: '#b87333', min: 7,  max: 13 },
+  { name: 'Silver',     color: '#c0c0c0', min: 14, max: 21 },
+  { name: 'Gold',       color: '#ffd700', min: 22, max: 29 },
+  { name: 'Platinum',   color: '#e5e4e2', min: 30, max: 39 },
+  { name: 'Adamantium', color: '#4ff0d0', min: 40, max: 999 },
+];
+export function TIER_FOR_LEVEL(level: number): Tier {
+  return TIERS.find(t => level >= t.min && level <= t.max) ?? TIERS[0];
+}
+
 export const ALIGNMENT_LABEL: Record<string, string> = {
   ORDER: 'ORDER', LIGHT: 'LIGHT',
   VEIL: 'VEIL',   DARK: 'DARK',
