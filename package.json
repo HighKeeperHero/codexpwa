@@ -1,9 +1,9 @@
 {
-  "name": "codex-pwa",
+  "name": "codexpwa",
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": ">=20.0.0"
+    "node": "20.x"
   },
   "scripts": {
     "dev": "vite",
