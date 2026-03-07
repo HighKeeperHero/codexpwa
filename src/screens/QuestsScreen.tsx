@@ -2,16 +2,9 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '@/AuthContext';
 import { generateQuests, type Quest, type QuestStatus } from '@/utils/questEngine';
 
-const RARITY_COLOR: Record<string, string> = {
-  common: '#7C5C3A', honored: '#8A7A5A', rare: '#4080B0', epic: '#D4A853', legendary: '#E8C070',
-};
-const STATUS_COLOR: Record<QuestStatus, string> = {
-  active: 'var(--ember)', available: 'var(--sapphire-bright)', completed: 'var(--gold)', locked: 'var(--text-dim)',
-};
-const STATUS_LABEL: Record<QuestStatus, string> = {
-  active: 'ACTIVE', available: 'AVAILABLE', completed: 'COMPLETE', locked: 'LOCKED',
-};
-
+const RC: Record<string, string> = { common: '#7C5C3A', honored: '#887860', rare: '#3A78A8', epic: '#C8A04E', legendary: '#E2B85E' };
+const SC: Record<QuestStatus, string> = { active: 'var(--ember)', available: 'var(--sapphire-bright)', completed: 'var(--gold)', locked: 'var(--text-3)' };
+const SL: Record<QuestStatus, string> = { active: 'ACTIVE', available: 'AVAILABLE', completed: 'COMPLETE', locked: 'LOCKED' };
 type Filter = 'all' | 'active' | 'completed';
 
 export function QuestsScreen() {
@@ -19,50 +12,49 @@ export function QuestsScreen() {
   const [filter,   setFilter]   = useState<Filter>('all');
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const quests = useMemo(() => hero ? generateQuests(hero) : [], [hero]);
-
+  const quests  = useMemo(() => hero ? generateQuests(hero) : [], [hero]);
   const visible = useMemo(() => {
     if (filter === 'active')    return quests.filter(q => q.status === 'active' || q.status === 'available');
     if (filter === 'completed') return quests.filter(q => q.status === 'completed');
     return quests.filter(q => q.status !== 'locked');
   }, [quests, filter]);
 
-  const completed = quests.filter(q => q.status === 'completed').length;
-  const total     = quests.filter(q => q.status !== 'locked').length;
-  const pct       = Math.round((completed / Math.max(total, 1)) * 100);
+  const done  = quests.filter(q => q.status === 'completed').length;
+  const total = quests.filter(q => q.status !== 'locked').length;
+  const pct   = Math.round((done / Math.max(total, 1)) * 100);
 
   return (
-    <div className="screen">
-      <div className="screen-content" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="screen screen-enter">
+      <div className="screen-content stagger">
 
         {/* Header */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-          <div className="ornament-row">
-            <div className="ornament-line" />
-            <span className="ornament-glyph">◈</span>
-            <div className="ornament-line" />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+          <div className="orn-row" style={{ width: 160 }}>
+            <div className="orn-line" /><span className="orn-glyph">◈</span><div className="orn-line" />
           </div>
-          <h1 className="serif-bold" style={{ fontSize: 28, color: 'var(--text-primary)', letterSpacing: 3 }}>QUEST BOARD</h1>
-          <p style={{ fontSize: 9, letterSpacing: 3, color: 'var(--text-dim)' }}>{completed} COMPLETE · {total - completed} REMAINING</p>
+          <h1 className="serif-bold" style={{ fontSize: 28, color: 'var(--text-1)', letterSpacing: 3 }}>QUEST BOARD</h1>
+          <p style={{ fontSize: 9, letterSpacing: 2.5, color: 'var(--text-3)' }}>
+            {done} COMPLETE · {total - done} REMAINING
+          </p>
         </div>
 
-        {/* Overall progress */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div className="xp-track" style={{ height: 4 }}>
-            <div className="xp-fill" style={{ width: `${pct}%`, background: 'var(--gold)' }} />
+        {/* Progress */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 4 }}>
+          <div className="xp-track" style={{ height: 3 }}>
+            <div className="xp-fill" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--gold-dim), var(--gold), var(--gold-bright))' }} />
           </div>
-          <p style={{ fontSize: 10, color: 'var(--text-dim)', textAlign: 'center', letterSpacing: 0.5 }}>{pct}% complete</p>
+          <p style={{ fontSize: 9, color: 'var(--text-3)', textAlign: 'center', letterSpacing: 0.5 }}>{pct}% complete</p>
         </div>
 
         {/* Filter tabs */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['all', 'active', 'completed'] as Filter[]).map(f => (
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          {(['all','active','completed'] as Filter[]).map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
-              flex: 1, padding: '8px 0', fontSize: 9, letterSpacing: 1.5, fontWeight: 600,
+              flex: 1, padding: '9px 0', fontSize: 8, letterSpacing: 1.5, fontWeight: 600,
               border: `1px solid ${filter === f ? 'var(--gold)' : 'var(--border)'}`,
               background: filter === f ? 'var(--gold-glow)' : 'var(--surface)',
-              color: filter === f ? 'var(--gold)' : 'var(--text-dim)',
-              borderRadius: 4, cursor: 'pointer',
+              color: filter === f ? 'var(--gold)' : 'var(--text-3)',
+              borderRadius: 6, transition: 'all 0.15s',
             }}>
               {f.toUpperCase()}
             </button>
@@ -82,7 +74,7 @@ export function QuestsScreen() {
             />
           ))}
           {visible.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-dim)', fontSize: 12 }}>
+            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-3)', fontSize: 13 }}>
               No quests in this category
             </div>
           )}
@@ -93,64 +85,87 @@ export function QuestsScreen() {
 }
 
 function QuestCard({ quest, expanded, onPress }: { quest: Quest; expanded: boolean; onPress: () => void }) {
-  const rc = RARITY_COLOR[quest.rarity] ?? 'var(--bronze)';
-  const sc = STATUS_COLOR[quest.status];
-  const isLocked = quest.status === 'locked';
-  const isDone   = quest.status === 'completed';
+  const rc     = RC[quest.rarity] ?? 'var(--bronze)';
+  const sc     = SC[quest.status];
+  const locked = quest.status === 'locked';
+  const done   = quest.status === 'completed';
 
   return (
     <div
-      className="card"
-      onClick={isLocked ? undefined : onPress}
-      style={{ display: 'flex', opacity: isLocked ? 0.4 : isDone ? 0.75 : 1, cursor: isLocked ? 'default' : 'pointer' }}
+      className={`card ${locked ? '' : 'card-pressable'}`}
+      onClick={locked ? undefined : onPress}
+      style={{
+        display: 'flex',
+        opacity: locked ? 0.35 : done ? 0.7 : 1,
+        borderColor: expanded ? rc + '60' : undefined,
+        transition: 'border-color 0.2s, opacity 0.2s',
+      }}
     >
-      <div style={{ width: 3, background: isLocked ? 'var(--border)' : rc, flexShrink: 0 }} />
-      <div style={{ flex: 1, padding: '14px 14px 14px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ width: 3, background: locked ? 'var(--border)' : rc, flexShrink: 0, transition: 'background 0.2s' }} />
+      <div style={{ flex: 1, padding: '13px 13px 13px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+
         {/* Top row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 8, letterSpacing: 1.5, fontWeight: 600, color: isLocked ? 'var(--text-dim)' : rc }}>
+          <span style={{ fontSize: 8, letterSpacing: 1.5, fontWeight: 600, color: locked ? 'var(--text-3)' : rc }}>
             {quest.rarity.toUpperCase()} · {quest.category.toUpperCase()}
           </span>
-          <span style={{ fontSize: 8, letterSpacing: 1.5, fontWeight: 600, color: sc, border: `1px solid ${sc}50`, background: `${sc}15`, padding: '2px 7px', borderRadius: 4 }}>
-            {STATUS_LABEL[quest.status]}
+          <span style={{
+            fontSize: 8, letterSpacing: 1.5, fontWeight: 600,
+            color: sc, border: `1px solid ${sc}45`,
+            background: `${sc}12`, padding: '2px 7px', borderRadius: 3,
+          }}>
+            {SL[quest.status]}
           </span>
         </div>
 
         {/* Title */}
-        <p className="serif" style={{ fontSize: 15, color: isLocked ? 'var(--text-dim)' : 'var(--text-primary)', letterSpacing: 0.3 }}>
-          {isLocked ? '— Locked —' : quest.title}
+        <p className="serif" style={{ fontSize: 15, color: locked ? 'var(--text-3)' : 'var(--text-1)', letterSpacing: 0.2 }}>
+          {locked ? '— Locked —' : quest.title}
         </p>
 
         {/* Progress */}
-        {!isLocked && !isDone && (
+        {!locked && !done && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div className="xp-track" style={{ height: 3 }}>
-              <div className="xp-fill" style={{ width: `${quest.progress * 100}%`, background: quest.status === 'active' ? 'var(--ember)' : 'var(--sapphire-bright)' }} />
+              <div className="xp-fill" style={{
+                width: `${quest.progress * 100}%`,
+                background: quest.status === 'active'
+                  ? 'linear-gradient(90deg, var(--ember-dim), var(--ember))' 
+                  : 'linear-gradient(90deg, var(--sapphire), var(--sapphire-bright))',
+              }} />
             </div>
-            <span style={{ fontSize: 9, color: 'var(--text-dim)', letterSpacing: 0.5 }}>{quest.progress_label}</span>
+            <span style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: 0.3 }}>{quest.progress_label}</span>
           </div>
         )}
-        {isDone && <span style={{ fontSize: 10, color: 'var(--gold)', letterSpacing: 0.5 }}>✦ {quest.progress_label}</span>}
+        {done && (
+          <span style={{ fontSize: 10, color: 'var(--gold)', letterSpacing: 0.3 }}>✦ {quest.progress_label}</span>
+        )}
 
-        {/* Expanded */}
-        {expanded && !isLocked && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
-            <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.6 }}>"{quest.lore}"</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 8, letterSpacing: 1.5, color: 'var(--text-dim)', fontWeight: 600 }}>OBJECTIVE</span>
-              <span style={{ fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>{quest.objective}</span>
+        {/* Expanded detail */}
+        {expanded && !locked && (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 12,
+            paddingTop: 12, marginTop: 4,
+            borderTop: '1px solid var(--border)',
+          }}>
+            <p style={{ fontSize: 12, color: 'var(--text-2)', fontStyle: 'italic', lineHeight: 1.7 }}>
+              "{quest.lore}"
+            </p>
+            <div>
+              <p style={{ fontSize: 8, letterSpacing: 1.5, color: 'var(--text-3)', fontWeight: 600, marginBottom: 4 }}>OBJECTIVE</p>
+              <p style={{ fontSize: 12, color: 'var(--text-1)', lineHeight: 1.5 }}>{quest.objective}</p>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 8, letterSpacing: 1.5, color: 'var(--text-dim)', fontWeight: 600 }}>REWARD</span>
-              <span style={{ fontSize: 13, color: 'var(--ember)', fontWeight: 600 }}>+{quest.xp_reward} Fate XP</span>
+              <p style={{ fontSize: 8, letterSpacing: 1.5, color: 'var(--text-3)', fontWeight: 600 }}>REWARD</p>
+              <span style={{ fontSize: 14, color: 'var(--ember)', fontWeight: 600 }}>+{quest.xp_reward} Fate XP</span>
             </div>
           </div>
         )}
       </div>
 
-      {!isLocked && (
-        <div style={{ padding: '14px 10px', display: 'flex', alignItems: 'flex-start', color: 'var(--text-dim)', fontSize: 10 }}>
-          {expanded ? '∧' : '∨'}
+      {!locked && (
+        <div style={{ padding: '13px 12px', display: 'flex', alignItems: 'flex-start', paddingTop: 26 }}>
+          <span style={{ fontSize: 10, color: 'var(--text-3)', lineHeight: 1 }}>{expanded ? '∧' : '∨'}</span>
         </div>
       )}
     </div>
