@@ -1,4 +1,3 @@
-import './index.css';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/AuthContext';
 import { SplashScreen }    from '@/screens/SplashScreen';
@@ -89,12 +88,12 @@ function Dashboard() {
     <>
       <OfflineBanner show={!isOnline} />
 
-  <>
-    {tab === 'home'     && <HomeScreen />}
-    {tab === 'hunts'    && <QuestsScreen />}
-    {tab === 'rankings' && <LeaderboardScreen />}
-    {tab === 'archive'  && <ProfileScreen />}
-  </>
+      <div style={{ paddingBottom: 72 }}>
+        {tab === 'home'     && <HomeScreen />}
+        {tab === 'hunts'    && <QuestsScreen />}
+        {tab === 'rankings' && <LeaderboardScreen />}
+        {tab === 'archive'  && <ProfileScreen />}
+      </div>
 
       <TabBar active={tab} onChange={setTab} />
 
@@ -179,6 +178,7 @@ export default function App() {
         // Desktop: phone shell
         boxShadow: window.innerWidth > 500 ? '0 0 60px rgba(0,0,0,0.8), inset 0 0 1px rgba(200,160,78,0.1)' : 'none',
         borderRadius: window.innerWidth > 500 ? 40 : 0,
+        overflow: 'hidden',
       }}>
         <Router />
       </div>
