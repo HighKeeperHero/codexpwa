@@ -209,10 +209,11 @@ function Router() {
   const readyToRoute = splashDone && !isLoading;
 
   // Once ready, set initial route based on session state
-  useEffect(() => {
-    if (!readyToRoute) return;
-    setRoute(hero ? 'dashboard' : 'landing');
-  }, [readyToRoute]);
+// Also catches sign-out: if hero disappears while on dashboard, return to landing
+useEffect(() => {
+  if (!readyToRoute) return;
+  setRoute(hero ? 'dashboard' : 'landing');
+}, [readyToRoute, hero]);
 
   // Show splash until both animation and loading are done
   if (!readyToRoute) {
