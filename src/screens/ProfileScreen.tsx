@@ -58,17 +58,18 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
 
   if (!hero) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height: '100%', padding: 32 }}>
-      <p style={{ color: 'var(--text-dim)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>No hero selected.</p>
+      <p style={{ color: 'rgba(232, 224, 204, 0.45)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>No hero selected.</p>
     </div>
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)' }}>
 
-      {/* Tab bar */}
+      {/* Tab bar — paddingTop handles iOS PWA status bar overlap */}
       <div style={{
         display: 'flex', borderBottom: '1px solid var(--border)',
         background: 'var(--surface)', flexShrink: 0,
+        paddingTop: 'env(safe-area-inset-top)',
       }}>
         {tabs.map(t => (
           <button
@@ -77,12 +78,12 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
             style={{
               flex: 1, padding: '12px 4px',
               background: 'none',
+              border: 'none',
               borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
-              color: tab === t.id ? 'var(--gold)' : 'var(--text-dim)',
+              color: tab === t.id ? 'var(--gold)' : 'rgba(232, 224, 204, 0.45)',
               fontFamily: 'Cinzel, serif', fontSize: 10,
               letterSpacing: '0.08em', textTransform: 'uppercase',
-              cursor: 'pointer', border: 'none',
-              borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
+              cursor: 'pointer',
               position: 'relative',
             }}
           >
@@ -179,7 +180,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
         {/* XP bar */}
         <div style={{ marginBottom: 4 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-            <span style={{ fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FATE XP</span>
+            <span style={{ fontSize: 10, color: 'rgba(232, 224, 204, 0.45)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FATE XP</span>
             <span style={{ fontSize: 10, color: tier.color, fontFamily: 'monospace' }}>{xp.toLocaleString()} XP</span>
           </div>
           <div style={{ background: 'var(--bg)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
@@ -202,7 +203,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: '#e8e0cc', margin: '0 0 4px' }}>
               {s.value}
             </p>
-            <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               {s.label}
             </p>
           </div>
@@ -216,7 +217,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
             onClick={onReturnToHeroSelect}
             style={{
               width: '100%', padding: '12px 0',
-              background: 'var(--surface)', color: 'var(--text-dim)',
+              background: 'var(--surface)', color: 'rgba(232, 224, 204, 0.45)',
               border: '1px solid var(--border)', borderRadius: 10,
               fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer',
               letterSpacing: '0.05em',
@@ -262,12 +263,12 @@ function RankingsTab({ rootId }: { rootId: string }) {
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: 48 }}>
-      <p style={{ color: 'var(--text-dim)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Consulting the Veil…</p>
+      <p style={{ color: 'rgba(232, 224, 204, 0.45)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Consulting the Veil…</p>
     </div>
   );
   if (error || board.length === 0) return (
     <div style={{ textAlign: 'center', padding: 48 }}>
-      <p style={{ color: 'var(--text-dim)', fontSize: 13 }}>{error ?? 'No rankings yet.'}</p>
+      <p style={{ color: 'rgba(232, 224, 204, 0.45)', fontSize: 13 }}>{error ?? 'No rankings yet.'}</p>
     </div>
   );
 
@@ -275,7 +276,7 @@ function RankingsTab({ rootId }: { rootId: string }) {
     <div style={{ padding: '16px 16px 32px' }}>
       <p style={{
         fontFamily: 'Cinzel, serif', fontSize: 10,
-        color: 'var(--text-dim)', letterSpacing: '0.15em',
+        color: 'rgba(232, 224, 204, 0.45)', letterSpacing: '0.15em',
         textTransform: 'uppercase', marginBottom: 12,
       }}>Fate Rankings</p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -292,7 +293,7 @@ function RankingsTab({ rootId }: { rootId: string }) {
             }}>
               <span style={{
                 fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700,
-                color: entry.rank <= 3 ? 'var(--gold)' : 'var(--text-dim)',
+                color: entry.rank <= 3 ? 'var(--gold)' : 'rgba(232, 224, 204, 0.45)',
                 width: 24, textAlign: 'right', flexShrink: 0,
               }}>
                 {entry.rank}
@@ -305,7 +306,7 @@ function RankingsTab({ rootId }: { rootId: string }) {
                   {entry.hero_name} {isMe && '(you)'}
                 </p>
                 {entry.equipped_title && (
-                  <p style={{ fontSize: 10, color: 'var(--text-dim)', margin: 0, letterSpacing: '0.06em' }}>
+                  <p style={{ fontSize: 10, color: 'rgba(232, 224, 204, 0.45)', margin: 0, letterSpacing: '0.06em' }}>
                     {entry.equipped_title.replace(/^title_/,'').replace(/_/g,' ').toUpperCase()}
                   </p>
                 )}
@@ -314,7 +315,7 @@ function RankingsTab({ rootId }: { rootId: string }) {
                 <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: tier.color, margin: '0 0 1px' }}>
                   Lv {entry.fate_level}
                 </p>
-                <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: 0, fontFamily: 'monospace' }}>
+                <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0, fontFamily: 'monospace' }}>
                   {(entry.value ?? 0).toLocaleString()} XP
                 </p>
               </div>
@@ -342,7 +343,7 @@ function WristbandTab({ rootId }: { rootId: string }) {
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: 48 }}>
-      <p style={{ color: 'var(--text-dim)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Scanning…</p>
+      <p style={{ color: 'rgba(232, 224, 204, 0.45)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Scanning…</p>
     </div>
   );
 
@@ -350,17 +351,17 @@ function WristbandTab({ rootId }: { rootId: string }) {
     <div style={{ padding: '16px 16px 32px' }}>
       <p style={{
         fontFamily: 'Cinzel, serif', fontSize: 10,
-        color: 'var(--text-dim)', letterSpacing: '0.15em',
+        color: 'rgba(232, 224, 204, 0.45)', letterSpacing: '0.15em',
         textTransform: 'uppercase', marginBottom: 12,
       }}>Linked Wristbands</p>
 
       {wearables.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <div style={{ fontSize: 32, color: 'var(--text-dim)', opacity: 0.4, marginBottom: 12 }}>◌</div>
-          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: 'var(--text-dim)', margin: '0 0 8px' }}>
+          <div style={{ fontSize: 32, color: 'rgba(232, 224, 204, 0.45)', opacity: 0.4, marginBottom: 12 }}>◌</div>
+          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 8px' }}>
             No Wristband Linked
           </p>
-          <p style={{ fontSize: 13, color: 'var(--text-dim)', opacity: 0.7, margin: 0, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 13, color: 'rgba(232, 224, 204, 0.45)', opacity: 0.7, margin: 0, lineHeight: 1.6 }}>
             Tap your wristband at a Heroes Veritas terminal to link it to this hero.
           </p>
         </div>
@@ -374,13 +375,13 @@ function WristbandTab({ rootId }: { rootId: string }) {
               <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#e8e0cc', margin: '0 0 4px' }}>
                 {w.friendly_name ?? 'Wristband'}
               </p>
-              <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: '0 0 2px' }}>
+              <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 2px' }}>
                 UID: <span style={{ fontFamily: 'monospace', color: 'var(--gold)', letterSpacing: '0.05em' }}>
                   {w.token_uid}
                 </span>
               </p>
               {w.last_tap_at && (
-                <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: 0 }}>
+                <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0 }}>
                   Last tap: {new Date(w.last_tap_at).toLocaleDateString()}
                 </p>
               )}

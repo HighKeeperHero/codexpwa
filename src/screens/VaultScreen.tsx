@@ -244,6 +244,7 @@ export function VaultScreen() {
       <div style={{
         display: 'flex', gap: 8, padding: '16px 16px 0',
         position: 'sticky', top: 0, zIndex: 10,
+        paddingTop: 'env(safe-area-inset-top)',
         background: 'var(--bg)',
       }}>
         {(['caches','titles','gear'] as Section[]).map(s => {
@@ -260,7 +261,7 @@ export function VaultScreen() {
               style={{
                 flex: 1, padding: '8px 4px',
                 background:  section === s ? 'var(--gold)' : 'var(--surface)',
-                color:       section === s ? '#0B0A08' : 'var(--text-dim)',
+                color:       section === s ? '#0B0A08' : 'rgba(232, 224, 204, 0.45)',
                 border:      `1px solid ${section === s ? 'var(--gold)' : 'var(--border)'}`,
                 borderRadius: 8,
                 fontFamily: 'Cinzel, serif',
@@ -311,7 +312,7 @@ export function VaultScreen() {
                 color: RARITY_COLOR[pendingOpen.rarity],
                 margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.1em',
               }}>{pendingOpen.label}</p>
-              <p style={{ color: 'var(--text-dim)', fontSize: 13, margin: '0 0 16px', fontStyle: 'italic' }}>
+              <p style={{ color: 'rgba(232, 224, 204, 0.45)', fontSize: 13, margin: '0 0 16px', fontStyle: 'italic' }}>
                 "The seal holds what the Veil has set aside for you."
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -332,7 +333,7 @@ export function VaultScreen() {
                   onClick={() => setPendingOpen(null)}
                   style={{
                     padding: '10px 16px',
-                    background: 'transparent', color: 'var(--text-dim)',
+                    background: 'transparent', color: 'rgba(232, 224, 204, 0.45)',
                     border: '1px solid var(--border)', borderRadius: 8,
                     cursor: 'pointer', fontSize: 13,
                   }}
@@ -344,7 +345,7 @@ export function VaultScreen() {
           )}
 
           {cacheLoading ? (
-            <p style={{ color: 'var(--text-dim)', textAlign: 'center', fontSize: 13, marginTop: 32 }}>Loading caches…</p>
+            <p style={{ color: 'rgba(232, 224, 204, 0.45)', textAlign: 'center', fontSize: 13, marginTop: 32 }}>Loading caches…</p>
           ) : caches.length === 0 ? (
             <EmptyState
               icon="⬡"
@@ -355,7 +356,7 @@ export function VaultScreen() {
             <>
               <p style={{
                 fontFamily: 'Cinzel, serif', fontSize: 10,
-                color: 'var(--text-dim)', letterSpacing: '0.15em',
+                color: 'rgba(232, 224, 204, 0.45)', letterSpacing: '0.15em',
                 textTransform: 'uppercase', marginBottom: 12,
               }}>
                 {caches.length} SEALED {caches.length === 1 ? 'CACHE' : 'CACHES'} AWAITING
@@ -379,7 +380,7 @@ export function VaultScreen() {
       {section === 'titles' && (
         <div style={{ padding: '20px 16px 0' }}>
           {titlesLoading ? (
-            <p style={{ color: 'var(--text-dim)', textAlign: 'center', fontSize: 13, marginTop: 32 }}>Loading titles…</p>
+            <p style={{ color: 'rgba(232, 224, 204, 0.45)', textAlign: 'center', fontSize: 13, marginTop: 32 }}>Loading titles…</p>
           ) : earnedTitles.length === 0 && lockedTitles.length === 0 ? (
             <EmptyState
               icon="◈"
@@ -458,7 +459,7 @@ export function VaultScreen() {
                 />
               ))}
               {inventory.filter(i => !i.is_equipped).length === 0 && (
-                <p style={{ color: 'var(--text-dim)', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>
+                <p style={{ color: 'rgba(232, 224, 204, 0.45)', fontSize: 13, textAlign: 'center', padding: '16px 0' }}>
                   All items equipped.
                 </p>
               )}
@@ -476,7 +477,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p style={{
       fontFamily: 'Cinzel, serif', fontSize: 10,
-      color: 'var(--text-dim)', letterSpacing: '0.15em',
+      color: 'rgba(232, 224, 204, 0.45)', letterSpacing: '0.15em',
       textTransform: 'uppercase', marginBottom: 10, marginTop: 0,
     }}>{children}</p>
   );
@@ -485,9 +486,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function EmptyState({ icon, title, body }: { icon: string; title: string; body: string }) {
   return (
     <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-      <div style={{ fontSize: 32, marginBottom: 12, color: 'var(--text-dim)', opacity: 0.4 }}>{icon}</div>
-      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: 'var(--text-dim)', margin: '0 0 8px' }}>{title}</p>
-      <p style={{ fontSize: 13, color: 'var(--text-dim)', opacity: 0.7, margin: 0, lineHeight: 1.6 }}>{body}</p>
+      <div style={{ fontSize: 32, marginBottom: 12, color: 'rgba(232, 224, 204, 0.45)', opacity: 0.4 }}>{icon}</div>
+      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 8px' }}>{title}</p>
+      <p style={{ fontSize: 13, color: 'rgba(232, 224, 204, 0.45)', opacity: 0.7, margin: 0, lineHeight: 1.6 }}>{body}</p>
     </div>
   );
 }
@@ -540,7 +541,7 @@ function CacheCard({ cache, isOpening, onTap }: {
           color: '#e8e0cc', margin: '0 0 2px',
         }}>{cache.label}</p>
         <p style={{
-          fontSize: 11, color: 'var(--text-dim)', margin: '0 0 2px',
+          fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 2px',
           textTransform: 'uppercase', letterSpacing: '0.08em',
         }}>
           {cacheTypeLabel[cache.cache_type] ?? cache.cache_type}
@@ -627,7 +628,7 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
           {RARITY_LABEL[rarity]}
         </p>
         <p style={{
-          fontSize: 12, color: 'var(--text-dim)', fontStyle: 'italic',
+          fontSize: 12, color: 'rgba(232, 224, 204, 0.45)', fontStyle: 'italic',
           margin: '0 0 28px',
         }}>
           {reward.message ?? 'The Veil has given what was kept for you.'}
@@ -658,9 +659,9 @@ function TitleCard({ title, isEquipping, onEquip }: {
 }) {
   const catColor: Record<string, string> = {
     fate: 'var(--gold)', boss: 'var(--ember)', session: '#60a5fa',
-    meta: '#a78bfa', training: '#34d399', general: 'var(--text-dim)',
+    meta: '#a78bfa', training: '#34d399', general: 'rgba(232, 224, 204, 0.45)',
   };
-  const color = catColor[title.category] ?? 'var(--text-dim)';
+  const color = catColor[title.category] ?? 'rgba(232, 224, 204, 0.45)';
 
   return (
     <div style={{
@@ -676,7 +677,7 @@ function TitleCard({ title, isEquipping, onEquip }: {
           color: '#e8e0cc', margin: '0 0 2px',
         }}>{title.display_name}</p>
         <p style={{
-          fontSize: 11, color: 'var(--text-dim)', margin: 0,
+          fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0,
         }}>
           {CATEGORY_LABEL[title.category] ?? title.category}
           {title.description ? ` · ${title.description}` : ''}
@@ -723,13 +724,13 @@ function LockedTitleCard({ title }: { title: TitleEntry }) {
       display: 'flex', alignItems: 'center', gap: 12,
       opacity: 0.5,
     }}>
-      <div style={{ color: 'var(--text-dim)', fontSize: 16, flexShrink: 0 }}>🔒</div>
+      <div style={{ color: 'rgba(232, 224, 204, 0.45)', fontSize: 16, flexShrink: 0 }}>🔒</div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
           fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
-          color: 'var(--text-dim)', margin: '0 0 2px',
+          color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 2px',
         }}>{title.display_name}</p>
-        <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: 0 }}>
+        <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0 }}>
           {categoryUnlockHint[title.category] ?? 'Complete specific challenges'}
         </p>
       </div>
@@ -757,7 +758,7 @@ function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
       </div>
       <p style={{
         fontFamily: 'Cinzel, serif', fontSize: 9,
-        color: 'var(--text-dim)', letterSpacing: '0.12em',
+        color: 'rgba(232, 224, 204, 0.45)', letterSpacing: '0.12em',
         textTransform: 'uppercase', margin: '0 0 2px',
       }}>{GEAR_SLOT_LABEL[slot]}</p>
       {item ? (
