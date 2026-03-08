@@ -32,7 +32,7 @@ interface LeaderboardEntry {
 
 // ── Main ───────────────────────────────────────────────────
 
-export default function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?: () => void }) {
+export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?: () => void }) {
   const { hero, signOut } = useAuth();
   const [tab, setTab] = useState<Tab>('profile');
 
