@@ -119,8 +119,8 @@ export function VaultScreen() {
     try {
       const res  = await fetch(`${BASE}/api/users/${rootId}/caches`);
       const json = await res.json();
-      const raw: SealedCache[] = json?.data ?? [];
-      setCaches(raw.filter(c => c.status === 'sealed'));
+      const raw = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+      setCaches((raw as SealedCache[]).filter(c => c.status === 'sealed'));
     } catch {}
     finally { setCacheLoading(false); }
   }, [rootId]);
@@ -137,7 +137,8 @@ export function VaultScreen() {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
       const json = await res.json();
-      setTitles(json?.data ?? []);
+      const titleData = json?.data;
+      setTitles(Array.isArray(titleData) ? titleData : Array.isArray(json) ? json : []);
     } catch {
       // Fallback: build from hero object if endpoint not yet deployed
       if (hero?.progression?.titles) {
@@ -229,11 +230,13 @@ export function VaultScreen() {
     } catch {}
   };
 
-  const inventory: GearItem[] = (hero?.gear?.inventory ?? []) as GearItem[];
-  const equipment             = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
+  const inventoryRaw = hero?.gear?.inventory;
+  const inventory: GearItem[] = Array.isArray(inventoryRaw) ? inventoryRaw as GearItem[] : [];
+  const equipment = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
 
-  const earnedTitles  = titles.filter(t => t.is_earned);
-  const lockedTitles  = titles.filter(t => !t.is_earned);
+  const safeTitles = Array.isArray(titles) ? titles : [];
+  const earnedTitles  = safeTitles.filter(t => t.is_earned);
+  const lockedTitles  = safeTitles.filter(t => !t.is_earned);
 
   // ── Render ────────────────────────────────────────────────
 
