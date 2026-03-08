@@ -150,8 +150,9 @@ export function TrainingScreen() {
       const res  = await fetch(`${BASE}/api/training/daily/${rootId}`);
       if (!res.ok) return;
       const data = await res.json();
-      setRites(Array.isArray(data?.rites) ? data.rites : []);
-      setStreak(typeof data?.streak === 'number' ? data.streak : 0);
+      const payload = data?.data ?? data;
+      setRites(Array.isArray(payload?.rites) ? payload.rites : []);
+      setStreak(typeof payload?.streak === 'number' ? payload.streak : 0);
     } catch {}
   }, [rootId]);
 
@@ -161,7 +162,8 @@ export function TrainingScreen() {
       const res  = await fetch(`${BASE}/api/training/pillars/${rootId}`);
       if (!res.ok) return;
       const data = await res.json();
-      setPillars(Array.isArray(data) ? data : []);
+      const payload = data?.data ?? data;
+      setPillars(Array.isArray(payload) ? payload : []);
     } catch {}
   }, [rootId]);
 
@@ -181,7 +183,8 @@ export function TrainingScreen() {
       const res  = await fetch(`${BASE}/api/training/chronicle/${rootId}`);
       if (!res.ok) return;
       const data = await res.json();
-      setChronicle(Array.isArray(data) ? data : []);
+      const payload = data?.data ?? data;
+      setChronicle(Array.isArray(payload) ? payload : []);
     } catch {}
   }, [rootId]);
 
