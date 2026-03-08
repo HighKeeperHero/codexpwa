@@ -1,10 +1,9 @@
 import './index.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from '@/AuthContext';
 import { SplashScreen }      from '@/screens/SplashScreen';
 import { LandingScreen }     from '@/screens/LandingScreen';
-import { RegisterScreen }    from '@/screens/RegisterScreen';
-import { LoginScreen }       from '@/screens/LoginScreen';
+import { HeroSelectScreen }  from '@/screens/HeroSelectScreen';
 import { HomeScreen }        from '@/screens/HomeScreen';
 import { QuestsScreen }      from '@/screens/QuestsScreen';
 import { LeaderboardScreen } from '@/screens/LeaderboardScreen';
@@ -13,7 +12,7 @@ import { AlignmentModal }    from '@/screens/AlignmentModal';
 import { TIER_FOR_LEVEL, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '@/api/pik';
 
 // ── Route types ───────────────────────────────────────────────────────────────
-type AppRoute = 'landing' | 'register' | 'login' | 'dashboard';
+type AppRoute = 'landing' | 'hero-select' | 'dashboard';
 type DashTab  = 'home' | 'hunts' | 'rankings' | 'archive';
 
 // ── Offline banner ─────────────────────────────────────────────────────────────
@@ -79,98 +78,6 @@ function TabBar({ active, onChange }: { active: DashTab; onChange: (t: DashTab) 
   );
 }
 
-// ── Returning hero card ───────────────────────────────────────────────────────
-// Shown on landing when a session exists but needs re-confirmation
-function ReturningHeroCard({ onContinue, onSwitch }: { onContinue: () => void; onSwitch: () => void }) {
-  const { hero, alignment } = useAuth();
-  if (!hero) return null;
-
-  const tier      = TIER_FOR_LEVEL(hero.progression.fate_level);
-  const ac        = ALIGNMENT_COLOR[alignment ?? ''] ?? ALIGNMENT_COLOR[hero.alignment] ?? 'var(--bronze)';
-  const al        = ALIGNMENT_LABEL[alignment ?? ''] ?? ALIGNMENT_LABEL[hero.alignment] ?? null;
-
-  return (
-    <div style={{ width: '100%', maxWidth: 380, marginBottom: 24 }}>
-      <p style={{ fontSize: 9, letterSpacing: '0.15em', color: 'var(--text-3)', marginBottom: 10, textAlign: 'center' }}>
-        WELCOME BACK
-      </p>
-
-      {/* Hero card */}
-      <div
-        onClick={onContinue}
-        style={{
-          padding: '18px 20px',
-          background: 'linear-gradient(135deg, rgba(200,160,78,0.08), rgba(200,94,40,0.03))',
-          border: '1px solid rgba(200,160,78,0.3)',
-          borderRadius: 14, cursor: 'pointer',
-          marginBottom: 10, transition: 'all 0.2s ease',
-          display: 'flex', alignItems: 'center', gap: 16,
-        }}
-      >
-        {/* Alignment dot */}
-        <div style={{
-          width: 44, height: 44, borderRadius: 10, flexShrink: 0,
-          background: `${ac}18`,
-          border: `1px solid ${ac}40`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 20,
-        }}>
-          {alignment === 'ORDER' ? '⚖' : alignment === 'CHAOS' ? '🜲' : alignment === 'LIGHT' ? '☀' : alignment === 'DARK' ? '☽' : '◈'}
-        </div>
-
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="serif-bold" style={{ fontSize: 18, color: 'var(--text-1)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {hero.display_name}
-          </p>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 10, color: tier.color, fontWeight: 700 }}>
-              {tier.name}
-            </span>
-            <span style={{ fontSize: 9, color: 'var(--text-3)' }}>·</span>
-            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
-              Level {hero.progression.fate_level}
-            </span>
-            {al && (
-              <>
-                <span style={{ fontSize: 9, color: 'var(--text-3)' }}>·</span>
-                <span style={{ fontSize: 10, color: ac, fontWeight: 600 }}>{al}</span>
-              </>
-            )}
-          </div>
-          <div style={{ marginTop: 8 }}>
-            <div className="xp-track" style={{ height: 3 }}>
-              <div className="xp-fill" style={{
-                width: `${Math.min(100, (hero.progression.xp_in_current_level / hero.progression.xp_needed_for_next) * 100)}%`,
-                background: `linear-gradient(90deg, ${ac}88, ${ac})`,
-              }} />
-            </div>
-          </div>
-        </div>
-
-        <span style={{ color: 'var(--gold)', fontSize: 18, flexShrink: 0, opacity: 0.6 }}>›</span>
-      </div>
-
-      {/* Switch hero */}
-      <button
-        onClick={onSwitch}
-        style={{
-          width: '100%', padding: '11px',
-          background: 'transparent',
-          border: '1px solid var(--border)',
-          borderRadius: 10, cursor: 'pointer',
-          color: 'var(--text-3)', fontSize: 11,
-          letterSpacing: '0.06em',
-          transition: 'border-color 0.2s',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(168,146,122,0.3)')}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
-      >
-        Switch Hero
-      </button>
-    </div>
-  );
-}
-
 // ── Dashboard shell ───────────────────────────────────────────────────────────
 function Dashboard() {
   const { isOnline, hero, showAlignmentModal, alignment, setAlignment, dismissAlignmentModal } = useAuth();
@@ -201,55 +108,36 @@ function Dashboard() {
 
 // ── Router ────────────────────────────────────────────────────────────────────
 function Router() {
-  const { hero, isLoading, signIn, signOut } = useAuth();
+  const { account, hero, isLoading, signOut } = useAuth();
   const [splashDone, setSplashDone] = useState(false);
   const [route,      setRoute]      = useState<AppRoute>('landing');
 
-  // Only advance past splash once BOTH animation finished AND auth resolved
   const readyToRoute = splashDone && !isLoading;
 
-  // Once ready, set initial route based on session state
-// Also catches sign-out: if hero disappears while on dashboard, return to landing
-useEffect(() => {
-  if (!readyToRoute) return;
-  setRoute(hero ? 'dashboard' : 'landing');
-}, [readyToRoute, hero]);
+  useEffect(() => {
+    if (!readyToRoute) return;
+    if (!account) { setRoute('landing'); return; }
+    if (!hero)    { setRoute('hero-select'); return; }
+    setRoute('dashboard');
+  }, [readyToRoute, account, hero]);
 
-  // Show splash until both animation and loading are done
   if (!readyToRoute) {
     return <SplashScreen onComplete={() => setSplashDone(true)} />;
   }
 
   if (route === 'landing') {
-    // If we have a hero, show returning card on landing
     return (
       <LandingScreen
-        returningHero={!!hero}
-        onContinue={() => setRoute('dashboard')}
-        onNewUser={() => { signOut(); setRoute('register'); }}
-        onExistingUser={() => setRoute('login')}
-        onSwitch={() => { signOut(); setRoute('login'); }}
+        onAuthenticated={() => setRoute('hero-select')}
       />
     );
   }
 
-  if (route === 'register') {
+  if (route === 'hero-select') {
     return (
-      <RegisterScreen
-        onComplete={async (_name, rootId) => {
-          await signIn(rootId);
-          setRoute('dashboard');
-        }}
-        onBack={() => setRoute('landing')}
-      />
-    );
-  }
-
-  if (route === 'login') {
-    return (
-      <LoginScreen
-        onComplete={() => setRoute('dashboard')}
-        onBack={() => setRoute('landing')}
+      <HeroSelectScreen
+        onHeroSelected={() => setRoute('dashboard')}
+        onSignOut={() => { signOut(); setRoute('landing'); }}
       />
     );
   }
