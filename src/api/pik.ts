@@ -357,6 +357,82 @@ export const MODIFIER_LABEL: Record<string, string> = {
   defense: 'Defense', crit_pct: 'Crit', cooldown_pct: 'Cooldown', fate_affinity: 'Fate Affinity',
 };
 
+// ── Vault API ─────────────────────────────────────────
+// Sprint 8: Cache opening, title equipping, gear equipping
+
+/** Open a sealed Fate Cache — requires Bearer token */
+export async function openFateCache(
+  rootId: string,
+  cacheId: string,
+  token: string,
+): Promise<{
+  reward_type:  string;
+  reward_value: string;
+  display_name: string;
+  rarity_tier:  Rarity;
+  xp_granted?:  number;
+  message?:     string;
+}> {
+  const res = await fetch(`${PIK_BASE}/api/users/${rootId}/caches/${cacheId}/open`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.message ?? 'Failed to open cache');
+  return json?.data ?? json;
+}
+
+/** Equip a title — pass titleId = 'none' to remove */
+export async function equipTitle(
+  rootId: string,
+  titleId: string,
+  token: string,
+): Promise<{ equipped_title: string | null; display_name?: string; message: string }> {
+  const res = await fetch(`${PIK_BASE}/api/users/${rootId}/titles/${titleId}/equip`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.message ?? 'Failed to equip title');
+  return json?.data ?? json;
+}
+
+/** Fetch all titles (earned + locked) for a hero — requires Bearer token */
+export async function fetchTitles(
+  rootId: string,
+  token: string,
+): Promise<Array<{
+  title_id:     string;
+  display_name: string;
+  category:     string;
+  description:  string | null;
+  is_earned:    boolean;
+  is_equipped:  boolean;
+  granted_at:   string | null;
+}>> {
+  const res = await fetch(`${PIK_BASE}/api/users/${rootId}/titles`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.message ?? 'Failed to fetch titles');
+  return json?.data ?? [];
+}
+
+/** Equip a gear item from inventory */
+export async function equipGear(
+  rootId: string,
+  inventoryId: string,
+  token: string,
+): Promise<{ message: string }> {
+  const res = await fetch(`${PIK_BASE}/api/users/${rootId}/gear/${inventoryId}/equip`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.message ?? 'Failed to equip gear');
+  return json?.data ?? json;
+}
+
 // ── Mock ──────────────────────────────────────────────
 
 export const MOCK_HEROES: Hero[] = [{

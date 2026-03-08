@@ -1,282 +1,393 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/AuthContext';
-import { generateNarrative, TIER_FOR_LEVEL, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '@/api/pik';
+// src/screens/ProfileScreen.tsx
+// ============================================================
+// Archive screen — tabs: Profile | Rankings | Vault | Wristband
+// Sprint 8: Vault tab added
+// ============================================================
+
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../AuthContext';
+import { VaultScreen } from './VaultScreen';
+import {
+  TIER_FOR_LEVEL,
+  ALIGNMENT_COLOR,
+  ALIGNMENT_LABEL,
+} from '../api/pik';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
 
-type Tab = 'profile' | 'rankings' | 'wristband';
+type Tab = 'profile' | 'rankings' | 'vault' | 'wristband';
 
-interface Props {
-  onReturnToHeroSelect: () => void;
+// ── Leaderboard types ──────────────────────────────────────
+
+interface LeaderboardEntry {
+  rank:           number;
+  root_id:        string;
+  hero_name:      string;
+  fate_level:     number;
+  fate_alignment: string;
+  equipped_title: string | null;
+  value:          number;
+  label:          string;
 }
 
-export function ProfileScreen({ onReturnToHeroSelect }: Props) {
-  const { hero, account, signOut } = useAuth();
+// ── Main ───────────────────────────────────────────────────
+
+export default function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?: () => void }) {
+  const { hero, signOut } = useAuth();
   const [tab, setTab] = useState<Tab>('profile');
 
-  if (!hero) return null;
+  // Vault badge: count sealed caches
+  const [sealedCount, setSealedCount] = useState(0);
+  useEffect(() => {
+    if (!hero?.root_id) return;
+    fetch(`${BASE}/api/users/${hero.root_id}/caches`)
+      .then(r => r.json())
+      .then(j => {
+        const sealed = (j?.data ?? []).filter((c: any) => c.status === 'sealed').length;
+        setSealedCount(sealed);
+      })
+      .catch(() => {});
+  }, [hero?.root_id]);
 
-  // Safe hero field access — handle both old and new shapes
-  const rootId     = (hero as any).root_id ?? (hero as any).id ?? '';
-  const heroName   = (hero as any).display_name ?? (hero as any).hero_name ?? 'Unknown Hero';
-  const fateLevel  = (hero as any).progression?.fate_level ?? (hero as any).fate_level ?? 1;
-  const fateXp     = (hero as any).progression?.fate_xp ?? (hero as any).fate_xp ?? 0;
-  const alignment  = (hero as any).alignment ?? (hero as any).fate_alignment ?? 'NONE';
-  const equTitle   = (hero as any).equipped_title ?? null;
+  const tabs: { id: Tab; label: string; badge?: number }[] = [
+    { id: 'profile',  label: 'Profile' },
+    { id: 'rankings', label: 'Rankings' },
+    { id: 'vault',    label: 'Vault', badge: sealedCount },
+    { id: 'wristband',label: 'Wristband' },
+  ];
+
+  if (!hero) return (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height: '100%', padding: 32 }}>
+      <p style={{ color: 'var(--text-dim)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>No hero selected.</p>
+    </div>
+  );
 
   return (
-    <div style={{ minHeight:'100dvh', background:'var(--bg)', paddingBottom:100 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)' }}>
 
-      {/* Header */}
-      <div style={{ padding:'48px 20px 0' }}>
-        <h2 className="serif-bold" style={{ fontSize:26, color:'var(--gold)', letterSpacing:'0.18em', marginBottom:2 }}>ARCHIVE</h2>
-        <p style={{ fontSize:11, color:'var(--text-3)', letterSpacing:'0.08em' }}>Record · Rankings · Wristband</p>
-      </div>
-
-      {/* In-page tabs */}
-      <div style={{ display:'flex', margin:'16px 20px 0', borderBottom:'1px solid var(--border)' }}>
-        {(['profile','rankings','wristband'] as Tab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
-            flex:1, background:'none', border:'none', cursor:'pointer',
-            padding:'10px 0', fontSize:9, letterSpacing:'0.12em', fontWeight:700,
-            fontFamily:'var(--font-serif)',
-            color: tab === t ? 'var(--gold)' : 'var(--text-3)',
-            transition:'color 0.15s', position:'relative',
-          }}>
-            {t === 'profile' ? 'PROFILE' : t === 'rankings' ? 'RANKINGS' : 'WRISTBAND'}
-            {tab === t && <div style={{ position:'absolute', bottom:-1, left:'15%', right:'15%', height:2, background:'var(--gold)', borderRadius:1 }} />}
+      {/* Tab bar */}
+      <div style={{
+        display: 'flex', borderBottom: '1px solid var(--border)',
+        background: 'var(--surface)', flexShrink: 0,
+      }}>
+        {tabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            style={{
+              flex: 1, padding: '12px 4px',
+              background: 'none',
+              borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
+              color: tab === t.id ? 'var(--gold)' : 'var(--text-dim)',
+              fontFamily: 'Cinzel, serif', fontSize: 10,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              cursor: 'pointer', border: 'none',
+              borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
+              position: 'relative',
+            }}
+          >
+            {t.label}
+            {t.badge && t.badge > 0 && (
+              <span style={{
+                position: 'absolute', top: 6, right: 'calc(50% - 18px)',
+                background: 'var(--ember)', color: '#fff',
+                borderRadius: 999, fontSize: 9, fontFamily: 'monospace',
+                padding: '1px 5px', fontWeight: 700, lineHeight: 1.4,
+              }}>
+                {t.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      <div style={{ padding:'20px 20px 0' }}>
-        {tab === 'profile'   && <ProfileTab rootId={rootId} heroName={heroName} fateLevel={fateLevel} fateXp={fateXp} alignment={alignment} equTitle={equTitle} account={account} onReturnToHeroSelect={onReturnToHeroSelect} onSignOut={signOut} />}
-        {tab === 'rankings'  && <RankingsTab rootId={rootId} />}
-        {tab === 'wristband' && <WristbandTab rootId={rootId} />}
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {tab === 'profile'   && <ProfileTab hero={hero} onSignOut={signOut} onReturnToHeroSelect={onReturnToHeroSelect} />}
+        {tab === 'rankings'  && <RankingsTab rootId={hero.root_id} />}
+        {tab === 'vault'     && <VaultScreen />}
+        {tab === 'wristband' && <WristbandTab rootId={hero.root_id} />}
       </div>
     </div>
   );
 }
 
-// ── Profile Tab ───────────────────────────────────────────────────────────────
-function ProfileTab({ rootId, heroName, fateLevel, fateXp, alignment, equTitle, account, onReturnToHeroSelect, onSignOut }: {
-  rootId:   string;
-  heroName: string;
-  fateLevel: number;
-  fateXp:   number;
-  alignment: string;
-  equTitle:  string | null;
-  account:   any;
-  onReturnToHeroSelect: () => void;
+// ── Profile Tab ────────────────────────────────────────────
+
+function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
+  hero: any;
   onSignOut: () => void;
+  onReturnToHeroSelect?: () => void;
 }) {
-  // Safe narrative — generateNarrative needs a valid UUID-like string
-  let narrative: any = {};
-  try { narrative = rootId ? generateNarrative(rootId) : {}; } catch {}
+  const prog      = hero.progression;
+  const level     = prog?.fate_level ?? 1;
+  const xp        = prog?.fate_xp ?? 0;
+  const xpToNext  = prog?.xp_to_next_level ?? 500;
+  const pct       = Math.min(100, Math.round((xp % xpToNext) / xpToNext * 100));
+  const tier      = TIER_FOR_LEVEL(level);
+  const alignment = hero.alignment ?? 'NONE';
+  const aColor    = ALIGNMENT_COLOR[alignment] ?? '#9ca3af';
 
-  let tier: any = { name:'Bronze', color:'#cd7f32' };
-  try { tier = TIER_FOR_LEVEL(fateLevel); } catch {}
-
-  const ac = (() => { try { return ALIGNMENT_COLOR[alignment] ?? 'var(--gold)'; } catch { return 'var(--gold)'; } })();
-  const al = (() => { try { return ALIGNMENT_LABEL[alignment] ?? 'NONE'; } catch { return 'NONE'; } })();
-
-  const xpInLevel  = fateXp % 500;
-  const xpToNext   = 500 - xpInLevel;
-  const xpPct      = Math.min((xpInLevel / 500) * 100, 100);
+  const statBlocks = [
+    { label: 'Sessions',    value: prog?.sessions_completed ?? 0 },
+    { label: 'Boss Kills',  value: prog?.boss_kills ?? 0 },
+    { label: 'Fate Seals',  value: prog?.caches_granted ?? 0 },
+    { label: 'Gear Found',  value: prog?.gear_acquired ?? 0 },
+  ];
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+    <div style={{ padding: 16 }}>
 
       {/* Hero card */}
-      <div style={{ padding:'20px', borderRadius:14, background:'linear-gradient(135deg,rgba(200,160,78,0.07),rgba(200,94,40,0.02))', border:'1px solid rgba(200,160,78,0.2)' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:14 }}>
-          <div style={{ width:52, height:52, borderRadius:12, flexShrink:0, background:`${ac}18`, border:`1px solid ${ac}35`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:24 }}>◈</div>
-          <div>
-            <p className="serif-bold" style={{ fontSize:22, color:'var(--text-1)' }}>{heroName}</p>
-            <div style={{ display:'flex', gap:8, marginTop:3, alignItems:'center', flexWrap:'wrap' }}>
-              <span style={{ fontSize:10, color:tier.color, fontWeight:700 }}>{tier.name}</span>
-              <span style={{ fontSize:9, color:'var(--text-3)' }}>·</span>
-              <span style={{ fontSize:10, color:'var(--text-3)' }}>Level {fateLevel}</span>
-              {al && al !== 'NONE' && <>
-                <span style={{ fontSize:9, color:'var(--text-3)' }}>·</span>
-                <span style={{ fontSize:10, color:ac, fontWeight:600 }}>{al}</span>
-              </>}
-            </div>
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 16, padding: '20px 16px', marginBottom: 16,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
+          {/* Avatar */}
+          <div style={{
+            width: 52, height: 52, borderRadius: 12, flexShrink: 0,
+            background: `radial-gradient(circle, ${aColor}30 0%, transparent 70%)`,
+            border: `1px solid ${aColor}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'Cinzel, serif', fontSize: 20, color: aColor,
+          }}>
+            {(hero.hero_name ?? '?')[0].toUpperCase()}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 17, fontWeight: 700, color: '#e8e0cc', margin: '0 0 2px' }}>
+              {hero.hero_name}
+            </p>
+            {prog?.equipped_title && (
+              <p style={{ fontSize: 11, color: 'var(--gold)', margin: '0 0 4px', letterSpacing: '0.06em' }}>
+                {prog.equipped_title.replace(/^title_/,'').replace(/_/g,' ').toUpperCase()}
+              </p>
+            )}
+            <p style={{ fontSize: 12, color: aColor, margin: 0, letterSpacing: '0.05em' }}>
+              {ALIGNMENT_LABEL[alignment] ?? alignment}
+            </p>
+          </div>
+          <div style={{
+            background: 'var(--bg)', border: `1px solid ${tier.color}`,
+            borderRadius: 8, padding: '4px 10px', flexShrink: 0, textAlign: 'center',
+          }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: tier.color, margin: '0 0 1px', letterSpacing: '0.1em' }}>{tier.name}</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: tier.color, margin: 0 }}>Lv {level}</p>
           </div>
         </div>
 
         {/* XP bar */}
-        <div style={{ marginBottom:12 }}>
-          <div style={{ height:3, background:'var(--border)', borderRadius:2 }}>
-            <div style={{ height:'100%', borderRadius:2, width:`${xpPct}%`, background:'linear-gradient(90deg,var(--ember),var(--gold))', transition:'width 0.6s cubic-bezier(0.16,1,0.3,1)' }} />
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ fontSize: 10, color: 'var(--text-dim)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FATE XP</span>
+            <span style={{ fontSize: 10, color: tier.color, fontFamily: 'monospace' }}>{xp.toLocaleString()} XP</span>
           </div>
-          <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-            <span style={{ fontSize:10, color:'var(--text-3)' }}>{fateXp.toLocaleString()} XP</span>
-            <span style={{ fontSize:10, color:'var(--text-3)' }}>{xpToNext} to next level</span>
+          <div style={{ background: 'var(--bg)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', width: `${pct}%`,
+              background: `linear-gradient(90deg, ${tier.color}80, ${tier.color})`,
+              borderRadius: 4, transition: 'width 0.6s ease',
+            }} />
           </div>
         </div>
-
-        {/* Narrative */}
-        {narrative.region && (
-          <div style={{ borderTop:'1px solid var(--border)', paddingTop:12, display:'flex', flexDirection:'column', gap:6 }}>
-            {[
-              { label:'REGION',  val: narrative.region   },
-              { label:'CLASS',   val: narrative.class    },
-              { label:'ORIGIN',  val: narrative.origin   },
-              { label:'CALLING', val: narrative.calling  },
-              { label:'VIRTUE',  val: narrative.virtue   },
-              { label:'VICE',    val: narrative.vice     },
-            ].filter(r => r.val).map(row => (
-              <div key={row.label} style={{ display:'flex', gap:10 }}>
-                <span style={{ fontSize:9, color:'var(--text-3)', letterSpacing:'0.08em', width:56, flexShrink:0, paddingTop:2 }}>{row.label}</span>
-                <span style={{ fontSize:12, color:'var(--text-2)', lineHeight:1.4 }}>{row.val}</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* Equipped title */}
-      {equTitle && (
-        <div style={{ padding:'12px 16px', borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)', display:'flex', gap:10, alignItems:'center' }}>
-          <span style={{ fontSize:16 }}>👑</span>
-          <div>
-            <p style={{ fontSize:9, color:'var(--text-3)', letterSpacing:'0.08em', marginBottom:2 }}>EQUIPPED TITLE</p>
-            <p style={{ fontSize:14, color:'var(--gold)', fontFamily:'var(--font-serif)' }}>{equTitle}</p>
+      {/* Stats grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 16 }}>
+        {statBlocks.map(s => (
+          <div key={s.label} style={{
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: 10, padding: '12px 14px',
+          }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: '#e8e0cc', margin: '0 0 4px' }}>
+              {s.value}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              {s.label}
+            </p>
           </div>
-        </div>
-      )}
-
-      {/* Fate ID */}
-      <div style={{ padding:'12px 16px', borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)' }}>
-        <p style={{ fontSize:9, color:'var(--text-3)', letterSpacing:'0.08em', marginBottom:4 }}>FATE ID</p>
-        <p style={{ fontSize:10, color:'var(--text-3)', fontFamily:'monospace', letterSpacing:'0.03em', wordBreak:'break-all' }}>{rootId}</p>
+        ))}
       </div>
-
-      {/* Account */}
-      {account?.email && (
-        <div style={{ padding:'12px 16px', borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)' }}>
-          <p style={{ fontSize:9, color:'var(--text-3)', letterSpacing:'0.08em', marginBottom:4 }}>FATE ACCOUNT</p>
-          <p style={{ fontSize:12, color:'var(--text-2)' }}>{account.email}</p>
-        </div>
-      )}
 
       {/* Actions */}
-      <div style={{ display:'flex', flexDirection:'column', gap:8, paddingTop:4, paddingBottom:16 }}>
-        <button onClick={onReturnToHeroSelect} style={{ width:'100%', padding:'14px', borderRadius:10, cursor:'pointer', background:'var(--surface)', border:'1px solid var(--border)', color:'var(--text-2)', fontSize:12, fontWeight:600, letterSpacing:'0.08em', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-          <span style={{ fontSize:14 }}>◈</span>
-          RETURN TO HERO SELECT
-        </button>
-        <button onClick={onSignOut} style={{ width:'100%', padding:'14px', borderRadius:10, cursor:'pointer', background:'none', border:'1px solid rgba(90,78,60,0.3)', color:'var(--text-3)', fontSize:11, letterSpacing:'0.08em' }}>
-          Sign out{account?.email ? ` of ${account.email}` : ''}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {onReturnToHeroSelect && (
+          <button
+            onClick={onReturnToHeroSelect}
+            style={{
+              width: '100%', padding: '12px 0',
+              background: 'var(--surface)', color: 'var(--text-dim)',
+              border: '1px solid var(--border)', borderRadius: 10,
+              fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer',
+              letterSpacing: '0.05em',
+            }}
+          >
+            Switch Hero
+          </button>
+        )}
+        <button
+          onClick={onSignOut}
+          style={{
+            width: '100%', padding: '12px 0',
+            background: 'transparent', color: '#9ca3af',
+            border: '1px solid var(--border)', borderRadius: 10,
+            fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer',
+            letterSpacing: '0.05em',
+          }}
+        >
+          Sign Out
         </button>
       </div>
     </div>
   );
 }
 
-// ── Rankings Tab ──────────────────────────────────────────────────────────────
+// ── Rankings Tab ───────────────────────────────────────────
+
 function RankingsTab({ rootId }: { rootId: string }) {
-  const [entries, setEntries] = useState<any[]>([]);
+  const [board, setBoard]     = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res  = await fetch(`${BASE}/api/leaderboard`);
-        if (!res.ok) { setLoading(false); return; }
-        const data = await res.json();
-        const board = data?.data?.entries ?? data?.data?.board ?? data?.data ?? data;
-        setEntries(Array.isArray(board) ? board : []);
-      } catch {}
-      finally { setLoading(false); }
-    };
-    load();
+    fetch(`${BASE}/api/leaderboard`)
+      .then(r => r.json())
+      .then(j => {
+        const entries: LeaderboardEntry[] = j?.data?.entries ?? j?.data ?? [];
+        setBoard(entries);
+      })
+      .catch(() => setError('Could not load leaderboard'))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p style={{ padding:'40px 0', textAlign:'center', fontSize:12, color:'var(--text-3)' }}>Loading rankings…</p>;
-
-  if (entries.length === 0) return (
-    <div style={{ textAlign:'center', padding:'40px 0' }}>
-      <p style={{ fontSize:13, color:'var(--text-3)' }}>No rankings yet.</p>
+  if (loading) return (
+    <div style={{ textAlign: 'center', padding: 48 }}>
+      <p style={{ color: 'var(--text-dim)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Consulting the Veil…</p>
+    </div>
+  );
+  if (error || board.length === 0) return (
+    <div style={{ textAlign: 'center', padding: 48 }}>
+      <p style={{ color: 'var(--text-dim)', fontSize: 13 }}>{error ?? 'No rankings yet.'}</p>
     </div>
   );
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-      {entries.map((e: any, i: number) => {
-        if (!e) return null;
-        const isMe = (e.root_id ?? e.id) === rootId;
-        let tier: any = { name:'Bronze', color:'#cd7f32' };
-        try { tier = TIER_FOR_LEVEL(e.fate_level ?? 1); } catch {}
-        return (
-          <div key={e.root_id ?? e.id ?? i} style={{ padding:'14px 16px', borderRadius:12, background: isMe ? 'rgba(200,160,78,0.08)' : 'var(--surface)', border:`1px solid ${isMe ? 'rgba(200,160,78,0.3)' : 'var(--border)'}`, display:'flex', alignItems:'center', gap:12 }}>
-            <span style={{ fontSize:13, fontWeight:700, color: i < 3 ? 'var(--gold)' : 'var(--text-3)', width:24, textAlign:'center', flexShrink:0 }}>
-              {i === 0 ? '◈' : i === 1 ? '◇' : i === 2 ? '△' : `${i+1}`}
-            </span>
-            <div style={{ flex:1, minWidth:0 }}>
-              <p style={{ fontSize:14, color: isMe ? 'var(--gold)' : 'var(--text-1)', fontFamily:'var(--font-serif)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                {e.hero_name ?? e.display_name ?? 'Unknown'}
-                {isMe && <span style={{ fontSize:10, color:'var(--text-3)', marginLeft:6 }}>(you)</span>}
-              </p>
-              <p style={{ fontSize:10, color:tier.color, marginTop:2 }}>{tier.name} · Lv {e.fate_level ?? 1}</p>
+    <div style={{ padding: '16px 16px 32px' }}>
+      <p style={{
+        fontFamily: 'Cinzel, serif', fontSize: 10,
+        color: 'var(--text-dim)', letterSpacing: '0.15em',
+        textTransform: 'uppercase', marginBottom: 12,
+      }}>Fate Rankings</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {board.map(entry => {
+          const isMe = entry.root_id === rootId;
+          const aColor = ALIGNMENT_COLOR[entry.fate_alignment] ?? '#9ca3af';
+          const tier   = TIER_FOR_LEVEL(entry.fate_level);
+          return (
+            <div key={entry.root_id} style={{
+              background: isMe ? 'rgba(200,160,78,0.08)' : 'var(--surface)',
+              border: `1px solid ${isMe ? 'var(--gold)' : 'var(--border)'}`,
+              borderRadius: 10, padding: '10px 14px',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <span style={{
+                fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700,
+                color: entry.rank <= 3 ? 'var(--gold)' : 'var(--text-dim)',
+                width: 24, textAlign: 'right', flexShrink: 0,
+              }}>
+                {entry.rank}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{
+                  fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
+                  color: isMe ? 'var(--gold)' : '#e8e0cc', margin: '0 0 1px',
+                }}>
+                  {entry.hero_name} {isMe && '(you)'}
+                </p>
+                {entry.equipped_title && (
+                  <p style={{ fontSize: 10, color: 'var(--text-dim)', margin: 0, letterSpacing: '0.06em' }}>
+                    {entry.equipped_title.replace(/^title_/,'').replace(/_/g,' ').toUpperCase()}
+                  </p>
+                )}
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: tier.color, margin: '0 0 1px' }}>
+                  Lv {entry.fate_level}
+                </p>
+                <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: 0, fontFamily: 'monospace' }}>
+                  {(entry.value ?? 0).toLocaleString()} XP
+                </p>
+              </div>
             </div>
-            <span style={{ fontSize:12, color:'var(--text-2)', fontWeight:600, flexShrink:0 }}>{e.label ?? `${(e.value ?? e.fate_xp ?? 0).toLocaleString()} XP`}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-// ── Wristband Tab ─────────────────────────────────────────────────────────────
+// ── Wristband Tab ──────────────────────────────────────────
+
 function WristbandTab({ rootId }: { rootId: string }) {
-  const [tokens,  setTokens]  = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [wearables, setWearables] = useState<any[]>([]);
+  const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res  = await fetch(`${BASE}/api/users/${rootId}/tokens`);
-        if (!res.ok) { setLoading(false); return; }
-        const data = await res.json();
-        setTokens(Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []);
-      } catch {}
-      finally { setLoading(false); }
-    };
-    if (rootId) load();
-    else setLoading(false);
+    fetch(`${BASE}/api/wearables/${rootId}`)
+      .then(r => r.json())
+      .then(j => setWearables(j?.data ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [rootId]);
 
-  if (loading) return <p style={{ padding:'40px 0', textAlign:'center', fontSize:12, color:'var(--text-3)' }}>Checking wristband…</p>;
-
-  const active = tokens.filter((t: any) => t?.status === 'active');
-
-  if (active.length === 0) return (
-    <div style={{ textAlign:'center', padding:'40px 20px' }}>
-      <p style={{ fontSize:30, marginBottom:14, opacity:0.3 }}>◈</p>
-      <p style={{ fontSize:13, color:'var(--text-3)', lineHeight:1.7 }}>
-        No wristband linked.<br />
-        Visit a Heroes' Veritas venue to link your Fate ID.
-      </p>
+  if (loading) return (
+    <div style={{ textAlign: 'center', padding: 48 }}>
+      <p style={{ color: 'var(--text-dim)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Scanning…</p>
     </div>
   );
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-      {active.map((t: any, i: number) => (
-        <div key={t?.token_id ?? t?.id ?? i} style={{ padding:'18px', borderRadius:14, background:'var(--surface)', border:'1px solid var(--border)' }}>
-          <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:10 }}>
-            <span style={{ fontSize:20 }}>⌚</span>
-            <div>
-              <p style={{ fontSize:13, color:'var(--text-1)', fontFamily:'var(--font-serif)' }}>{t?.friendly_name ?? t?.token_type ?? 'Wristband'}</p>
-              <p style={{ fontSize:10, color:'#6A8A5A', marginTop:2 }}>Active</p>
-            </div>
-          </div>
-          {t?.token_uid && <p style={{ fontSize:10, color:'var(--text-3)', fontFamily:'monospace' }}>UID: {t.token_uid}</p>}
-          {t?.tap_count != null && <p style={{ fontSize:10, color:'var(--text-3)', marginTop:4 }}>{t.tap_count} taps recorded</p>}
+    <div style={{ padding: '16px 16px 32px' }}>
+      <p style={{
+        fontFamily: 'Cinzel, serif', fontSize: 10,
+        color: 'var(--text-dim)', letterSpacing: '0.15em',
+        textTransform: 'uppercase', marginBottom: 12,
+      }}>Linked Wristbands</p>
+
+      {wearables.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+          <div style={{ fontSize: 32, color: 'var(--text-dim)', opacity: 0.4, marginBottom: 12 }}>◌</div>
+          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: 'var(--text-dim)', margin: '0 0 8px' }}>
+            No Wristband Linked
+          </p>
+          <p style={{ fontSize: 13, color: 'var(--text-dim)', opacity: 0.7, margin: 0, lineHeight: 1.6 }}>
+            Tap your wristband at a Heroes Veritas terminal to link it to this hero.
+          </p>
         </div>
-      ))}
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {wearables.map((w: any) => (
+            <div key={w.token_id} style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 10, padding: '12px 14px',
+            }}>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#e8e0cc', margin: '0 0 4px' }}>
+                {w.friendly_name ?? 'Wristband'}
+              </p>
+              <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: '0 0 2px' }}>
+                UID: <span style={{ fontFamily: 'monospace', color: 'var(--gold)', letterSpacing: '0.05em' }}>
+                  {w.token_uid}
+                </span>
+              </p>
+              {w.last_tap_at && (
+                <p style={{ fontSize: 11, color: 'var(--text-dim)', margin: 0 }}>
+                  Last tap: {new Date(w.last_tap_at).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
