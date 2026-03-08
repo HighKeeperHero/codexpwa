@@ -4,7 +4,7 @@
 // Sections: Fate Caches | Titles | Gear Loadout
 // ============================================================
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useAuth } from '../AuthContext';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
@@ -473,7 +473,7 @@ export function VaultScreen() {
 
 // ── Sub-components ─────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({ children }: { children: ReactNode }) {
   return (
     <p style={{
       fontFamily: 'Cinzel, serif', fontSize: 10,
