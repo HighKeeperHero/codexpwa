@@ -85,18 +85,20 @@ function getWeekEndUTC(): number {
   d.setUTCHours(0, 0, 0, 0);
   return d.getTime();
 }
-function formatHHMM(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+function formatHHMMSS(ms: number): string {
+  const s  = Math.max(0, Math.floor(ms / 1000));
+  const h  = Math.floor(s / 3600);
+  const m  = Math.floor((s % 3600) / 60);
+  const sc = s % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`;
 }
-function formatDDHHMM(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return `${d}D ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+function formatDDHHMMSS(ms: number): string {
+  const s  = Math.max(0, Math.floor(ms / 1000));
+  const d  = Math.floor(s / 86400);
+  const h  = Math.floor((s % 86400) / 3600);
+  const m  = Math.floor((s % 3600) / 60);
+  const sc = s % 60;
+  return `${d}D ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sc).padStart(2,'0')}`;
 }
 
 function useCountdown(targetMs: number) {
@@ -109,7 +111,7 @@ function useCountdown(targetMs: number) {
 }
 
 // ── Countdown badge ───────────────────────────────────────────────────────────
-function CountdownBadge({ label, ms, format }: { label: string; ms: number; format: 'hhmm' | 'ddhhmm' }) {
+function CountdownBadge({ label, ms, format }: { label: string; ms: number; format: 'hhmmss' | 'ddhhmmss' }) {
   const remaining = useCountdown(ms);
   return (
     <div style={{
@@ -119,7 +121,7 @@ function CountdownBadge({ label, ms, format }: { label: string; ms: number; form
     }}>
       <span style={{ fontSize:9, color:'var(--text-3)', letterSpacing:'0.08em' }}>{label}</span>
       <span style={{ fontSize:11, color:'var(--gold)', fontFamily:'monospace', fontWeight:700, letterSpacing:'0.06em' }}>
-        {format === 'hhmm' ? formatHHMM(remaining) : formatDDHHMM(remaining)}
+        {format === 'hhmmss' ? formatHHMMSS(remaining) : formatDDHHMMSS(remaining)}
       </span>
     </div>
   );
@@ -326,7 +328,7 @@ function DailyView({ rites, completing, onComplete, midnightMs }: {
             <span style={{ fontSize:11, color: allDone ? '#6A8A5A' : 'var(--text-3)', fontWeight:700 }}>
               {completed}/3{allDone ? ' ◈' : ''}
             </span>
-            <CountdownBadge label="RESETS" ms={midnightMs} format="hhmm" />
+            <CountdownBadge label="RESETS" ms={midnightMs} format="hhmmss" />
           </div>
         </div>
         <div style={{ height:3, background:'var(--border)', borderRadius:2 }}>
@@ -404,7 +406,7 @@ function PillarsView({ pillars, alignment, midnightMs }: { pillars: PillarData[]
       {/* Streak reset timer */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <p style={{ fontSize:11, color:'var(--text-3)' }}>Streak resets if no activity today</p>
-        <CountdownBadge label="RESETS" ms={midnightMs} format="hhmm" />
+        <CountdownBadge label="RESETS" ms={midnightMs} format="hhmmss" />
       </div>
 
       {resonance && (
@@ -514,7 +516,7 @@ function OathView({ oath, rootId, weekEndMs, onUpdate, showToast }: {
         {/* Countdown */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', borderRadius:10, background:'rgba(37,32,24,0.8)', border:'1px solid var(--border)' }}>
           <span style={{ fontSize:11, color:'var(--text-3)' }}>Week ends</span>
-          <CountdownBadge label="REMAINING" ms={weekEndMs} format="ddhhmm" />
+          <CountdownBadge label="REMAINING" ms={weekEndMs} format="ddhhmmss" />
         </div>
 
         <div style={{ padding:'20px', borderRadius:14, background:'rgba(200,160,78,0.06)', border:'1px solid rgba(200,160,78,0.2)' }}>
@@ -557,7 +559,7 @@ function OathView({ oath, rootId, weekEndMs, onUpdate, showToast }: {
       {/* Week countdown */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <p style={{ fontSize:11, color:'var(--text-3)' }}>Oath window closes</p>
-        <CountdownBadge label="REMAINING" ms={weekEndMs} format="ddhhmm" />
+        <CountdownBadge label="REMAINING" ms={weekEndMs} format="ddhhmmss" />
       </div>
       <p style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.7 }}>
         Declare a weekly oath — a commitment to yourself, entered into the Codex. Choose your pillar, your level of commitment, then select your oath.
