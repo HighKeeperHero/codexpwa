@@ -32,7 +32,7 @@ function OfflineBanner({ show }: { show: boolean }) {
 // ── Tab bar ───────────────────────────────────────────────────────────────────
 const TABS: { id: DashTab; label: string; icon: string }[] = [
   { id: 'home',     label: 'Home',     icon: '◈' },
-  { id: 'training', label: 'Training', icon: '⚔' },
+  { id: 'training', label: 'Training', icon: '✦' },
   { id: 'hunts',    label: 'Hunts',    icon: '◉' },
   { id: 'archive',  label: 'Archive',  icon: '★' },
 ];
