@@ -128,7 +128,8 @@ export function TrainingScreen() {
   const [streak,     setStreak]     = useState(0);
   const [pillars,    setPillars]    = useState<PillarData[]>([]);
   const [oath,       setOath]       = useState<Oath | null | undefined>(undefined); // undefined=loading
-  const [chronicle,  setChronicle]  = useState<ChronicleEntry[]>([]);
+  const [chronicle,       setChronicle]       = useState<ChronicleEntry[]>([]);
+  const [chronicleLoaded, setChronicleLoaded] = useState(false);
   const [loading,    setLoading]    = useState(true);
   const [completing, setCompleting] = useState<string | null>(null);
   const [toast,      setToast]      = useState<{ msg: string; xp?: number } | null>(null);
@@ -185,6 +186,7 @@ export function TrainingScreen() {
       const data = await res.json();
       const payload = data?.data ?? data;
       setChronicle(Array.isArray(payload) ? payload : []);
+      setChronicleLoaded(true);
     } catch {}
   }, [rootId]);
 
@@ -298,7 +300,7 @@ export function TrainingScreen() {
         {view === 'daily'     && <DailyView rites={rites} completing={completing} onComplete={completeRite} />}
         {view === 'pillars'   && <PillarsView pillars={pillars} alignment={alignment} />}
         {view === 'oath'      && <OathView oath={oath} rootId={rootId} onUpdate={async () => { await fetchOath(); }} showToast={showToast} />}
-        {view === 'chronicle' && <ChronicleView entries={chronicle} />}
+        {view === 'chronicle' && <ChronicleView entries={chronicle} loaded={chronicleLoaded} />}
       </div>
     </div>
   );
@@ -686,14 +688,26 @@ function OathView({ oath, rootId, onUpdate, showToast }: {
 }
 
 // ── Chronicle View ────────────────────────────────────────────────────────────
-function ChronicleView({ entries }: { entries: ChronicleEntry[] }) {
+function ChronicleView({ entries, loaded }: { entries: ChronicleEntry[]; loaded: boolean }) {
+  if (!loaded) {
+    return (
+      <div style={{ textAlign:'center', padding:'48px 20px' }}>
+        <p style={{ fontSize:12, color:'var(--text-3)' }}>Loading Chronicle…</p>
+      </div>
+    );
+  }
+
   if (!Array.isArray(entries) || entries.length === 0) {
     return (
       <div style={{ textAlign:'center', padding:'48px 20px' }}>
         <p style={{ fontSize:30, marginBottom:14, opacity:0.3 }}>◈</p>
-        <p style={{ fontSize:13, color:'var(--text-3)', lineHeight:1.7 }}>
-          The Chronicle is empty.<br />
-          Complete your first rite to begin your record.
+        <p style={{ fontSize:14, color:'var(--text-2)', fontFamily:'var(--font-serif)', marginBottom:8 }}>
+          The Chronicle Awaits
+        </p>
+        <p style={{ fontSize:12, color:'var(--text-3)', lineHeight:1.8 }}>
+          Your record is empty.<br />
+          Complete a daily rite to write your first entry.<br />
+          <span style={{ fontSize:11, opacity:0.7 }}>Every act sealed here is permanent.</span>
         </p>
       </div>
     );
