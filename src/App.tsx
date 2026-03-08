@@ -201,7 +201,7 @@ function Dashboard() {
 
 // ── Router ────────────────────────────────────────────────────────────────────
 function Router() {
-  const { hero, isLoading, signOut } = useAuth();
+  const { hero, isLoading, signIn, signOut } = useAuth();
   const [splashDone, setSplashDone] = useState(false);
   const [route,      setRoute]      = useState<AppRoute>('landing');
 
@@ -237,7 +237,7 @@ useEffect(() => {
     return (
       <RegisterScreen
         onComplete={async (_name, rootId) => {
-          // signIn handled inside RegisterScreen via AuthContext
+          await signIn(rootId);
           setRoute('dashboard');
         }}
         onBack={() => setRoute('landing')}
