@@ -186,7 +186,8 @@ function RankingsTab({ rootId }: { rootId: string }) {
         const res  = await fetch(`${BASE}/api/leaderboard`);
         if (!res.ok) { setLoading(false); return; }
         const data = await res.json();
-        setEntries(Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []);
+        const board = data?.data?.entries ?? data?.data?.board ?? data?.data ?? data;
+        setEntries(Array.isArray(board) ? board : []);
       } catch {}
       finally { setLoading(false); }
     };
@@ -220,7 +221,7 @@ function RankingsTab({ rootId }: { rootId: string }) {
               </p>
               <p style={{ fontSize:10, color:tier.color, marginTop:2 }}>{tier.name} · Lv {e.fate_level ?? 1}</p>
             </div>
-            <span style={{ fontSize:12, color:'var(--text-2)', fontWeight:600, flexShrink:0 }}>{(e.fate_xp ?? 0).toLocaleString()} XP</span>
+            <span style={{ fontSize:12, color:'var(--text-2)', fontWeight:600, flexShrink:0 }}>{e.label ?? `${(e.value ?? e.fate_xp ?? 0).toLocaleString()} XP`}</span>
           </div>
         );
       })}
