@@ -22,6 +22,18 @@ import { DismantleOverlay, type DismantleResult } from './DismantleOverlay';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
 
+// ── Response unwrapper ─────────────────────────────────────────
+// The PIK backend wraps every response in { status, data: X } via a global
+// ResponseInterceptor, but controllers also return { status, data } manually —
+// resulting in a double envelope: { status, data: { status, data: payload } }.
+// This helper collapses either shape to the raw payload.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function unwrap(json: any): any {
+  const d = json?.data;
+  if (d !== null && d !== undefined && typeof d === 'object' && 'data' in d) return d.data;
+  return d ?? json;
+}
+
 // ── Types ──────────────────────────────────────────────────────
 type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
 type CacheReward = CacheRewardPayload;
@@ -183,8 +195,8 @@ export function VaultScreen() {
     try {
       const res  = await fetch(`${BASE}/api/users/${rootId}/caches`);
       const json = await res.json();
-      const raw  = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
-      setCaches((raw as SealedCache[]).filter(c => c.status === 'sealed'));
+      const raw  = unwrap(json);
+      setCaches((Array.isArray(raw) ? raw as SealedCache[] : []).filter(c => c.status === 'sealed'));
     } catch {} finally { setCacheLoading(false); }
   }, [rootId]);
 
@@ -194,8 +206,8 @@ export function VaultScreen() {
     try {
       const res  = await fetch(`${BASE}/api/users/${rootId}/titles`, { headers: { Authorization: `Bearer ${sessionToken}` } });
       const json = await res.json();
-      const td   = json?.data;
-      setTitles(Array.isArray(td) ? td : Array.isArray(json) ? json : []);
+      const td   = unwrap(json);
+      setTitles(Array.isArray(td) ? td : []);
     } catch {
       if (hero?.progression?.titles) {
         const equipped = hero.progression.equipped_title;
@@ -219,14 +231,15 @@ export function VaultScreen() {
       // Nexus balance
       const nRes  = await fetch(`${BASE}/api/users/${rootId}/nexus`, { headers: { Authorization: `Bearer ${sessionToken}` } });
       if (nRes.ok) {
-        const nJson = await nRes.json();
-        setNexusBalance((nJson?.data?.balance ?? nJson?.balance ?? 0) as number);
+        const nJson   = await nRes.json();
+        const nData   = unwrap(nJson);
+        setNexusBalance((nData?.balance ?? nData ?? 0) as number);
       }
       // Components
       const cRes  = await fetch(`${BASE}/api/users/${rootId}/components`, { headers: { Authorization: `Bearer ${sessionToken}` } });
       if (cRes.ok) {
         const cJson = await cRes.json();
-        const arr   = (cJson?.data ?? cJson) as ComponentEntry[];
+        const arr   = unwrap(cJson) as ComponentEntry[];
         if (Array.isArray(arr)) {
           const map: Record<string, number> = {};
           arr.forEach(c => { map[c.id] = c.quantity; });
@@ -237,7 +250,7 @@ export function VaultScreen() {
       const rRes  = await fetch(`${BASE}/api/workshop/recipes`);
       if (rRes.ok) {
         const rJson = await rRes.json();
-        const arr   = rJson?.data ?? rJson;
+        const arr   = unwrap(rJson);
         if (Array.isArray(arr) && arr.length > 0) setRecipes(arr);
       }
     } catch {} finally { setEconomyLoading(false); }
@@ -305,7 +318,7 @@ export function VaultScreen() {
       });
       if (res.ok) {
         const json    = await res.json();
-        const payload = json?.data ?? json;
+        const payload = unwrap(json);
         setDismantleResult({
           nexus_gained:      payload.nexus_gained ?? 0,
           components_gained: payload.components_gained ?? [],
@@ -369,7 +382,7 @@ export function VaultScreen() {
       });
       if (res.ok) {
         const json = await res.json();
-        const payload = json?.data ?? json;
+        const payload = unwrap(json);
         if (payload.new_nexus_balance !== undefined) setNexusBalance(payload.new_nexus_balance);
         if (payload.new_components)                  setComponents(payload.new_components);
         await refreshHero();
