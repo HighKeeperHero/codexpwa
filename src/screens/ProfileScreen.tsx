@@ -39,7 +39,7 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
 
   const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: 'profile',   label: 'Profile' },
-    { id: 'rankings',  label: 'Fates' },
+    { id: 'rankings',  label: 'Leaderboard' },
     { id: 'vault',     label: 'Vault',     badge: sealedCount },
     { id: 'chronicle', label: 'Chronicle' },
     { id: 'wristband', label: 'Wristband' },
@@ -73,8 +73,8 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
               borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
               color: tab === t.id ? 'var(--gold)' : 'rgba(232, 224, 204, 0.45)',
               fontFamily: 'Cinzel, serif',
-              fontSize: 9,
-              letterSpacing: '0.06em',
+              fontSize: 8,
+              letterSpacing: '0.04em',
               textTransform: 'uppercase',
               cursor: 'pointer',
               position: 'relative',
