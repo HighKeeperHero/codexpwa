@@ -113,11 +113,6 @@ export function VaultScreen() {
   const [titlesLoading, setTitlesLoading] = useState(true);
   const [equippingTitle, setEquippingTitle] = useState<string | null>(null);
 
-  // ── Gear state (local — refreshed independently from hero)
-  const [localInventory, setLocalInventory] = useState<GearItem[]>([]);
-  const [localEquipment, setLocalEquipment] = useState<Record<string, GearItem | null>>({});
-  const [gearLoading, setGearLoading] = useState(false);
-
   // ── Section state
   type Section = 'caches' | 'titles' | 'gear';
   const [section, setSection] = useState<Section>('caches');
@@ -171,35 +166,6 @@ export function VaultScreen() {
   }, [rootId, sessionToken, hero]);
 
   useEffect(() => { fetchTitles(); }, [fetchTitles]);
-
-  // ── Fetch gear ───────────────────────────────────────────
-
-  const fetchGear = useCallback(async () => {
-    if (!rootId) return;
-    setGearLoading(true);
-    try {
-      const [invRes, eqRes] = await Promise.all([
-        fetch(`${BASE}/api/users/${rootId}/inventory`),
-        fetch(`${BASE}/api/users/${rootId}/equipment`),
-      ]);
-      const invJson = invRes.ok ? await invRes.json() : null;
-      const eqJson  = eqRes.ok  ? await eqRes.json()  : null;
-      const inv = invJson?.data ?? invJson ?? [];
-      const eq  = eqJson?.data  ?? eqJson  ?? {};
-      setLocalInventory(Array.isArray(inv) ? inv as GearItem[] : []);
-      setLocalEquipment((typeof eq === 'object' && eq !== null && !Array.isArray(eq)) ? eq as Record<string, GearItem | null> : {});
-    } catch {
-      // Fallback to hero object if endpoints unavailable
-      const invRaw = hero?.gear?.inventory;
-      const eqRaw  = hero?.gear?.equipment;
-      setLocalInventory(Array.isArray(invRaw) ? invRaw as GearItem[] : []);
-      setLocalEquipment((eqRaw && typeof eqRaw === 'object') ? eqRaw as Record<string, GearItem | null> : {});
-    } finally {
-      setGearLoading(false);
-    }
-  }, [rootId, hero]);
-
-  useEffect(() => { fetchGear(); }, [fetchGear]);
 
   // ── Open cache ────────────────────────────────────────────
 
@@ -269,20 +235,16 @@ export function VaultScreen() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message ?? 'Failed to equip');
-      // Refresh gear locally (fast) and hero (for XP/stats)
-      await Promise.all([fetchGear(), refreshHero()]);
+      // Force hero refresh and update local gear state from refreshed hero
+      await refreshHero();
     } catch (e: any) {
       alert(e?.message ?? 'Failed to equip item');
     }
   };
 
-  // Use local gear state (refreshed after equip) — falls back to hero on first load
-  const inventory: GearItem[] = localInventory.length > 0
-    ? localInventory
-    : (Array.isArray(hero?.gear?.inventory) ? hero!.gear!.inventory as GearItem[] : []);
-  const equipment: Record<string, GearItem | null> = Object.keys(localEquipment).length > 0
-    ? localEquipment
-    : ((hero?.gear?.equipment && typeof hero.gear.equipment === 'object') ? hero.gear.equipment as Record<string, GearItem | null> : {});
+  const inventoryRaw = hero?.gear?.inventory;
+  const inventory: GearItem[] = Array.isArray(inventoryRaw) ? inventoryRaw as GearItem[] : [];
+  const equipment = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
 
   const safeTitles = Array.isArray(titles) ? titles : [];
   const earnedTitles  = safeTitles.filter(t => t.is_earned);
@@ -662,15 +624,11 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
         }}>
           {rewardTypeLabel[reward.reward_type] ?? 'Reward'}
         </p>
-        <p style={{
-          fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700,
-          color: '#e8e0cc', margin: '0 0 4px',
-        }}>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: '#e8e0cc', margin: '0 0 4px' }}>
           {reward.display_name}
         </p>
         {reward.reward_type === 'gear' && reward.slot && (
-          <p style={{ fontSize: 11, color: 'rgba(232,224,204,0.45)', margin: '0 0 8px',
-            textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          <p style={{ fontSize: 11, color: 'rgba(232,224,204,0.45)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             {GEAR_SLOT_LABEL[reward.slot] ?? reward.slot}
           </p>
         )}
@@ -851,8 +809,7 @@ function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void 
 
   return (
     <div style={{
-      background: 'var(--surface)',
-      border: `1px solid ${color}`,
+      background: 'var(--surface)', border: `1px solid ${color}`,
       borderRadius: 10, padding: '12px 14px',
       display: 'flex', alignItems: 'center', gap: 12,
       boxShadow: `0 0 10px ${RARITY_GLOW[rarity] ?? 'transparent'}`,
@@ -860,10 +817,8 @@ function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void 
       <div style={{
         width: 40, height: 40, flexShrink: 0,
         background: RARITY_GLOW[rarity] ?? 'transparent',
-        border: `1px solid ${color}`,
-        borderRadius: 8,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 20,
+        border: `1px solid ${color}`, borderRadius: 8,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
       }}>
         {item.icon ?? '⚔'}
       </div>
@@ -875,22 +830,14 @@ function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void 
           {RARITY_LABEL[rarity] ?? rarity} · {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
         </p>
       </div>
-      <button
-        onClick={handleEquip}
-        disabled={equipping}
-        style={{
-          padding: '8px 16px', flexShrink: 0,
-          background: color, color: '#0B0A08',
-          border: `2px solid ${color}`,
-          borderRadius: 6,
-          fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 900,
-          cursor: equipping ? 'wait' : 'pointer',
-          opacity: equipping ? 0.7 : 1,
-          letterSpacing: '0.08em',
-          boxShadow: `0 0 8px ${color}60`,
-          minWidth: 64,
-        }}
-      >
+      <button onClick={handleEquip} disabled={equipping} style={{
+        padding: '8px 16px', flexShrink: 0,
+        background: color, color: '#0B0A08',
+        border: `2px solid ${color}`, borderRadius: 6,
+        fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 900,
+        cursor: equipping ? 'wait' : 'pointer', opacity: equipping ? 0.7 : 1,
+        letterSpacing: '0.08em', boxShadow: `0 0 8px ${color}60`, minWidth: 64,
+      }}>
         {equipping ? '…' : 'EQUIP'}
       </button>
     </div>
