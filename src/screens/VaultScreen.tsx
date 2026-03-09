@@ -9,9 +9,11 @@
 // - Slot icon/label smaller and muted
 //
 // BUG FIX: GearItem.rarity_tier → rarity  (matches pik.ts mapGearItem)
+// v3: RewardReveal replaced by CacheOpenOverlay (cinematic animation)
 // ============================================================
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useAuth } from '../AuthContext';
+import { CacheOpenOverlay, type CacheRewardPayload } from './CacheOpenOverlay';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
 
@@ -23,11 +25,8 @@ interface SealedCache {
   label: string; status: 'sealed' | 'opened'; trigger: string; granted_at: string;
 }
 
-interface CacheReward {
-  reward_type: string; reward_value: string; display_name: string;
-  rarity_tier: Rarity; xp_granted?: number; message?: string;
-  slot?: string; description?: string; modifiers?: Record<string, number>;
-}
+// Re-use the payload type from CacheOpenOverlay
+type CacheReward = CacheRewardPayload;
 
 interface TitleEntry {
   title_id: string; display_name: string; category: string;
@@ -73,7 +72,9 @@ export function VaultScreen() {
   const { hero, sessionToken, refreshHero } = useAuth();
   const [caches, setCaches] = useState<SealedCache[]>([]);
   const [openingId, setOpeningId] = useState<string | null>(null);
-  const [pendingOpen, setPendingOpen] = useState<SealedCache | null>(null);
+  // openingCache: set when the overlay should be shown (immediately on confirm)
+  const [openingCache, setOpeningCache] = useState<SealedCache | null>(null);
+  // reward: null while API in-flight, populated when response arrives
   const [reward, setReward] = useState<CacheReward | null>(null);
   const [cacheLoading, setCacheLoading] = useState(true);
   const [titles, setTitles] = useState<TitleEntry[]>([]);
@@ -128,7 +129,10 @@ export function VaultScreen() {
 
   const handleOpenCache = async (cache: SealedCache) => {
     if (!rootId || !sessionToken) return;
-    setOpeningId(cache.cache_id); setPendingOpen(null); setReward(null);
+    // Immediately launch overlay — reward arrives async
+    setOpeningCache(cache);
+    setReward(null);
+    setOpeningId(cache.cache_id);
     try {
       const res = await fetch(`${BASE}/api/users/${rootId}/caches/${cache.cache_id}/open`, {
         method: 'POST',
@@ -140,8 +144,18 @@ export function VaultScreen() {
       setReward(r);
       await fetchCaches(); await refreshHero();
       if (r.reward_type === 'title') await fetchTitles();
-    } catch (e: any) { alert(e?.message ?? 'Failed to open cache'); }
+    } catch (e: any) {
+      // On error, close the overlay and alert
+      setOpeningCache(null);
+      setReward(null);
+      alert(e?.message ?? 'Failed to open cache');
+    }
     finally { setOpeningId(null); }
+  };
+
+  const handleOverlayDismiss = () => {
+    setOpeningCache(null);
+    setReward(null);
   };
 
   const handleEquipTitle = async (titleId: string, isEquipped: boolean) => {
@@ -218,35 +232,16 @@ export function VaultScreen() {
       {/* ── CACHES ──────────────────────────────────────────── */}
       {section === 'caches' && (
         <div style={{ padding: '20px 16px 0' }}>
-          {reward && <RewardReveal reward={reward} onDismiss={() => setReward(null)} />}
-          {pendingOpen && !reward && (
-            <div style={{
-              background: 'var(--surface)', border: `1px solid ${RARITY_COLOR[pendingOpen.rarity]}`,
-              borderRadius: 12, padding: 20, marginBottom: 16,
-              boxShadow: `0 0 24px ${RARITY_GLOW[pendingOpen.rarity]}`,
-            }}>
-              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: RARITY_COLOR[pendingOpen.rarity], margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {pendingOpen.label}
-              </p>
-              <p style={{ color: 'var(--text-3)', fontSize: 13, margin: '0 0 16px', fontStyle: 'italic' }}>
-                "The seal holds what has been set aside for you."
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => handleOpenCache(pendingOpen)} disabled={openingId !== null} style={{
-                  flex: 1, padding: '10px 0', background: RARITY_COLOR[pendingOpen.rarity],
-                  color: '#0B0A08', border: 'none', borderRadius: 8,
-                  fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
-                  cursor: openingId ? 'wait' : 'pointer',
-                }}>
-                  {openingId ? 'Opening…' : 'Break the Seal'}
-                </button>
-                <button onClick={() => setPendingOpen(null)} style={{
-                  padding: '10px 16px', background: 'transparent', color: 'var(--text-2)',
-                  border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', fontSize: 13,
-                }}>Later</button>
-              </div>
-            </div>
+
+          {/* Cinematic overlay — shown immediately on open, reward populated async */}
+          {openingCache && (
+            <CacheOpenOverlay
+              cache={openingCache}
+              reward={reward}
+              onDismiss={handleOverlayDismiss}
+            />
           )}
+
           {cacheLoading ? (
             <p style={{ color: 'var(--text-3)', textAlign: 'center', fontSize: 13, marginTop: 32 }}>Loading caches…</p>
           ) : caches.length === 0 ? (
@@ -259,7 +254,7 @@ export function VaultScreen() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {caches.map(c => (
                   <CacheCard key={c.cache_id} cache={c} isOpening={openingId === c.cache_id}
-                    onTap={() => { setPendingOpen(c); setReward(null); }} />
+                    onTap={() => handleOpenCache(c)} />
                 ))}
               </div>
             </>
@@ -382,76 +377,6 @@ function CacheCard({ cache, isOpening, onTap }: { cache: SealedCache; isOpening:
       </div>
       <div style={{ color, fontSize: 18, flexShrink: 0 }}>›</div>
     </button>
-  );
-}
-
-// ── Reward Reveal ──────────────────────────────────────────────
-function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: () => void }) {
-  const rarity = (reward.rarity_tier ?? 'common') as Rarity;
-  const color  = RARITY_COLOR[rarity];
-  const glow   = RARITY_GLOW[rarity];
-  const rewardIcon: Record<string, string> = { xp_boost: '✦', title: '◈', gear: '⚔', marker: '⬡' };
-  const rewardTypeLabel: Record<string, string> = { xp_boost: 'Fate XP', title: 'Title Unlocked', gear: 'Gear Found', marker: 'Lore Fragment' };
-  const itemName = reward.display_name || (
-    reward.reward_type === 'gear'     ? 'Gear Item' :
-    reward.reward_type === 'title'    ? 'New Title' :
-    reward.reward_type === 'xp_boost' ? `${reward.reward_value ?? '?'} XP` : 'Reward'
-  );
-  return (
-    <div onClick={onDismiss} style={{
-      position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(11,15,26,0.94)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.3s ease',
-    }}>
-      <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:scale(0.9); } to { opacity:1; transform:scale(1); } }
-        @keyframes glowPulse { 0%,100% { box-shadow:0 0 24px ${glow}; } 50% { box-shadow:0 0 60px ${color}40; } }
-      `}</style>
-      <div style={{
-        background: 'var(--surface)', border: `2px solid ${color}`, borderRadius: 16,
-        padding: '40px 28px', textAlign: 'center', maxWidth: 300, width: '100%',
-        animation: 'glowPulse 2s ease infinite',
-      }}>
-        <div style={{ fontSize: 52, marginBottom: 12, color, filter: `drop-shadow(0 0 12px ${color})` }}>
-          {rewardIcon[reward.reward_type] ?? '✦'}
-        </div>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color, letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 10px' }}>
-          {rewardTypeLabel[reward.reward_type] ?? 'Reward'}
-        </p>
-        <div style={{ display: 'inline-block', background: `${color}22`, border: `1px solid ${color}`, borderRadius: 999, padding: '3px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color, textTransform: 'uppercase', marginBottom: 16 }}>
-          {RARITY_LABEL[rarity]}
-        </div>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 6px', lineHeight: 1.2 }}>
-          {itemName}
-        </p>
-        {reward.reward_type === 'gear' && reward.slot && (
-          <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-            {GEAR_SLOT_LABEL[reward.slot] ?? reward.slot}
-          </p>
-        )}
-        {reward.modifiers && Object.keys(reward.modifiers).length > 0 && (
-          <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: '8px 14px', marginBottom: 14, textAlign: 'left' }}>
-            {Object.entries(reward.modifiers).map(([k, v]) => (
-              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, margin: '3px 0' }}>
-                <span style={{ color: 'var(--text-2)' }}>{MODIFIER_LABEL[k] ?? k}</span>
-                <span style={{ color: 'var(--gold)', fontWeight: 700 }}>+{v}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {reward.xp_granted && (
-          <p style={{ fontSize: 13, color: 'var(--gold)', margin: '0 0 14px', fontWeight: 700 }}>
-            +{reward.xp_granted} Fate XP
-          </p>
-        )}
-        <p style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic', margin: '0 0 28px', lineHeight: 1.5 }}>
-          {reward.message ?? 'The Veil has given what was kept for you.'}
-        </p>
-        <button onClick={e => { e.stopPropagation(); onDismiss(); }} style={{
-          width: '100%', padding: '12px 0', background: color, color: '#0B0A08',
-          border: 'none', borderRadius: 8, fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-        }}>Claim</button>
-      </div>
-    </div>
   );
 }
 
