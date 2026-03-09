@@ -174,9 +174,10 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
   const [components, setComponents] = useState<Record<string, number>>({});
   const [economyLoading, setEconomyLoading] = useState(true);
 
-  // Dismantle
+  // Dismantle — dismantledIds removes items from local list instantly before server confirms
   const [dismantlingItem, setDismantlingItem] = useState<GearItem | null>(null);
   const [dismantleResult, setDismantleResult] = useState<DismantleResult | null>(null);
+  const [dismantledIds, setDismantledIds]     = useState<Set<string>>(new Set());
 
   // Workshop / Forge
   const [recipes, setRecipes] = useState<Recipe[]>(DEFAULT_RECIPES);
@@ -184,23 +185,44 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
   const [craftMsg, setCraftMsg] = useState<string | null>(null);
 
   type Section = 'caches' | 'titles' | 'gear' | 'forge';
-  const [section, setSection]       = useState<Section>('caches');
-  // Track which sections have been viewed — clears their badge on first visit
-  const [seenSections, setSeenSections] = useState<Set<Section>>(new Set());
+  const [section, setSection] = useState<Section>('caches');
+
+  // Title badge — persisted in localStorage per hero so it survives tab switches & remounts.
+  // Stores the last-seen earned title count. Badge = max(0, current − stored).
+  // Resets (badge hides) when Titles section is opened. Returns when new titles are earned.
+  const rootIdRef = hero?.root_id ?? '';
+  const [lastSeenTitleCount, setLastSeenTitleCount] = useState<number>(0);
+
+  // Load last-seen title count from localStorage when hero loads
+  useEffect(() => {
+    if (!rootIdRef) return;
+    try {
+      const stored = parseInt(localStorage.getItem(`pik:titles_seen:${rootIdRef}`) ?? '0', 10) || 0;
+      setLastSeenTitleCount(stored);
+    } catch {}
+  }, [rootIdRef]);
 
   const handleSectionChange = (s: Section) => {
     setSection(s);
-    setSeenSections(prev => { const next = new Set(prev); next.add(s); return next; });
+    if (s === 'titles') {
+      // Mark all currently-loaded earned titles as seen
+      const count = Array.isArray(titles) ? titles.filter(t => t.is_earned).length : 0;
+      if (count > 0) {
+        setLastSeenTitleCount(count);
+        try { localStorage.setItem(`pik:titles_seen:${rootIdRef}`, String(count)); } catch {}
+      }
+    }
   };
 
-  // Notify parent when titles section is viewed so badge can clear
+  // Also mark seen when titles finish loading while already on Titles tab
   useEffect(() => {
-    if (section === 'titles' && onTitlesViewed) {
-      const earned = Array.isArray(titles) ? titles.filter(t => t.is_earned).length : 0;
-      onTitlesViewed(earned);
-    }
+    if (section !== 'titles') return;
+    const count = Array.isArray(titles) ? titles.filter(t => t.is_earned).length : 0;
+    if (count <= lastSeenTitleCount) return;
+    setLastSeenTitleCount(count);
+    try { localStorage.setItem(`pik:titles_seen:${rootIdRef}`, String(count)); } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section, titles]);
+  }, [titles, section]);
 
   const rootId = hero?.root_id;
 
@@ -327,58 +349,54 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
   // ── Dismantle ─────────────────────────────────────────────
   const handleDismantle = async (item: GearItem) => {
     if (!rootId || !sessionToken) return;
-    setDismantlingItem(item); setDismantleResult(null);
+
+    // ① Compute yield synchronously — no API wait, zero overlay delay
+    const yield_  = DISMANTLE_YIELD[item.rarity];
+    const newBal  = nexusBalance + yield_.nexus;
+    const newComp = { ...components };
+    yield_.components.forEach(c => { newComp[c.id] = (newComp[c.id] ?? 0) + c.qty; });
+    const immediateResult: DismantleResult = {
+      nexus_gained:      yield_.nexus,
+      components_gained: yield_.components.map(c => ({ id: c.id, name: c.name, icon: c.icon, quantity: c.qty })),
+      new_nexus_balance: newBal,
+      new_components:    newComp,
+    };
+
+    // ② Show overlay with result immediately — DismantleOverlay transitions straight to YIELD
+    setDismantlingItem(item);
+    setDismantleResult(immediateResult);
+
+    // ③ Remove item from local inventory list instantly
+    setDismantledIds(prev => { const next = new Set(prev); next.add(item.inventory_id); return next; });
+
+    // ④ Apply economy locally
+    setNexusBalance(newBal);
+    setComponents(newComp);
+
+    // ⑤ Fire API in background — reconcile with server values if endpoint exists
     try {
-      const res  = await fetch(`${BASE}/api/users/${rootId}/gear/${item.inventory_id}/dismantle`, {
-        method: 'POST', headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
+      const res = await fetch(`${BASE}/api/users/${rootId}/gear/${item.inventory_id}/dismantle`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
       });
       if (res.ok) {
         const json    = await res.json();
         const payload = unwrap(json);
-        setDismantleResult({
-          nexus_gained:      payload.nexus_gained ?? 0,
-          components_gained: payload.components_gained ?? [],
-          new_nexus_balance: payload.new_nexus_balance ?? nexusBalance + (payload.nexus_gained ?? 0),
-          new_components:    payload.new_components ?? {},
-        });
-        if (payload.new_nexus_balance !== undefined) setNexusBalance(payload.new_nexus_balance);
-        if (payload.new_components)                  setComponents(payload.new_components);
-      } else {
-        // Backend doesn't have this endpoint yet — apply client-side
-        const yield_  = DISMANTLE_YIELD[item.rarity];
-        const newBal  = nexusBalance + yield_.nexus;
-        const newComp = { ...components };
-        yield_.components.forEach(c => { newComp[c.id] = (newComp[c.id] ?? 0) + c.qty; });
-        setNexusBalance(newBal);
-        setComponents(newComp);
-        setDismantleResult({
-          nexus_gained:      yield_.nexus,
-          components_gained: yield_.components.map(c => ({ id: c.id, name: c.name, icon: c.icon, quantity: c.qty })),
-          new_nexus_balance: newBal,
-          new_components:    newComp,
-        });
+        // Reconcile with authoritative server values
+        const serverBal  = payload.new_nexus_balance ?? newBal;
+        const serverComp = payload.new_components    ?? newComp;
+        setNexusBalance(serverBal);
+        setComponents(serverComp);
+        setDismantleResult(prev => prev ? { ...prev, new_nexus_balance: serverBal, new_components: serverComp } : prev);
       }
-      await refreshHero();
-    } catch (e: any) {
-      // Fallback: apply locally
-      const yield_  = DISMANTLE_YIELD[item.rarity];
-      const newBal  = nexusBalance + yield_.nexus;
-      const newComp = { ...components };
-      yield_.components.forEach(c => { newComp[c.id] = (newComp[c.id] ?? 0) + c.qty; });
-      setNexusBalance(newBal);
-      setComponents(newComp);
-      setDismantleResult({
-        nexus_gained:      yield_.nexus,
-        components_gained: yield_.components.map(c => ({ id: c.id, name: c.name, icon: c.icon, quantity: c.qty })),
-        new_nexus_balance: newBal,
-        new_components:    newComp,
-      });
-    }
+      // Whether endpoint existed or not, server state now matches — safe to refresh
+    } catch {}
+    // Do NOT refreshHero here — it would re-add the item before DB deletion commits
   };
 
   const handleDismantleDismiss = () => {
     setDismantlingItem(null); setDismantleResult(null);
-    // Refresh to drop dismantled item from inventory
+    // Refresh now to sync hero state post-dismantle
     refreshHero();
   };
 
@@ -425,7 +443,7 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
   const inventoryRaw     = hero?.gear?.inventory;
   const inventory: GearItem[] = Array.isArray(inventoryRaw) ? inventoryRaw as GearItem[] : [];
   const equipment        = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
-  const unequippedItems  = inventory.filter(i => !i.is_equipped);
+  const unequippedItems  = inventory.filter(i => !i.is_equipped && !dismantledIds.has(i.inventory_id));
   const safeTitles       = Array.isArray(titles) ? titles : [];
   const earnedTitles     = safeTitles.filter(t => t.is_earned);
   const lockedTitles     = safeTitles.filter(t => !t.is_earned);
@@ -457,12 +475,12 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
       }}>
         {(['caches','titles','gear','forge'] as Section[]).map(s => {
           const labels: Record<Section, string> = { caches: 'Caches', titles: 'Titles', gear: 'Gear', forge: 'Forge' };
+          const titleBadge = Math.max(0, earnedTitles.length - lastSeenTitleCount);
           const rawCounts: Record<Section, number> = {
-            caches: caches.length, titles: earnedTitles.length,
+            caches: caches.length, titles: titleBadge,
             gear: unequippedItems.length, forge: recipes.length,
           };
-          // Badge only shows until the section has been viewed this session
-          const badgeCount = seenSections.has(s) ? 0 : rawCounts[s];
+          const badgeCount = rawCounts[s];
           const isActive = section === s;
           const isForge  = s === 'forge';
           return (
