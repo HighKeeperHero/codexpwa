@@ -1,24 +1,22 @@
-// api/lore.ts
-// ============================================================
+// api/lore.js
 // Vercel Serverless Function — Narrative Lore Excerpt
-//
-// POST /api/lore
-// Body: { rootId, region, class, origin, wound, calling, virtue, vice }
-// Returns: { lore: string }
-//
-// Env var required in Vercel dashboard:
-//   ANTHROPIC_API_KEY=sk-ant-...
-//
-// The key never touches the client bundle.
-// ============================================================
+// Plain JS to avoid any TypeScript build issues.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { rootId, region, class: heroClass, origin, wound, calling, virtue, vice } = req.body ?? {};
+  const {
+    rootId,
+    region,
+    class: heroClass,
+    origin,
+    wound,
+    calling,
+    virtue,
+    vice,
+  } = req.body ?? {};
 
   if (!rootId || !region || !heroClass) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -51,16 +49,16 @@ Rules:
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method:  'POST',
+      method: 'POST',
       headers: {
-        'Content-Type':      'application/json',
-        'x-api-key':         apiKey,
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model:      'claude-haiku-4-5-20251001',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,
-        messages:   [{ role: 'user', content: prompt }],
+        messages: [{ role: 'user', content: prompt }],
       }),
     });
 
@@ -70,18 +68,16 @@ Rules:
       return res.status(502).json({ error: 'Upstream API error' });
     }
 
-    const data  = await response.json();
-    const lore  = data?.content?.[0]?.text?.trim() ?? '';
+    const data = await response.json();
+    const lore = data?.content?.[0]?.text?.trim() ?? '';
 
     if (!lore) {
-      return res.status(502).json({ error: 'Empty response from model' });
+      return res.status(502).json({ error: 'Empty response' });
     }
 
-    // Cache-control: immutable per rootId (same hero always gets same lore server-side
-    // because the model seed is deterministic via the profile — close enough)
     res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
     return res.status(200).json({ lore });
-  } catch (e: any) {
+  } catch (e) {
     console.error('Lore generation failed:', e);
     return res.status(500).json({ error: 'Internal error' });
   }
