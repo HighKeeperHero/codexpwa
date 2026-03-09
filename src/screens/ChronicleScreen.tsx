@@ -11,7 +11,7 @@
 // All data already loaded via fetchHero() — zero new API calls.
 // ============================================================
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import {
   TIER_FOR_LEVEL,
@@ -20,6 +20,12 @@ import {
   MODIFIER_LABEL,
   xpProgress,
 } from '@/api/pik';
+
+// ── Module-level lore cache (survives re-renders, cleared on page reload) ─────
+// Maps rootId → generated lore string so the API is only called once per hero
+// per browser session regardless of how many times the Chronicle tab is opened.
+const LORE_CACHE = new Map<string, string>();
+
 
 // ── Types (local mirrors matching pik.ts shapes) ─────────────
 
@@ -147,6 +153,15 @@ export function ChronicleScreen() {
               hero={hero}
               alignColor={alignColor}
             />
+
+            {/* AI Lore Excerpt — generated once per hero, cached in session */}
+            {narrative && (
+              <LoreExcerpt
+                rootId={hero.root_id}
+                narrative={narrative}
+                alignColor={alignColor}
+              />
+            )}
 
             {/* Narrative profile */}
             {narrative && (
@@ -396,6 +411,160 @@ function TierCard({ tier, hero, alignColor }: { tier: any; hero: any; alignColor
           {prog.sessions_completed} sessions
         </p>
       </div>
+    </div>
+  );
+}
+
+// ── LoreExcerpt ───────────────────────────────────────────────
+// Calls /api/lore on first render for this rootId.
+// Shows a shimmer skeleton while loading, the lore text once ready,
+// or silently nothing on error (non-blocking).
+
+function LoreExcerpt({
+  rootId, narrative, alignColor,
+}: {
+  rootId: string;
+  narrative: any;
+  alignColor: string;
+}) {
+  const [lore,    setLore]    = useState<string | null>(LORE_CACHE.get(rootId) ?? null);
+  const [loading, setLoading] = useState(!LORE_CACHE.has(rootId));
+  const fetched = useRef(LORE_CACHE.has(rootId));
+
+  useEffect(() => {
+    if (fetched.current) return;
+    fetched.current = true;
+
+    const generate = async () => {
+      try {
+        const res = await fetch('/api/lore', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            rootId,
+            region:  narrative.region,
+            class:   narrative.class,
+            origin:  narrative.origin,
+            wound:   narrative.wound,
+            calling: narrative.calling,
+            virtue:  narrative.virtue,
+            vice:    narrative.vice,
+          }),
+        });
+
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.lore) {
+          LORE_CACHE.set(rootId, data.lore);
+          setLore(data.lore);
+        }
+      } catch {
+        // Silently fail — lore is a bonus, not critical
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    generate();
+  }, [rootId]);
+
+  // Shimmer while loading
+  if (loading) {
+    return (
+      <div style={{
+        background:   'var(--surface)',
+        border:       `1px solid ${alignColor}25`,
+        borderRadius: 12,
+        padding:      '16px 14px',
+        overflow:     'hidden',
+        position:     'relative',
+      }}>
+        <style>{`
+          @keyframes lore-shimmer {
+            0%   { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+          }
+        `}</style>
+        {/* Shimmer lines */}
+        {[100, 88, 94, 60].map((w, i) => (
+          <div key={i} style={{
+            height:     11,
+            width:      `${w}%`,
+            borderRadius: 4,
+            marginBottom: i < 3 ? 10 : 0,
+            background: `linear-gradient(90deg,
+              rgba(232,224,204,0.04) 0%,
+              rgba(232,224,204,0.10) 40%,
+              rgba(232,224,204,0.04) 80%)`,
+            backgroundSize: '800px 100%',
+            animation:  `lore-shimmer 1.6s ${i * 0.1}s infinite linear`,
+          }} />
+        ))}
+      </div>
+    );
+  }
+
+  // Nothing if failed
+  if (!lore) return null;
+
+  return (
+    <div style={{
+      background:   'var(--surface)',
+      border:       `1px solid ${alignColor}40`,
+      borderRadius: 12,
+      padding:      '16px 14px',
+      boxShadow:    `0 0 24px ${alignColor}0a`,
+      position:     'relative',
+      overflow:     'hidden',
+    }}>
+      {/* Subtle top accent */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+        background: `linear-gradient(90deg, transparent, ${alignColor}60, transparent)`,
+      }} />
+
+      {/* Header */}
+      <div style={{
+        display:       'flex',
+        alignItems:    'center',
+        gap:           8,
+        marginBottom:  12,
+      }}>
+        <span style={{ color: alignColor, fontSize: 11 }}>◈</span>
+        <p style={{
+          fontFamily:    'Cinzel, serif',
+          fontSize:      9,
+          color:         `${alignColor}99`,
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          margin:        0,
+        }}>
+          Fate Chronicle — First Entry
+        </p>
+        <span style={{
+          marginLeft:    'auto',
+          fontSize:      8,
+          letterSpacing: '0.1em',
+          color:         'rgba(232,224,204,0.2)',
+          fontFamily:    'Cinzel, serif',
+          textTransform: 'uppercase',
+        }}>
+          AI · Unique
+        </span>
+      </div>
+
+      {/* Lore text */}
+      <p style={{
+        fontFamily:  'Georgia, serif',
+        fontSize:    13,
+        fontStyle:   'italic',
+        color:       'rgba(232,224,204,0.80)',
+        lineHeight:  1.75,
+        margin:      0,
+        letterSpacing: '0.01em',
+      }}>
+        {lore}
+      </p>
     </div>
   );
 }
