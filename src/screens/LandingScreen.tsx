@@ -1,37 +1,38 @@
+// src/screens/LandingScreen.tsx
+// v2 icon color fixes:
+//   - "Create Fate Account" button icon (⚔): color white
+//   - "Sign In" button icon (◈): color var(--gold) / #FFA500
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/AuthContext';
 
 type Mode = 'choose' | 'login' | 'register';
-
-interface Props {
-  onAuthenticated: () => void;
-}
+interface Props { onAuthenticated: () => void; }
 
 export function LandingScreen({ onAuthenticated }: Props) {
   const { loginWithEmail, registerWithEmail } = useAuth();
-  const [mode,     setMode]     = useState<Mode>('choose');
-  const [email,    setEmail]    = useState('');
+  const [mode, setMode] = useState<Mode>('choose');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error,    setError]    = useState<string | null>(null);
-  const [loading,  setLoading]  = useState(false);
-  const [entered,  setEntered]  = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [entered, setEntered] = useState(false);
 
-  useEffect(() => { const t = setTimeout(() => setEntered(true), 80); return () => clearTimeout(t); }, []);
+  useEffect(() => {
+    const t = setTimeout(() => setEntered(true), 80);
+    return () => clearTimeout(t);
+  }, []);
 
   const submit = async () => {
     if (!email.trim() || !password.trim()) { setError('Email and password are required'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       if (mode === 'login')    await loginWithEmail(email.trim(), password);
       if (mode === 'register') await registerWithEmail(email.trim(), password);
       onAuthenticated();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
@@ -42,17 +43,20 @@ export function LandingScreen({ onAuthenticated }: Props) {
       padding: '40px 24px',
     }}>
       <style>{`
-        @keyframes landIn { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes landIn {
+          from { opacity:0; transform:translateY(16px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
         .li { opacity:0; }
         .li.e { animation: landIn 0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
         .auth-input {
-          width:100%; padding:14px 16px; background:var(--surface);
-          border:1px solid var(--border); border-radius:10px;
-          color:var(--text-1); font-size:15px; outline:none;
-          transition:border-color 0.2s; box-sizing:border-box;
-          font-family:var(--font-body);
+          width:100%; padding:14px 16px;
+          background:var(--surface); border:1px solid var(--border);
+          border-radius:10px; color:var(--text-1); font-size:15px;
+          outline:none; transition:border-color 0.2s;
+          box-sizing:border-box; font-family:var(--font-body);
         }
-        .auth-input:focus { border-color:rgba(200,160,78,0.4); }
+        .auth-input:focus { border-color:rgba(255,165,0,0.4); }
         .auth-input::placeholder { color:var(--text-3); }
         .oauth-btn {
           width:100%; padding:14px; border-radius:10px;
@@ -61,7 +65,7 @@ export function LandingScreen({ onAuthenticated }: Props) {
           display:flex; align-items:center; justify-content:center; gap:10px;
           transition:border-color 0.2s;
         }
-        .oauth-btn:hover { border-color:rgba(168,146,122,0.3); }
+        .oauth-btn:hover { border-color:rgba(255,165,0,0.25); }
       `}</style>
 
       {/* Wordmark */}
@@ -78,25 +82,38 @@ export function LandingScreen({ onAuthenticated }: Props) {
 
       <div className={`li ${entered ? 'e' : ''}`} style={{ animationDelay:'100ms', width:'100%', maxWidth:380 }}>
 
-        {/* ── Mode: choose ── */}
+        {/* ── Mode: choose ─────────────────────────────────── */}
         {mode === 'choose' && (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+
+            {/* Create Fate Account */}
             <button
               onClick={() => setMode('register')}
               style={{
                 width:'100%', padding:'20px', borderRadius:12, cursor:'pointer', textAlign:'left',
-                background:'linear-gradient(135deg,rgba(200,160,78,0.08),rgba(200,94,40,0.03))',
-                border:'1px solid rgba(200,160,78,0.25)', display:'flex', alignItems:'center', gap:14,
+                background:'linear-gradient(135deg,rgba(255,165,0,0.08),rgba(200,94,40,0.03))',
+                border:'1px solid rgba(255,165,0,0.25)',
+                display:'flex', alignItems:'center', gap:14,
               }}
             >
-              <div style={{ width:44, height:44, borderRadius:10, background:'rgba(200,160,78,0.12)', border:'1px solid rgba(200,160,78,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>⚔</div>
+              <div style={{
+                width:44, height:44, borderRadius:10,
+                background:'rgba(255,165,0,0.12)', border:'1px solid rgba(255,165,0,0.3)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:20, flexShrink:0,
+                /* ← FIXED: Create Fate Account icon is white */
+                color: '#FFFFFF',
+              }}>⚔</div>
               <div>
-                <p style={{ fontSize:15, fontWeight:600, color:'var(--gold)', marginBottom:3, fontFamily:'var(--font-serif)' }}>Create Fate Account</p>
+                <p style={{ fontSize:15, fontWeight:600, color:'var(--gold)', marginBottom:3, fontFamily:'var(--font-serif)' }}>
+                  Create Fate Account
+                </p>
                 <p style={{ fontSize:12, color:'var(--text-3)' }}>Begin your record in the Codex</p>
               </div>
               <span style={{ marginLeft:'auto', color:'var(--gold)', opacity:0.5, fontSize:18, flexShrink:0 }}>›</span>
             </button>
 
+            {/* Sign In */}
             <button
               onClick={() => setMode('login')}
               style={{
@@ -105,28 +122,35 @@ export function LandingScreen({ onAuthenticated }: Props) {
                 display:'flex', alignItems:'center', gap:14,
               }}
             >
-              <div style={{ width:44, height:44, borderRadius:10, background:'rgba(37,32,24,0.8)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0 }}>◈</div>
+              <div style={{
+                width:44, height:44, borderRadius:10,
+                background:'rgba(255,165,0,0.08)', border:'1px solid rgba(255,165,0,0.25)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:20, flexShrink:0,
+                /* ← FIXED: Sign In icon is gold */
+                color: 'var(--gold)',
+              }}>◈</div>
               <div>
-                <p style={{ fontSize:15, fontWeight:600, color:'var(--text-1)', marginBottom:3, fontFamily:'var(--font-serif)' }}>Sign In</p>
+                <p style={{ fontSize:15, fontWeight:600, color:'var(--text-1)', marginBottom:3, fontFamily:'var(--font-serif)' }}>
+                  Sign In
+                </p>
                 <p style={{ fontSize:12, color:'var(--text-3)' }}>Return to your existing account</p>
               </div>
               <span style={{ marginLeft:'auto', color:'var(--text-3)', opacity:0.5, fontSize:18, flexShrink:0 }}>›</span>
             </button>
+
           </div>
         )}
 
-        {/* ── Mode: login / register ── */}
+        {/* ── Mode: login / register ──────────────────────── */}
         {(mode === 'login' || mode === 'register') && (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-
-            {/* Back */}
             <button
               onClick={() => { setMode('choose'); setError(null); }}
               style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:12, cursor:'pointer', textAlign:'left', padding:'0 0 8px', letterSpacing:'0.05em' }}
             >
               ← Back
             </button>
-
             <p className="serif-bold" style={{ fontSize:22, color:'var(--text-1)', marginBottom:4 }}>
               {mode === 'login' ? 'Welcome Back' : 'Create Account'}
             </p>
@@ -136,7 +160,6 @@ export function LandingScreen({ onAuthenticated }: Props) {
                 : 'Your Fate Account holds your identity across all venues.'}
             </p>
 
-            {/* OAuth placeholders */}
             <button className="oauth-btn" onClick={() => alert('Google OAuth coming soon — use email for now')}>
               <span style={{ fontSize:16 }}>G</span>
               <span>Continue with Google</span>
@@ -146,32 +169,20 @@ export function LandingScreen({ onAuthenticated }: Props) {
               <span>Continue with Apple</span>
             </button>
 
-            {/* Divider */}
             <div style={{ display:'flex', alignItems:'center', gap:10, margin:'4px 0' }}>
               <div style={{ flex:1, height:1, background:'var(--border)' }} />
               <span style={{ fontSize:11, color:'var(--text-3)', letterSpacing:'0.06em' }}>OR</span>
               <div style={{ flex:1, height:1, background:'var(--border)' }} />
             </div>
 
-            {/* Email / password */}
-            <input
-              className="auth-input"
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+            <input className="auth-input" type="email" placeholder="Email address"
+              value={email} onChange={e => setEmail(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && submit()}
-              autoCapitalize="none"
-              autoCorrect="off"
-            />
-            <input
-              className="auth-input"
-              type="password"
+              autoCapitalize="none" autoCorrect="off" />
+            <input className="auth-input" type="password"
               placeholder={mode === 'register' ? 'Create password (8+ characters)' : 'Password'}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && submit()}
-            />
+              value={password} onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && submit()} />
 
             {error && (
               <p style={{ fontSize:12, color:'var(--ember)', padding:'8px 12px', background:'rgba(200,94,40,0.08)', borderRadius:8, border:'1px solid rgba(200,94,40,0.2)' }}>
@@ -179,20 +190,17 @@ export function LandingScreen({ onAuthenticated }: Props) {
               </p>
             )}
 
-            <button
-              onClick={submit}
-              disabled={loading}
-              style={{
-                width:'100%', padding:'15px', borderRadius:10, cursor: loading ? 'not-allowed' : 'pointer',
-                background: loading ? 'rgba(200,160,78,0.3)' : 'var(--gold)',
-                border:'none', color:'var(--bg)', fontSize:14, fontWeight:700,
-                letterSpacing:'0.08em', transition:'all 0.2s',
-              }}
-            >
+            <button onClick={submit} disabled={loading} style={{
+              width:'100%', padding:'15px', borderRadius:10,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              background: loading ? 'rgba(255,165,0,0.3)' : 'var(--gold)',
+              border:'none', color:'var(--bg)',
+              fontSize:14, fontWeight:700, letterSpacing:'0.08em',
+              transition:'all 0.2s',
+            }}>
               {loading ? 'Please wait…' : mode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
             </button>
 
-            {/* Toggle */}
             <p style={{ textAlign:'center', fontSize:12, color:'var(--text-3)', marginTop:4 }}>
               {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
               <button
