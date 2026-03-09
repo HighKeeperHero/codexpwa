@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/AuthContext';
 import { xpProgress, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '@/api/pik';
 import { ShareFateCard } from '@/screens/ShareFateCard';
+import { CeremonyOverlay } from '@/screens/CeremonyOverlay';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
 
@@ -331,6 +332,9 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
 
       {/* Fate Card Modal */}
       {showCard && <ShareFateCard onClose={() => setShowCard(false)} />}
+
+      {/* Ceremonies */}
+      <CeremonyOverlay />
     </div>
   );
 }
