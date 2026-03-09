@@ -22,7 +22,7 @@ export function SplashScreen({ onComplete }: Props) {
       onClick={() => { setPhase(4); setTimeout(onComplete, 400); }}
       style={{
         position: 'fixed', inset: 0, zIndex: 9999,
-        background: '#0B0A08',
+        background: '#0B0F1A',          // ← navy bg (new theme)
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         cursor: 'pointer',
@@ -49,55 +49,54 @@ export function SplashScreen({ onComplete }: Props) {
           to   { opacity: 1; transform: translateY(0); }
         }
         @keyframes goldGlow {
-          0%, 100% { text-shadow: 0 0 20px rgba(200,160,78,0.3); }
-          50%       { text-shadow: 0 0 40px rgba(200,160,78,0.6), 0 0 80px rgba(200,160,78,0.2); }
+          0%, 100% { text-shadow: 0 0 20px rgba(255,165,0,0.35); }
+          50%       { text-shadow: 0 0 48px rgba(255,165,0,0.7), 0 0 90px rgba(255,165,0,0.25); }
         }
         @keyframes shimmerLine {
           from { background-position: -200% center; }
-          to   { background-position: 200% center; }
+          to   { background-position:  200% center; }
         }
       `}</style>
 
       {/* Atmospheric vignette */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.7) 100%)',
+        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.75) 100%)',
         pointerEvents: 'none',
       }} />
 
-      {/* Grain texture overlay */}
+      {/* Grain texture */}
       <div style={{
-        position: 'absolute', inset: 0, opacity: 0.03,
+        position: 'absolute', inset: 0, opacity: 0.02,
         backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         pointerEvents: 'none',
       }} />
 
-      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
-
+      <div style={{
+        position: 'relative',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0,
+      }}>
         {/* Top ornamental row */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 0,
-          marginBottom: 28, width: 240,
-          opacity: phase >= 1 ? 1 : 0,
-          transition: 'opacity 0.3s ease',
+          display: 'flex', alignItems: 'center', gap: 0, marginBottom: 28,
+          width: 240,
+          opacity: phase >= 1 ? 1 : 0, transition: 'opacity 0.3s ease',
         }}>
           <div style={{
             flex: 1, height: 1,
-            background: 'linear-gradient(90deg, transparent, #C8A04E, transparent)',
+            background: 'linear-gradient(90deg, transparent, #FFA500, transparent)',
             transformOrigin: 'left center',
             animation: phase >= 1 ? 'lineGrow 0.8s cubic-bezier(0.16,1,0.3,1) forwards' : 'none',
           }} />
           <div style={{
-            width: 8, height: 8,
-            background: '#C8A04E',
-            transform: 'rotate(45deg)',
-            margin: '0 10px',
+            width: 8, height: 8, background: '#FFA500',
+            transform: 'rotate(45deg)', margin: '0 10px',
             animation: phase >= 1 ? 'glyphPulse 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.3s both' : 'none',
-            boxShadow: '0 0 12px rgba(200,160,78,0.6)',
+            boxShadow: '0 0 14px rgba(255,165,0,0.7)',
           }} />
           <div style={{
             flex: 1, height: 1,
-            background: 'linear-gradient(90deg, transparent, #C8A04E, transparent)',
+            background: 'linear-gradient(90deg, transparent, #FFA500, transparent)',
             transformOrigin: 'right center',
             animation: phase >= 1 ? 'lineGrow 0.8s cubic-bezier(0.16,1,0.3,1) forwards' : 'none',
           }} />
@@ -108,9 +107,8 @@ export function SplashScreen({ onComplete }: Props) {
           fontFamily: "'Cinzel', 'Trajan Pro', Georgia, serif",
           fontSize: 'clamp(52px, 14vw, 72px)',
           fontWeight: 700,
-          color: '#C8A04E',
-          letterSpacing: '0.35em',
-          lineHeight: 1,
+          color: '#FFA500',
+          letterSpacing: '0.35em', lineHeight: 1,
           animation: phase >= 2
             ? 'wordReveal 0.9s cubic-bezier(0.16,1,0.3,1) forwards, goldGlow 3s ease-in-out 1s infinite'
             : 'none',
@@ -123,10 +121,8 @@ export function SplashScreen({ onComplete }: Props) {
         {/* Subtitle */}
         <div style={{
           fontFamily: "'Cinzel', Georgia, serif",
-          fontSize: 11,
-          letterSpacing: '0.4em',
-          color: 'rgba(200,160,78,0.5)',
-          marginTop: 14,
+          fontSize: 11, letterSpacing: '0.4em',
+          color: 'rgba(255,165,0,0.5)', marginTop: 14,
           animation: phase >= 3 ? 'subReveal 0.7s ease forwards' : 'none',
           opacity: phase >= 3 ? 1 : 0,
           userSelect: 'none',
@@ -136,28 +132,25 @@ export function SplashScreen({ onComplete }: Props) {
 
         {/* Bottom ornamental row */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 0,
-          marginTop: 28, width: 240,
-          opacity: phase >= 1 ? 1 : 0,
-          transition: 'opacity 0.3s ease',
+          display: 'flex', alignItems: 'center', gap: 0, marginTop: 28,
+          width: 240,
+          opacity: phase >= 1 ? 1 : 0, transition: 'opacity 0.3s ease',
         }}>
           <div style={{
             flex: 1, height: 1,
-            background: 'linear-gradient(90deg, transparent, #C8A04E, transparent)',
+            background: 'linear-gradient(90deg, transparent, #FFA500, transparent)',
             transformOrigin: 'left center',
             animation: phase >= 1 ? 'lineGrow 0.8s cubic-bezier(0.16,1,0.3,1) forwards' : 'none',
           }} />
           <div style={{
-            width: 8, height: 8,
-            background: '#C8A04E',
-            transform: 'rotate(45deg)',
-            margin: '0 10px',
+            width: 8, height: 8, background: '#FFA500',
+            transform: 'rotate(45deg)', margin: '0 10px',
             animation: phase >= 1 ? 'glyphPulse 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.3s both' : 'none',
-            boxShadow: '0 0 12px rgba(200,160,78,0.6)',
+            boxShadow: '0 0 14px rgba(255,165,0,0.7)',
           }} />
           <div style={{
             flex: 1, height: 1,
-            background: 'linear-gradient(90deg, transparent, #C8A04E, transparent)',
+            background: 'linear-gradient(90deg, transparent, #FFA500, transparent)',
             transformOrigin: 'right center',
             animation: phase >= 1 ? 'lineGrow 0.8s cubic-bezier(0.16,1,0.3,1) forwards' : 'none',
           }} />
@@ -167,9 +160,8 @@ export function SplashScreen({ onComplete }: Props) {
         <p style={{
           marginTop: 36,
           fontFamily: 'system-ui, sans-serif',
-          fontSize: 11,
-          letterSpacing: '0.15em',
-          color: 'rgba(168,146,122,0.4)',
+          fontSize: 11, letterSpacing: '0.15em',
+          color: 'rgba(143,168,204,0.45)',    // ← blue-grey to match navy theme
           animation: phase >= 3 ? 'subReveal 1s ease 0.3s both' : 'none',
           opacity: phase >= 3 ? 1 : 0,
           userSelect: 'none',
@@ -183,7 +175,7 @@ export function SplashScreen({ onComplete }: Props) {
         <div style={{
           position: 'absolute', bottom: 48,
           fontSize: 9, letterSpacing: '0.2em',
-          color: 'rgba(90,78,60,0.6)',
+          color: 'rgba(74,94,122,0.7)',        // ← muted navy-blue
           animation: 'subReveal 0.5s ease forwards',
           userSelect: 'none',
         }}>
