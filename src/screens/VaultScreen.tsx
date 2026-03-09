@@ -154,7 +154,7 @@ const DEFAULT_RECIPES: Recipe[] = [
 ];
 
 // ── Main Component ─────────────────────────────────────────────
-export function VaultScreen() {
+export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount: number) => void } = {}) {
   const { hero, sessionToken, refreshHero } = useAuth();
 
   // Cache state
@@ -184,7 +184,23 @@ export function VaultScreen() {
   const [craftMsg, setCraftMsg] = useState<string | null>(null);
 
   type Section = 'caches' | 'titles' | 'gear' | 'forge';
-  const [section, setSection] = useState<Section>('caches');
+  const [section, setSection]       = useState<Section>('caches');
+  // Track which sections have been viewed — clears their badge on first visit
+  const [seenSections, setSeenSections] = useState<Set<Section>>(new Set());
+
+  const handleSectionChange = (s: Section) => {
+    setSection(s);
+    setSeenSections(prev => { const next = new Set(prev); next.add(s); return next; });
+  };
+
+  // Notify parent when titles section is viewed so badge can clear
+  useEffect(() => {
+    if (section === 'titles' && onTitlesViewed) {
+      const earned = Array.isArray(titles) ? titles.filter(t => t.is_earned).length : 0;
+      onTitlesViewed(earned);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section, titles]);
 
   const rootId = hero?.root_id;
 
@@ -441,14 +457,16 @@ export function VaultScreen() {
       }}>
         {(['caches','titles','gear','forge'] as Section[]).map(s => {
           const labels: Record<Section, string> = { caches: 'Caches', titles: 'Titles', gear: 'Gear', forge: 'Forge' };
-          const counts: Record<Section, number> = {
+          const rawCounts: Record<Section, number> = {
             caches: caches.length, titles: earnedTitles.length,
             gear: unequippedItems.length, forge: recipes.length,
           };
+          // Badge only shows until the section has been viewed this session
+          const badgeCount = seenSections.has(s) ? 0 : rawCounts[s];
           const isActive = section === s;
           const isForge  = s === 'forge';
           return (
-            <button key={s} onClick={() => setSection(s)} style={{
+            <button key={s} onClick={() => handleSectionChange(s)} style={{
               flex: 1, padding: '8px 2px',
               background: isActive ? (isForge ? 'rgba(255,165,0,0.15)' : 'var(--gold)') : 'var(--surface)',
               color: isActive ? (isForge ? 'var(--gold)' : '#0B0A08') : 'var(--text-2)',
@@ -458,12 +476,12 @@ export function VaultScreen() {
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, transition: 'all 0.15s',
             }}>
               <span>{labels[s]}</span>
-              {counts[s] > 0 && (
+              {badgeCount > 0 && (
                 <span style={{
                   fontSize: 9,
                   background: isActive ? (isForge ? 'var(--gold)' : 'rgba(0,0,0,0.2)') : 'var(--gold)',
                   color: '#0B0A08', borderRadius: 999, padding: '1px 5px', fontFamily: 'monospace',
-                }}>{counts[s]}</span>
+                }}>{badgeCount}</span>
               )}
             </button>
           );
