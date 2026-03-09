@@ -30,6 +30,9 @@ interface CacheReward {
   rarity_tier:  Rarity;
   xp_granted?:  number;
   message?:     string;
+  slot?:        string;
+  description?: string;
+  modifiers?:   Record<string, number>;
 }
 
 interface TitleEntry {
@@ -84,6 +87,11 @@ const GEAR_SLOT_LABEL: Record<string, string> = {
   weapon: 'Weapon', helm: 'Helm', chest: 'Chest', arms: 'Arms', legs: 'Legs', rune: 'Rune',
 };
 
+const MODIFIER_LABEL: Record<string, string> = {
+  xp_bonus_pct: 'XP Bonus', boss_damage_pct: 'Boss Dmg', luck_pct: 'Luck',
+  defense: 'Defense', crit_pct: 'Crit', cooldown_pct: 'Cooldown', fate_affinity: 'Fate Affinity',
+};
+
 const CATEGORY_LABEL: Record<string, string> = {
   fate: 'Fate', boss: 'Combat', session: 'Session', meta: 'Realm', training: 'Training', general: 'General',
 };
@@ -119,8 +127,8 @@ export function VaultScreen() {
     try {
       const res  = await fetch(`${BASE}/api/users/${rootId}/caches`);
       const json = await res.json();
-      const raw = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
-      setCaches((raw as SealedCache[]).filter(c => c.status === 'sealed'));
+      const raw: SealedCache[] = json?.data ?? [];
+      setCaches(raw.filter(c => c.status === 'sealed'));
     } catch {}
     finally { setCacheLoading(false); }
   }, [rootId]);
@@ -137,8 +145,7 @@ export function VaultScreen() {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
       const json = await res.json();
-      const titleData = json?.data;
-      setTitles(Array.isArray(titleData) ? titleData : Array.isArray(json) ? json : []);
+      setTitles(json?.data ?? []);
     } catch {
       // Fallback: build from hero object if endpoint not yet deployed
       if (hero?.progression?.titles) {
@@ -217,26 +224,27 @@ export function VaultScreen() {
   const handleEquipGear = async (inventoryId: string) => {
     if (!rootId || !sessionToken) return;
     try {
-      const res = await fetch(`${BASE}/api/users/${rootId}/gear/${inventoryId}/equip`, {
+      const res = await fetch(`${BASE}/api/users/${rootId}/equipment/equip`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sessionToken}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({ inventory_id: inventoryId }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.message ?? 'Failed');
+      if (!res.ok) throw new Error(json?.message ?? 'Failed to equip');
       await refreshHero();
-    } catch {}
+    } catch (e: any) {
+      alert(e?.message ?? 'Failed to equip item');
+    }
   };
 
-  const inventoryRaw = hero?.gear?.inventory;
-  const inventory: GearItem[] = Array.isArray(inventoryRaw) ? inventoryRaw as GearItem[] : [];
-  const equipment = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
+  const inventory: GearItem[] = (hero?.gear?.inventory ?? []) as GearItem[];
+  const equipment             = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
 
-  const safeTitles = Array.isArray(titles) ? titles : [];
-  const earnedTitles  = safeTitles.filter(t => t.is_earned);
-  const lockedTitles  = safeTitles.filter(t => !t.is_earned);
+  const earnedTitles  = titles.filter(t => t.is_earned);
+  const lockedTitles  = titles.filter(t => !t.is_earned);
 
   // ── Render ────────────────────────────────────────────────
 
@@ -614,22 +622,51 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
         </p>
         <p style={{
           fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700,
-          color: '#e8e0cc', margin: '0 0 12px',
+          color: '#e8e0cc', margin: '0 0 4px',
         }}>
           {reward.display_name}
         </p>
-        {reward.xp_granted && (
-          <p style={{ fontSize: 13, color: 'var(--gold)', margin: '0 0 12px' }}>
-            +{reward.xp_granted} Fate XP
+        {/* Slot label for gear */}
+        {reward.reward_type === 'gear' && reward.slot && (
+          <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 8px',
+            textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            {GEAR_SLOT_LABEL[reward.slot] ?? reward.slot}
           </p>
         )}
         <p style={{
           fontSize: 11, color,
           textTransform: 'uppercase', letterSpacing: '0.1em',
-          margin: '0 0 28px', fontWeight: 700,
+          margin: '0 0 12px', fontWeight: 700,
         }}>
           {RARITY_LABEL[rarity]}
         </p>
+        {/* Gear modifiers */}
+        {reward.reward_type === 'gear' && reward.modifiers && Object.keys(reward.modifiers).length > 0 && (
+          <div style={{
+            background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '8px 12px',
+            marginBottom: 12, textAlign: 'left',
+          }}>
+            {Object.entries(reward.modifiers as Record<string, number>).map(([k, v]) => (
+              <p key={k} style={{ fontSize: 11, color: 'var(--gold)', margin: '2px 0',
+                display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'rgba(232,224,204,0.6)' }}>{MODIFIER_LABEL[k] ?? k}</span>
+                <span>+{v}</span>
+              </p>
+            ))}
+          </div>
+        )}
+        {/* XP granted */}
+        {reward.xp_granted && (
+          <p style={{ fontSize: 13, color: 'var(--gold)', margin: '0 0 12px' }}>
+            +{reward.xp_granted} Fate XP
+          </p>
+        )}
+        {/* Description / flavour */}
+        {reward.description && (
+          <p style={{ fontSize: 12, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 12px', lineHeight: 1.5 }}>
+            {reward.description}
+          </p>
+        )}
         <p style={{
           fontSize: 12, color: 'rgba(232, 224, 204, 0.45)', fontStyle: 'italic',
           margin: '0 0 28px',
@@ -781,7 +818,13 @@ function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
 
 function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void }) {
   const rarity = item.rarity_tier as Rarity;
-  const color  = RARITY_COLOR[rarity];
+  const color  = RARITY_COLOR[rarity] ?? '#9ca3af';
+  const [equipping, setEquipping] = useState(false);
+
+  const handleEquip = async () => {
+    setEquipping(true);
+    try { await onEquip(); } finally { setEquipping(false); }
+  };
 
   return (
     <div style={{
@@ -789,14 +832,15 @@ function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void 
       border: `1px solid ${color}`,
       borderRadius: 10, padding: '12px 14px',
       display: 'flex', alignItems: 'center', gap: 12,
+      boxShadow: `0 0 10px ${RARITY_GLOW[rarity] ?? 'transparent'}`,
     }}>
       <div style={{
-        width: 36, height: 36, flexShrink: 0,
+        width: 40, height: 40, flexShrink: 0,
         background: RARITY_GLOW[rarity],
         border: `1px solid ${color}`,
-        borderRadius: 6,
+        borderRadius: 8,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 18,
+        fontSize: 20,
       }}>
         {item.icon ?? '⚔'}
       </div>
@@ -806,20 +850,26 @@ function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void 
           color: '#e8e0cc', margin: '0 0 2px',
         }}>{item.item_name}</p>
         <p style={{ fontSize: 11, color, margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          {RARITY_LABEL[rarity]} · {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
+          {RARITY_LABEL[rarity] ?? rarity} · {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
         </p>
       </div>
       <button
-        onClick={onEquip}
+        onClick={handleEquip}
+        disabled={equipping}
         style={{
-          padding: '6px 12px', flexShrink: 0,
+          padding: '8px 16px', flexShrink: 0,
           background: color, color: '#0B0A08',
-          border: 'none', borderRadius: 6,
-          fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700,
-          cursor: 'pointer',
+          border: `2px solid ${color}`,
+          borderRadius: 6,
+          fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 900,
+          cursor: equipping ? 'wait' : 'pointer',
+          opacity: equipping ? 0.7 : 1,
+          letterSpacing: '0.08em',
+          boxShadow: `0 0 8px ${color}60`,
+          minWidth: 64,
         }}
       >
-        Equip
+        {equipping ? '…' : 'EQUIP'}
       </button>
     </div>
   );
