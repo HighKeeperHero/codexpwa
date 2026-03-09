@@ -127,8 +127,8 @@ export function VaultScreen() {
     try {
       const res  = await fetch(`${BASE}/api/users/${rootId}/caches`);
       const json = await res.json();
-      const raw: SealedCache[] = json?.data ?? [];
-      setCaches(raw.filter(c => c.status === 'sealed'));
+      const raw = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+      setCaches((raw as SealedCache[]).filter(c => c.status === 'sealed'));
     } catch {}
     finally { setCacheLoading(false); }
   }, [rootId]);
@@ -145,7 +145,8 @@ export function VaultScreen() {
         headers: { Authorization: `Bearer ${sessionToken}` },
       });
       const json = await res.json();
-      setTitles(json?.data ?? []);
+      const titleData = json?.data;
+      setTitles(Array.isArray(titleData) ? titleData : Array.isArray(json) ? json : []);
     } catch {
       // Fallback: build from hero object if endpoint not yet deployed
       if (hero?.progression?.titles) {
@@ -240,11 +241,13 @@ export function VaultScreen() {
     }
   };
 
-  const inventory: GearItem[] = (hero?.gear?.inventory ?? []) as GearItem[];
-  const equipment             = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
+  const inventoryRaw = hero?.gear?.inventory;
+  const inventory: GearItem[] = Array.isArray(inventoryRaw) ? inventoryRaw as GearItem[] : [];
+  const equipment = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
 
-  const earnedTitles  = titles.filter(t => t.is_earned);
-  const lockedTitles  = titles.filter(t => !t.is_earned);
+  const safeTitles = Array.isArray(titles) ? titles : [];
+  const earnedTitles  = safeTitles.filter(t => t.is_earned);
+  const lockedTitles  = safeTitles.filter(t => !t.is_earned);
 
   // ── Render ────────────────────────────────────────────────
 
@@ -626,7 +629,6 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
         }}>
           {reward.display_name}
         </p>
-        {/* Slot label for gear */}
         {reward.reward_type === 'gear' && reward.slot && (
           <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 8px',
             textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -640,30 +642,27 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
         }}>
           {RARITY_LABEL[rarity]}
         </p>
-        {/* Gear modifiers */}
         {reward.reward_type === 'gear' && reward.modifiers && Object.keys(reward.modifiers).length > 0 && (
           <div style={{
             background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '8px 12px',
             marginBottom: 12, textAlign: 'left',
           }}>
-            {Object.entries(reward.modifiers as Record<string, number>).map(([k, v]) => (
-              <p key={k} style={{ fontSize: 11, color: 'var(--gold)', margin: '2px 0',
-                display: 'flex', justifyContent: 'space-between' }}>
+            {Object.entries(reward.modifiers).map(([k, v]) => (
+              <p key={k} style={{ fontSize: 11, margin: '2px 0',
+                display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <span style={{ color: 'rgba(232,224,204,0.6)' }}>{MODIFIER_LABEL[k] ?? k}</span>
-                <span>+{v}</span>
+                <span style={{ color: 'var(--gold)' }}>+{v}</span>
               </p>
             ))}
           </div>
         )}
-        {/* XP granted */}
         {reward.xp_granted && (
           <p style={{ fontSize: 13, color: 'var(--gold)', margin: '0 0 12px' }}>
             +{reward.xp_granted} Fate XP
           </p>
         )}
-        {/* Description / flavour */}
         {reward.description && (
-          <p style={{ fontSize: 12, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 12px', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 12, color: 'rgba(232, 224, 204, 0.6)', margin: '0 0 12px', lineHeight: 1.5 }}>
             {reward.description}
           </p>
         )}
@@ -817,13 +816,13 @@ function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
 // ── Inventory Card ────────────────────────────────────────────
 
 function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void }) {
-  const rarity = item.rarity_tier as Rarity;
+  const rarity = (item.rarity_tier as Rarity) ?? 'common';
   const color  = RARITY_COLOR[rarity] ?? '#9ca3af';
   const [equipping, setEquipping] = useState(false);
 
-  const handleEquip = async () => {
+  const handleEquip = () => {
     setEquipping(true);
-    try { await onEquip(); } finally { setEquipping(false); }
+    Promise.resolve(onEquip()).finally(() => setEquipping(false));
   };
 
   return (
@@ -836,7 +835,7 @@ function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void 
     }}>
       <div style={{
         width: 40, height: 40, flexShrink: 0,
-        background: RARITY_GLOW[rarity],
+        background: RARITY_GLOW[rarity] ?? 'transparent',
         border: `1px solid ${color}`,
         borderRadius: 8,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
