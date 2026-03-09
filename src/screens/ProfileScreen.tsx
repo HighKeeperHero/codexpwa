@@ -100,13 +100,16 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
   const earned = TROPHIES.filter(t => t.check(hero, extras));
   const locked = TROPHIES.filter(t => !t.check(hero, extras));
   const pct    = Math.round((earned.length / TROPHIES.length) * 100);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const toggle = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
           <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, fontWeight: 700, letterSpacing: '0.22em',
-            textTransform: 'uppercase', color: 'rgba(255,165,0,0.55)', margin: '0 0 3px' }}>Milestones</p>
+            textTransform: 'uppercase', color: 'rgba(255,165,0,0.55)', margin: '0 0 3px' }}>Milestones Reached</p>
           <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>{earned.length} / {TROPHIES.length} unlocked</p>
         </div>
         <span style={{ fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700,
@@ -123,7 +126,10 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
         <>
           <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Earned</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
-            {earned.map(t => <TrophyCard key={t.id} trophy={t} earned />)}
+            {earned.map(t => (
+              <TrophyCard key={t.id} trophy={t} earned
+                expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />
+            ))}
           </div>
         </>
       )}
@@ -132,7 +138,10 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
         <>
           <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Locked</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {locked.map(t => <TrophyCard key={t.id} trophy={t} earned={false} />)}
+            {locked.map(t => (
+              <TrophyCard key={t.id} trophy={t} earned={false}
+                expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />
+            ))}
           </div>
         </>
       )}
@@ -140,41 +149,96 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
   );
 }
 
-function TrophyCard({ trophy, earned }: { trophy: TrophyDef; earned: boolean }) {
+// Per-trophy earn context — what specifically achieved each milestone
+const TROPHY_EARN_DETAIL: Record<string, string> = {
+  first_session:    'Completed your first Heroes Veritas session. The Veil now knows your name.',
+  wristband_linked: 'Linked a wristband token to your hero identity.',
+  first_gear:       'Opened your first Fate Seal and received a piece of gear.',
+  first_title:      'Earned a pillar title through training progression.',
+  first_cache:      'Received a Fate Seal from venue play or a training streak milestone.',
+  sessions_5:       'Five sessions completed. The Veil has learned to expect you.',
+  fate_5:           'Accumulated enough Fate XP to reach Level 5.',
+  gear_3:           'Collected 3 pieces of gear across sessions and Fate Seals.',
+  first_boss:       'Dealt the killing blow to a boss enemy during a session.',
+  titles_3:         'Reached Level 3 in at least three different training pillars.',
+  sessions_10:      'Ten sessions completed. A pattern emerges.',
+  fate_10:          'Reached Fate Level 10 through combined session and training XP.',
+  boss_5:           'Five boss kills across any combination of venues and sessions.',
+  fate_15:          'Reached Fate Level 15. Only the Mythic tier remains.',
+  veil_cleared:     'Achieved 100% boss completion in a single session run.',
+  fate_18:          'Reached the maximum Fate Level. The Codex is complete.',
+};
+
+function TrophyCard({ trophy, earned, expanded, onToggle }: {
+  trophy: TrophyDef; earned: boolean;
+  expanded?: boolean; onToggle?: () => void;
+}) {
   const rc = RARITY_COLOR[trophy.rarity];
+  const detail = TROPHY_EARN_DETAIL[trophy.id];
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12,
-      background: earned ? `linear-gradient(90deg, var(--surface), ${rc}0A)` : 'var(--surface)',
-      border: `1px solid ${earned ? rc + '35' : 'var(--border)'}`,
-      borderRadius: 10, padding: '10px 13px', opacity: earned ? 1 : 0.45 }}>
-      <div style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 8,
-        background: earned ? `${rc}12` : 'rgba(255,255,255,0.04)',
-        border: `1px solid ${earned ? rc + '30' : 'rgba(255,255,255,0.07)'}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: earned ? 15 : 13, color: earned ? rc : 'rgba(255,255,255,0.12)',
-        filter: earned ? `drop-shadow(0 0 6px ${rc}50)` : 'none' }}>
-        {earned ? trophy.icon : '?'}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700,
-            color: earned ? 'var(--text-1)' : 'var(--text-3)', margin: 0 }}>
-            {earned ? trophy.name : '???'}
-          </p>
-          {earned && (
-            <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: rc,
-              background: `${rc}15`, border: `1px solid ${rc}30`, borderRadius: 3,
-              padding: '1px 5px', textTransform: 'uppercase' }}>{trophy.rarity}</span>
-          )}
+    <div
+      onClick={onToggle}
+      style={{ background: earned ? `linear-gradient(90deg, var(--surface), ${rc}0A)` : 'var(--surface)',
+        border: `1px solid ${earned ? (expanded ? rc + '70' : rc + '35') : 'var(--border)'}`,
+        borderRadius: 10, padding: '10px 13px', opacity: earned ? 1 : 0.45,
+        cursor: 'pointer', transition: 'border-color 0.15s',
+        boxShadow: expanded && earned ? `0 0 12px ${rc}20` : 'none' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Icon */}
+        <div style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 8,
+          background: earned ? `${rc}12` : 'rgba(255,255,255,0.04)',
+          border: `1px solid ${earned ? rc + '30' : 'rgba(255,255,255,0.07)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: earned ? 15 : 13, color: earned ? rc : 'rgba(255,255,255,0.12)',
+          filter: earned ? `drop-shadow(0 0 6px ${rc}50)` : 'none' }}>
+          {earned ? trophy.icon : '?'}
         </div>
-        <p style={{ fontSize: 11, margin: 0, lineHeight: 1.4,
-          color: earned ? 'var(--text-2)' : 'var(--text-3)',
-          fontStyle: earned ? 'italic' : 'normal' }}>
-          {earned ? trophy.lore : trophy.hint}
-        </p>
+        {/* Text */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700,
+              color: earned ? 'var(--text-1)' : 'var(--text-3)', margin: 0 }}>
+              {earned ? trophy.name : '???'}
+            </p>
+            {earned && (
+              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: rc,
+                background: `${rc}15`, border: `1px solid ${rc}30`, borderRadius: 3,
+                padding: '1px 5px', textTransform: 'uppercase' }}>{trophy.rarity}</span>
+            )}
+          </div>
+          <p style={{ fontSize: 11, margin: 0, lineHeight: 1.4,
+            color: earned ? 'var(--text-2)' : 'var(--text-3)',
+            fontStyle: earned ? 'italic' : 'normal' }}>
+            {earned ? trophy.lore : trophy.hint}
+          </p>
+        </div>
+        {/* Expand chevron */}
+        <div style={{ flexShrink: 0, color: earned ? rc : 'rgba(255,255,255,0.15)',
+          fontSize: 10, opacity: 0.7, transition: 'transform 0.2s',
+          transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</div>
       </div>
-      {earned && <div style={{ width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
-        background: rc, boxShadow: `0 0 6px ${rc}` }} />}
+
+      {/* Expanded earn detail */}
+      {expanded && earned && detail && (
+        <div style={{ marginTop: 10, paddingTop: 10,
+          borderTop: `1px solid ${rc}25` }}>
+          <p style={{ fontSize: 9, color: rc, letterSpacing: '0.14em',
+            textTransform: 'uppercase', fontWeight: 700, margin: '0 0 5px',
+            fontFamily: 'Cinzel, serif' }}>How this was earned</p>
+          <p style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.6, margin: 0 }}>
+            {detail}
+          </p>
+        </div>
+      )}
+      {expanded && !earned && (
+        <div style={{ marginTop: 10, paddingTop: 10,
+          borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <p style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>
+            {trophy.hint}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -361,16 +425,37 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
 function WristbandTab({ rootId }: { rootId: string }) {
   const [wearables, setWearables] = useState<any[]>([]);
   const [loading, setLoading]     = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
+    setFetchError(false);
     fetch(`${BASE}/api/wearables/${rootId}`)
-      .then(r => r.json()).then(j => setWearables(unwrap(j) ?? []))
-      .catch(() => {}).finally(() => setLoading(false));
+      .then(r => r.json())
+      .then(j => {
+        const raw = unwrap(j);
+        // Guard: only accept actual arrays — 404/error objects must not reach setWearables
+        setWearables(Array.isArray(raw) ? raw : []);
+      })
+      .catch(() => setFetchError(true))
+      .finally(() => setLoading(false));
   }, [rootId]);
 
   if (loading) return (
     <div style={{ textAlign: 'center', padding: 48 }}>
       <p style={{ color: 'var(--text-3)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Scanning…</p>
+    </div>
+  );
+
+  if (fetchError) return (
+    <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+      <div style={{ fontSize: 28, color: 'var(--text-3)', opacity: 0.4, marginBottom: 12 }}>◌</div>
+      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'var(--text-2)', margin: '0 0 6px' }}>
+        Could not reach wristband service
+      </p>
+      <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, lineHeight: 1.6 }}>
+        The wristband endpoint is unavailable. Your linked wristbands will appear here once the service is active.
+      </p>
     </div>
   );
 
