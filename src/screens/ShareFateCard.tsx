@@ -25,9 +25,11 @@ const H = 1920;
 
 // ── Alignment accent glyphs ───────────────────────────────────
 const ALIGN_GLYPH: Record<string, string> = {
-  ORDER: '◈', LIGHT: '◈',
-  VEIL:  '◆', DARK:  '◆',
-  WILD:  '◇', NONE:  '◇', '': '◇',
+  ORDER: '⚖',
+  CHAOS: '🜲',
+  LIGHT: '☀',
+  DARK:  '☽',
+  NONE:  '◇', '': '◇',
 };
 
 // ── Color palette ─────────────────────────────────────────────

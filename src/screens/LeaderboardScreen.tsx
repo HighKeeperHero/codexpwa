@@ -26,9 +26,11 @@ const RANK_COLOR: Record<number, string> = {
 };
 
 const ALIGN_GLYPH: Record<string, string> = {
-  ORDER: '◈', LIGHT: '◈',
-  VEIL:  '◆', DARK:  '◆',
-  WILD:  '◇', NONE:  '◇', '': '◇',
+	ORDER: '⚖',
+	CHAOS: '🜲',
+	LIGHT: '☀',
+	DARK:  '☽',
+	NONE:  '◇', '': '◇',
 };
 
 // ── Main Component ───────────────────────────────────────────

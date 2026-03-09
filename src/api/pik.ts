@@ -6,7 +6,7 @@ const PIK_BASE = 'https://pik-prd-production.up.railway.app';
 
 // ── Types ─────────────────────────────────────────────
 
-export type Alignment = 'ORDER' | 'VEIL' | 'WILD' | 'DARK' | 'NONE' | 'LIGHT';
+export type Alignment = 'ORDER' | 'CHAOS' | 'LIGHT' | 'DARK' | 'NONE';
 export type Rarity    = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
 export interface GearItem {
@@ -91,9 +91,11 @@ export interface LeaderboardEntry {
 // ── Alignment ─────────────────────────────────────────
 
 export const ALIGNMENT_COLOR: Record<string, string> = {
-  ORDER: '#C8A04E', LIGHT: '#C8A04E',
-  VEIL:  '#7A5888', DARK:  '#7A5888',
-  WILD:  '#486E48', NONE:  '#5A4E3C', '': '#5A4E3C',
+  ORDER: '#4A7EC8',
+  CHAOS: '#C85E28',
+  LIGHT: '#C8A04E',
+  DARK:  '#7A5888',
+  NONE:  '#5A4E3C', '': '#5A4E3C',
 };
 
 // ── Tiers ──────────────────────────────────────────────
@@ -111,9 +113,9 @@ export function TIER_FOR_LEVEL(level: number): Tier {
 }
 
 export const ALIGNMENT_LABEL: Record<string, string> = {
-  ORDER: 'ORDER', LIGHT: 'LIGHT',
-  VEIL: 'VEIL',   DARK: 'DARK',
-  WILD: 'WILD',   NONE: 'NONE', '': 'NONE',
+  ORDER: 'ORDER', CHAOS: 'CHAOS',
+  LIGHT: 'LIGHT', DARK:  'DARK',
+  NONE:  'NONE',  '':    'NONE',
 };
 
 // ── Narrative (deterministic from root_id) ────────────
