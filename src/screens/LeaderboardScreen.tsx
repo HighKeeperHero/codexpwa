@@ -1,203 +1,447 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/AuthContext';
-import { fetchLeaderboard, ALIGNMENT_COLOR, ALIGNMENT_LABEL, type LeaderboardEntry } from '@/api/pik';
-import { MOCK_HEROES } from '@/api/pik';
+// src/screens/LeaderboardScreen.tsx
+// ============================================================
+// Sprint 8+ — Leaderboard Tab
+// Ranks heroes by Fate XP across all connected venues.
+// Uses existing fetchLeaderboard() from pik.ts — no new
+// backend work required.
+// ============================================================
 
-const MOCK_LEADERBOARD: LeaderboardEntry[] = MOCK_HEROES.map((h, i) => ({
-  rank: i + 1, root_id: h.root_id, display_name: h.display_name,
-  alignment: h.alignment, value: h.progression.total_xp,
-  fate_level: h.progression.fate_level, sessions: h.progression.sessions_completed,
-}));
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../AuthContext';
+import {
+  fetchLeaderboard,
+  TIER_FOR_LEVEL,
+  ALIGNMENT_COLOR,
+  ALIGNMENT_LABEL,
+  type LeaderboardEntry,
+} from '@/api/pik';
 
-const RANK_COLORS = ['#C8A04E', '#A8A8B0', '#9A6A40'];
-const RANK_LABEL  = ['I', 'II', 'III'];
+// ── Constants ────────────────────────────────────────────────
+
+const RANK_MEDAL: Record<number, string> = { 1: '⬡', 2: '⬡', 3: '⬡' };
+const RANK_COLOR: Record<number, string> = {
+  1: '#f59e0b',  // legendary gold
+  2: '#c0c0c0',  // silver
+  3: '#cd7f32',  // bronze
+};
+
+const ALIGN_GLYPH: Record<string, string> = {
+  ORDER: '◈', LIGHT: '◈',
+  VEIL:  '◆', DARK:  '◆',
+  WILD:  '◇', NONE:  '◇', '': '◇',
+};
+
+// ── Main Component ───────────────────────────────────────────
 
 export function LeaderboardScreen() {
-  const { hero, isOnline, isMock } = useAuth();
-  const [entries, setEntries]     = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [lastFetch, setLastFetch] = useState<Date | null>(null);
-  const [error, setError]         = useState<string | null>(null);
+  const { hero } = useAuth();
 
-  const load = async () => {
-    if (!isOnline || isMock) {
-      setEntries(MOCK_LEADERBOARD);
-      setLoading(false);
-      return;
-    }
+  const [entries,    setEntries]    = useState<LeaderboardEntry[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState<string | null>(null);
+  const [filterAlign, setFilterAlign] = useState<string>('ALL');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await fetchLeaderboard();
       setEntries(data);
-      setLastFetch(new Date());
-    } catch (e) {
-      setError('Could not reach the PIK');
-      setEntries(MOCK_LEADERBOARD);
+      setLastUpdated(new Date());
+    } catch (e: any) {
+      setError(e?.message ?? 'Failed to load leaderboard');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { load(); }, [isOnline, isMock]);
+  useEffect(() => { load(); }, [load]);
 
-  const myEntry = hero ? entries.find(e => e.root_id === hero.root_id) : null;
+  // ── Filter ───────────────────────────────────────────────────
+
+  const alignments = ['ALL', ...Array.from(new Set(entries.map(e => e.alignment).filter(Boolean)))];
+  const visible    = filterAlign === 'ALL'
+    ? entries
+    : entries.filter(e => e.alignment === filterAlign);
+
+  // Find current hero's rank
+  const myRank = hero
+    ? entries.find(e => e.root_id === hero.root_id)
+    : null;
+
+  // ── Render ───────────────────────────────────────────────────
 
   return (
-    <div className="screen screen-enter">
-      <div className="screen-content stagger">
+    <div style={{ padding: '0 0 80px' }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-          <div className="orn-row" style={{ width: 160 }}>
-            <div className="orn-line" /><span className="orn-glyph">★</span><div className="orn-line" />
-          </div>
-          <h1 className="serif-bold" style={{ fontSize: 28, color: 'var(--text-1)', letterSpacing: 3 }}>THE RANKINGS</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {lastFetch && !isMock && (
-              <><span className="live-dot" /><span style={{ fontSize: 9, color: 'var(--text-3)' }}>LIVE FROM PIK</span></>
+      {/* Header */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 10,
+        background: 'var(--bg)',
+        paddingTop: 'env(safe-area-inset-top)',
+        borderBottom: '1px solid var(--border)',
+      }}>
+        <div style={{ padding: '16px 16px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
+            <p style={{
+              fontFamily: 'Cinzel, serif', fontSize: 16, fontWeight: 700,
+              color: 'var(--gold)', margin: 0, letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+            }}>Fate Board</p>
+            {lastUpdated && (
+              <span style={{ fontSize: 10, color: 'rgba(232,224,204,0.35)', fontFamily: 'monospace' }}>
+                {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
             )}
-            {(isMock || !isOnline) && (
-              <span className="badge" style={{ color: 'var(--ember)', borderColor: 'rgba(200,94,40,0.3)' }}>DEMO DATA</span>
-            )}
+            <button
+              onClick={load}
+              disabled={loading}
+              style={{
+                marginLeft: 'auto',
+                background: 'none', border: '1px solid var(--border)',
+                color: 'rgba(232,224,204,0.45)', fontSize: 11,
+                borderRadius: 6, padding: '4px 10px',
+                fontFamily: 'Cinzel, serif', cursor: loading ? 'wait' : 'pointer',
+                opacity: loading ? 0.5 : 1,
+              }}
+            >
+              {loading ? '…' : '↻'}
+            </button>
           </div>
-        </div>
 
-        {/* My rank highlight */}
-        {myEntry && (
-          <>
-            <div className="divider"><span className="divider-label">YOUR STANDING</span></div>
-            <MyRankCard entry={myEntry} />
-          </>
-        )}
-
-        {/* Refresh */}
-        <button onClick={load} disabled={loading || !isOnline} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-3)', fontSize: 9, letterSpacing: 1.5, padding: '9px 0', marginBottom: 4, background: 'var(--surface)', opacity: !isOnline ? 0.4 : 1 }}>
-          {loading ? <><span className="live-dot" /><span>LOADING</span></> : <span>↺  REFRESH RANKINGS</span>}
-        </button>
-
-        {error && (
-          <div style={{ fontSize: 11, color: 'var(--ember)', textAlign: 'center', padding: '8px 0', marginBottom: 8 }}>
-            {error} — showing demo data
-          </div>
-        )}
-
-        {/* Podium */}
-        {entries.length >= 3 && !loading && (
-          <>
-            <div className="divider"><span className="divider-label">TOP HEROES</span></div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 16 }}>
-              {[1, 0, 2].map(idx => {
-                const e = entries[idx];
-                if (!e) return <div key={idx} style={{ flex: 1 }} />;
-                const rc  = RANK_COLORS[idx] ?? 'var(--text-3)';
-                const ac  = ALIGNMENT_COLOR[e.alignment] ?? 'var(--bronze)';
-                const isMe = e.root_id === hero?.root_id;
-                const heights = [120, 140, 100];
-                return (
-                  <div key={e.root_id} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 10, color: rc, fontWeight: 700, letterSpacing: 1 }}>{RANK_LABEL[idx]}</span>
-                    <div style={{
-                      width: '100%', height: heights[idx], background: 'var(--surface)',
-                      border: `1px solid ${rc}50`, borderRadius: 8,
-                      display: 'flex', flexDirection: 'column', alignItems: 'center',
-                      justifyContent: 'center', gap: 4, padding: '0 8px',
-                      ...(isMe ? { borderColor: 'var(--gold)', background: 'var(--gold-glow)' } : {}),
-                    }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: ac }} />
-                      <p style={{ fontSize: 11, color: 'var(--text-1)', textAlign: 'center', lineHeight: 1.3, fontWeight: 500 }}>{e.display_name}</p>
-                      <p className="serif-bold" style={{ fontSize: 14, color: rc }}>Lv.{e.fate_level}</p>
-                      <p style={{ fontSize: 9, color: 'var(--text-3)' }}>{e.value.toLocaleString()} XP</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Full list */}
-        <div className="divider"><span className="divider-label">ALL HEROES  ·  {entries.length}</span></div>
-
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[1,2,3,4].map(i => (
-              <div key={i} className="skeleton" style={{ height: 60, borderRadius: 8 }} />
-            ))}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {entries.map((e, i) => {
-              const rc   = i < 3 ? RANK_COLORS[i] : 'var(--text-3)';
-              const ac   = ALIGNMENT_COLOR[e.alignment] ?? 'var(--bronze)';
-              const isMe = e.root_id === hero?.root_id;
+          {/* Alignment filter pills */}
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+            {alignments.map(a => {
+              const active = filterAlign === a;
+              const color  = a === 'ALL' ? 'var(--gold)' : (ALIGNMENT_COLOR[a] ?? 'var(--gold)');
               return (
-                <div key={e.root_id ?? i} className="card" style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 15px',
-                  ...(isMe ? { borderColor: 'var(--gold)', background: 'var(--gold-glow)' } : {}),
-                }}>
-                  {/* Rank */}
-                  <div style={{ width: 28, textAlign: 'center', flexShrink: 0 }}>
-                    {i < 3
-                      ? <span className="serif-bold" style={{ fontSize: 15, color: rc }}>{RANK_LABEL[i]}</span>
-                      : <span style={{ fontSize: 12, color: 'var(--text-3)' }}>#{e.rank}</span>
-                    }
-                  </div>
-                  {/* Alignment dot */}
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: ac, flexShrink: 0 }} />
-                  {/* Name */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 13, color: isMe ? 'var(--gold)' : 'var(--text-1)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {e.display_name}
-                      </span>
-                      {isMe && <span style={{ fontSize: 7, color: 'var(--gold)', letterSpacing: 1.5, fontWeight: 700, flexShrink: 0 }}>YOU</span>}
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
-                      <span style={{ fontSize: 9, color: 'var(--text-3)' }}>
-                        {ALIGNMENT_LABEL[e.alignment] ?? e.alignment}
-                      </span>
-                      <span style={{ fontSize: 9, color: 'var(--text-3)' }}>
-                        Lv.{e.fate_level}
-                      </span>
-                    </div>
-                  </div>
-                  {/* XP */}
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <span className="serif-bold" style={{ fontSize: 14, color: i < 3 ? rc : 'var(--text-1)' }}>
-                      {e.value.toLocaleString()}
-                    </span>
-                    <p style={{ fontSize: 8, letterSpacing: 1, color: 'var(--text-3)' }}>XP</p>
-                  </div>
-                </div>
+                <button
+                  key={a}
+                  onClick={() => setFilterAlign(a)}
+                  style={{
+                    flexShrink: 0,
+                    padding: '4px 12px',
+                    background: active ? color : 'transparent',
+                    color: active ? '#0B0A08' : color,
+                    border: `1px solid ${color}`,
+                    borderRadius: 999,
+                    fontFamily: 'Cinzel, serif',
+                    fontSize: 10, fontWeight: 700,
+                    letterSpacing: '0.08em',
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {a === 'ALL' ? 'All' : `${ALIGN_GLYPH[a] ?? ''} ${ALIGNMENT_LABEL[a] ?? a}`}
+                </button>
               );
             })}
           </div>
-        )}
-        <div style={{ height: 32 }} />
+        </div>
+      </div>
+
+      {/* My rank banner */}
+      {myRank && (
+        <MyRankBanner entry={myRank} total={entries.length} />
+      )}
+
+      {/* Content */}
+      {loading && entries.length === 0 ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message={error} onRetry={load} />
+      ) : visible.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div style={{ padding: '12px 16px 0' }}>
+          {/* Podium top-3 */}
+          {filterAlign === 'ALL' && visible.length >= 3 && (
+            <Podium top3={visible.slice(0, 3)} myRootId={hero?.root_id} />
+          )}
+
+          {/* Full ranked list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {visible.map((entry, idx) => (
+              <RankRow
+                key={entry.root_id}
+                entry={entry}
+                isMe={entry.root_id === hero?.root_id}
+              />
+            ))}
+          </div>
+
+          {/* Footer */}
+          <p style={{
+            textAlign: 'center', fontSize: 10,
+            color: 'rgba(232,224,204,0.25)',
+            fontFamily: 'Cinzel, serif', letterSpacing: '0.1em',
+            padding: '24px 0 0',
+          }}>
+            {visible.length} HEROES RANKED · FATE XP
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── My Rank Banner ───────────────────────────────────────────
+
+function MyRankBanner({ entry, total }: { entry: LeaderboardEntry; total: number }) {
+  const tier  = TIER_FOR_LEVEL(entry.fate_level);
+  const color = ALIGNMENT_COLOR[entry.alignment] ?? 'var(--gold)';
+  const percentile = Math.round((1 - (entry.rank - 1) / total) * 100);
+
+  return (
+    <div style={{
+      margin: '12px 16px 0',
+      background: `linear-gradient(135deg, var(--surface), ${color}18)`,
+      border: `1px solid ${color}60`,
+      borderRadius: 12, padding: '12px 14px',
+      display: 'flex', alignItems: 'center', gap: 12,
+      boxShadow: `0 0 20px ${color}20`,
+    }}>
+      <div style={{
+        fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700,
+        color: 'var(--gold)', minWidth: 44, textAlign: 'center',
+        lineHeight: 1,
+      }}>
+        #{entry.rank}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{
+          fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700,
+          color: '#e8e0cc', margin: '0 0 2px',
+        }}>
+          Your Standing
+        </p>
+        <p style={{ fontSize: 11, color: 'rgba(232,224,204,0.45)', margin: 0 }}>
+          Top {percentile}% · {entry.fate_level} · {entry.value.toLocaleString()} XP
+        </p>
+      </div>
+      <div style={{
+        fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 700,
+        color: tier.color, letterSpacing: '0.08em',
+        textTransform: 'uppercase', textAlign: 'right',
+      }}>
+        {tier.name}
       </div>
     </div>
   );
 }
 
-function MyRankCard({ entry }: { entry: LeaderboardEntry }) {
-  const ac = ALIGNMENT_COLOR[entry.alignment] ?? 'var(--bronze)';
-  const rc = entry.rank <= 3 ? RANK_COLORS[entry.rank - 1] : 'var(--text-2)';
+// ── Podium ───────────────────────────────────────────────────
+
+function Podium({ top3, myRootId }: { top3: LeaderboardEntry[]; myRootId?: string }) {
+  const order = [top3[1], top3[0], top3[2]]; // 2nd, 1st, 3rd layout
+
   return (
-    <div className="card" style={{ padding: '16px', borderColor: 'var(--gold-dim)', background: 'var(--gold-glow)', marginBottom: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div>
-          <p style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--text-3)', fontWeight: 600, marginBottom: 4 }}>YOUR RANK</p>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span className="serif-bold" style={{ fontSize: 32, color: rc }}>#{entry.rank}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-2)' }}>of all heroes</span>
-          </div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ fontSize: 9, letterSpacing: 1.5, color: 'var(--text-3)', fontWeight: 600, marginBottom: 4 }}>FATE XP</p>
-          <span className="serif-bold" style={{ fontSize: 24, color: 'var(--gold)' }}>{entry.value.toLocaleString()}</span>
-        </div>
+    <div style={{ marginBottom: 20 }}>
+      <p style={{
+        fontFamily: 'Cinzel, serif', fontSize: 9,
+        color: 'rgba(232,224,204,0.3)', letterSpacing: '0.2em',
+        textTransform: 'uppercase', marginBottom: 12,
+      }}>
+        Top Fates
+      </p>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+        {order.map((entry, i) => {
+          const isCenter  = i === 1; // rank 1
+          const podiumRank = isCenter ? 1 : i === 0 ? 2 : 3;
+          const color     = RANK_COLOR[podiumRank];
+          const acColor   = ALIGNMENT_COLOR[entry.alignment] ?? 'var(--gold)';
+          const tier      = TIER_FOR_LEVEL(entry.fate_level);
+          const isMe      = entry.root_id === myRootId;
+
+          return (
+            <div
+              key={entry.root_id}
+              style={{
+                flex: isCenter ? 1.3 : 1,
+                background: `linear-gradient(180deg, var(--surface) 0%, ${color}15 100%)`,
+                border: `1px solid ${isMe ? acColor : color}60`,
+                borderBottom: `3px solid ${color}`,
+                borderRadius: '10px 10px 0 0',
+                padding: `${isCenter ? 16 : 12}px 8px 12px`,
+                textAlign: 'center',
+                boxShadow: isCenter ? `0 0 24px ${color}30` : `0 0 12px ${color}18`,
+                transition: 'all 0.2s',
+              }}
+            >
+              <div style={{ fontSize: isCenter ? 22 : 18, marginBottom: 6, color }}>
+                {RANK_MEDAL[podiumRank]}
+              </div>
+              <p style={{
+                fontFamily: 'Cinzel, serif', fontSize: isCenter ? 11 : 10,
+                fontWeight: 700, color: isMe ? acColor : '#e8e0cc',
+                margin: '0 0 2px', letterSpacing: '0.04em',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {entry.display_name}
+              </p>
+              <p style={{
+                fontFamily: 'monospace', fontSize: 9,
+                color: 'rgba(232,224,204,0.45)', margin: '0 0 4px',
+              }}>
+                Lv {entry.fate_level}
+              </p>
+              <p style={{
+                fontSize: 9, color, fontWeight: 700,
+                fontFamily: 'Cinzel, serif', letterSpacing: '0.08em',
+                margin: 0, textTransform: 'uppercase',
+              }}>
+                #{podiumRank}
+              </p>
+            </div>
+          );
+        })}
       </div>
+      {/* Podium base */}
+      <div style={{
+        display: 'flex', gap: 6,
+      }}>
+        {[2, 1, 3].map(r => (
+          <div
+            key={r}
+            style={{
+              flex: r === 1 ? 1.3 : 1,
+              height: r === 1 ? 20 : r === 2 ? 12 : 8,
+              background: `${RANK_COLOR[r]}30`,
+              borderBottom: `2px solid ${RANK_COLOR[r]}60`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Rank Row ─────────────────────────────────────────────────
+
+function RankRow({ entry, isMe }: { entry: LeaderboardEntry; isMe: boolean }) {
+  const tier   = TIER_FOR_LEVEL(entry.fate_level);
+  const color  = ALIGNMENT_COLOR[entry.alignment] ?? '#5A4E3C';
+  const rankC  = RANK_COLOR[entry.rank] ?? (isMe ? 'var(--gold)' : 'rgba(232,224,204,0.45)');
+
+  return (
+    <div style={{
+      background: isMe
+        ? `linear-gradient(90deg, var(--surface), ${color}18)`
+        : 'var(--surface)',
+      border: `1px solid ${isMe ? color : 'var(--border)'}`,
+      borderRadius: 10, padding: '11px 14px',
+      display: 'flex', alignItems: 'center', gap: 12,
+      boxShadow: isMe ? `0 0 12px ${color}20` : 'none',
+    }}>
+      {/* Rank */}
+      <div style={{
+        fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
+        color: rankC, minWidth: 32, textAlign: 'center',
+      }}>
+        {entry.rank <= 3
+          ? <span style={{ fontSize: 16 }}>{RANK_MEDAL[entry.rank]}</span>
+          : `#${entry.rank}`
+        }
+      </div>
+
+      {/* Name + alignment */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+          <p style={{
+            fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
+            color: isMe ? 'var(--gold)' : '#e8e0cc',
+            margin: 0,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {entry.display_name}
+          </p>
+          {isMe && (
+            <span style={{
+              fontSize: 8, background: 'var(--gold)', color: '#0B0A08',
+              borderRadius: 4, padding: '1px 5px',
+              fontFamily: 'Cinzel, serif', fontWeight: 700, flexShrink: 0,
+            }}>YOU</span>
+          )}
+        </div>
+        <p style={{
+          fontSize: 11, color, margin: 0,
+          textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700,
+        }}>
+          {ALIGN_GLYPH[entry.alignment] ?? '◇'} {ALIGNMENT_LABEL[entry.alignment] ?? entry.alignment}
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <p style={{
+          fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700,
+          color: tier.color, margin: '0 0 2px',
+        }}>
+          Lv {entry.fate_level}
+        </p>
+        <p style={{
+          fontFamily: 'monospace', fontSize: 10,
+          color: 'rgba(232,224,204,0.45)', margin: 0,
+        }}>
+          {entry.value.toLocaleString()} XP
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Sub-components ───────────────────────────────────────────
+
+function LoadingState() {
+  return (
+    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+      <div style={{
+        fontSize: 28, color: 'var(--gold)', marginBottom: 12,
+        animation: 'spin 2s linear infinite',
+      }}>⬡</div>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      <p style={{
+        fontFamily: 'Cinzel, serif', fontSize: 12,
+        color: 'rgba(232,224,204,0.45)', letterSpacing: '0.15em',
+        textTransform: 'uppercase',
+      }}>
+        Consulting the Veil…
+      </p>
+    </div>
+  );
+}
+
+function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+      <div style={{ fontSize: 28, marginBottom: 12, opacity: 0.4 }}>⬡</div>
+      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'rgba(232,224,204,0.6)', margin: '0 0 16px' }}>
+        The Fates are silent
+      </p>
+      <p style={{ fontSize: 12, color: 'rgba(232,224,204,0.3)', margin: '0 0 20px' }}>{message}</p>
+      <button
+        onClick={onRetry}
+        style={{
+          padding: '8px 20px', background: 'var(--surface)',
+          color: 'var(--gold)', border: '1px solid var(--gold)',
+          borderRadius: 8, fontFamily: 'Cinzel, serif', fontSize: 12,
+          cursor: 'pointer',
+        }}
+      >
+        Try Again
+      </button>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+      <div style={{ fontSize: 28, marginBottom: 12, opacity: 0.4 }}>⬡</div>
+      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'rgba(232,224,204,0.45)', margin: 0 }}>
+        No heroes match this alignment
+      </p>
     </div>
   );
 }

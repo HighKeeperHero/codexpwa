@@ -1,12 +1,13 @@
 // src/screens/ProfileScreen.tsx
 // ============================================================
-// Archive screen — tabs: Profile | Rankings | Vault | Wristband
-// Sprint 8: Vault tab added
+// Archive screen — tabs: Profile | Rankings | Vault | Chronicle | Wristband
+// Sprint 8+: LeaderboardScreen + ChronicleScreen added
 // ============================================================
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../AuthContext';
 import { VaultScreen } from './VaultScreen';
+import { LeaderboardScreen } from './LeaderboardScreen';
+import { ChronicleScreen } from './ChronicleScreen';
 import {
   TIER_FOR_LEVEL,
   ALIGNMENT_COLOR,
@@ -15,23 +16,10 @@ import {
 
 const BASE = 'https://pik-prd-production.up.railway.app';
 
-type Tab = 'profile' | 'rankings' | 'vault' | 'wristband';
+// ── Tab type ──────────────────────────────────────────────────
+type Tab = 'profile' | 'rankings' | 'vault' | 'chronicle' | 'wristband';
 
-// ── Leaderboard types ──────────────────────────────────────
-
-interface LeaderboardEntry {
-  rank:           number;
-  root_id:        string;
-  hero_name:      string;
-  fate_level:     number;
-  fate_alignment: string;
-  equipped_title: string | null;
-  value:          number;
-  label:          string;
-}
-
-// ── Main ───────────────────────────────────────────────────
-
+// ── Main ──────────────────────────────────────────────────────
 export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?: () => void }) {
   const { hero, signOut } = useAuth();
   const [tab, setTab] = useState<Tab>('profile');
@@ -50,10 +38,11 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
   }, [hero?.root_id]);
 
   const tabs: { id: Tab; label: string; badge?: number }[] = [
-    { id: 'profile',  label: 'Profile' },
-    { id: 'rankings', label: 'Rankings' },
-    { id: 'vault',    label: 'Vault', badge: sealedCount },
-    { id: 'wristband',label: 'Wristband' },
+    { id: 'profile',   label: 'Profile' },
+    { id: 'rankings',  label: 'Fates' },
+    { id: 'vault',     label: 'Vault',     badge: sealedCount },
+    { id: 'chronicle', label: 'Chronicle' },
+    { id: 'wristband', label: 'Wristband' },
   ];
 
   if (!hero) return (
@@ -64,11 +53,12 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)' }}>
-
-      {/* Tab bar — paddingTop handles iOS PWA status bar overlap */}
+      {/* Tab bar */}
       <div style={{
-        display: 'flex', borderBottom: '1px solid var(--border)',
-        background: 'var(--surface)', flexShrink: 0,
+        display: 'flex',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--surface)',
+        flexShrink: 0,
         paddingTop: 'env(safe-area-inset-top)',
       }}>
         {tabs.map(t => (
@@ -76,24 +66,34 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
             key={t.id}
             onClick={() => setTab(t.id)}
             style={{
-              flex: 1, padding: '12px 4px',
+              flex: 1,
+              padding: '12px 2px',
               background: 'none',
               border: 'none',
               borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent',
               color: tab === t.id ? 'var(--gold)' : 'rgba(232, 224, 204, 0.45)',
-              fontFamily: 'Cinzel, serif', fontSize: 10,
-              letterSpacing: '0.08em', textTransform: 'uppercase',
+              fontFamily: 'Cinzel, serif',
+              fontSize: 9,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
               cursor: 'pointer',
               position: 'relative',
             }}
           >
             {t.label}
-            {t.badge && t.badge > 0 && (
+            {t.badge != null && t.badge > 0 && (
               <span style={{
-                position: 'absolute', top: 6, right: 'calc(50% - 18px)',
-                background: 'var(--ember)', color: '#fff',
-                borderRadius: 999, fontSize: 9, fontFamily: 'monospace',
-                padding: '1px 5px', fontWeight: 700, lineHeight: 1.4,
+                position: 'absolute',
+                top: 6,
+                right: 'calc(50% - 18px)',
+                background: 'var(--ember)',
+                color: '#fff',
+                borderRadius: 999,
+                fontSize: 9,
+                fontFamily: 'monospace',
+                padding: '1px 5px',
+                fontWeight: 700,
+                lineHeight: 1.4,
               }}>
                 {t.badge}
               </span>
@@ -105,17 +105,21 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {tab === 'profile'   && <ProfileTab hero={hero} onSignOut={signOut} onReturnToHeroSelect={onReturnToHeroSelect} />}
-        {tab === 'rankings'  && <RankingsTab rootId={hero.root_id} />}
+        {tab === 'rankings'  && <LeaderboardScreen />}
         {tab === 'vault'     && <VaultScreen />}
+        {tab === 'chronicle' && <ChronicleScreen />}
         {tab === 'wristband' && <WristbandTab rootId={hero.root_id} />}
       </div>
     </div>
   );
 }
 
-// ── Profile Tab ────────────────────────────────────────────
-
-function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
+// ── Profile Tab ───────────────────────────────────────────────
+function ProfileTab({
+  hero,
+  onSignOut,
+  onReturnToHeroSelect,
+}: {
   hero: any;
   onSignOut: () => void;
   onReturnToHeroSelect?: () => void;
@@ -130,18 +134,18 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
   const aColor    = ALIGNMENT_COLOR[alignment] ?? '#9ca3af';
 
   const statBlocks = [
-    { label: 'Sessions',    value: prog?.sessions_completed ?? 0 },
-    { label: 'Boss Kills',  value: prog?.boss_kills ?? 0 },
-    { label: 'Fate Seals',  value: prog?.caches_granted ?? 0 },
-    { label: 'Gear Found',  value: prog?.gear_acquired ?? 0 },
+    { label: 'Sessions',   value: prog?.sessions_completed ?? 0 },
+    { label: 'Boss Kills', value: prog?.boss_kills ?? 0 },
+    { label: 'Fate Seals', value: prog?.caches_granted ?? 0 },
+    { label: 'Gear Found', value: prog?.gear_acquired ?? 0 },
   ];
 
   return (
     <div style={{ padding: 16 }}>
-
       {/* Hero card */}
       <div style={{
-        background: 'var(--surface)', border: '1px solid var(--border)',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: 16, padding: '20px 16px', marginBottom: 16,
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
@@ -153,11 +157,11 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: 'Cinzel, serif', fontSize: 20, color: aColor,
           }}>
-            {(hero.hero_name ?? '?')[0].toUpperCase()}
+            {(hero.display_name ?? hero.hero_name ?? '?')[0].toUpperCase()}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 17, fontWeight: 700, color: '#e8e0cc', margin: '0 0 2px' }}>
-              {hero.hero_name}
+              {hero.display_name ?? hero.hero_name}
             </p>
             {prog?.equipped_title && (
               <p style={{ fontSize: 11, color: 'var(--gold)', margin: '0 0 4px', letterSpacing: '0.06em' }}>
@@ -219,8 +223,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
               width: '100%', padding: '12px 0',
               background: 'var(--surface)', color: 'rgba(232, 224, 204, 0.45)',
               border: '1px solid var(--border)', borderRadius: 10,
-              fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer',
-              letterSpacing: '0.05em',
+              fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer', letterSpacing: '0.05em',
             }}
           >
             Switch Hero
@@ -232,8 +235,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
             width: '100%', padding: '12px 0',
             background: 'transparent', color: '#9ca3af',
             border: '1px solid var(--border)', borderRadius: 10,
-            fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer',
-            letterSpacing: '0.05em',
+            fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer', letterSpacing: '0.05em',
           }}
         >
           Sign Out
@@ -243,95 +245,10 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: {
   );
 }
 
-// ── Rankings Tab ───────────────────────────────────────────
-
-function RankingsTab({ rootId }: { rootId: string }) {
-  const [board, setBoard]     = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch(`${BASE}/api/leaderboard`)
-      .then(r => r.json())
-      .then(j => {
-        const entries: LeaderboardEntry[] = j?.data?.entries ?? j?.data ?? [];
-        setBoard(entries);
-      })
-      .catch(() => setError('Could not load leaderboard'))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) return (
-    <div style={{ textAlign: 'center', padding: 48 }}>
-      <p style={{ color: 'rgba(232, 224, 204, 0.45)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Consulting the Veil…</p>
-    </div>
-  );
-  if (error || board.length === 0) return (
-    <div style={{ textAlign: 'center', padding: 48 }}>
-      <p style={{ color: 'rgba(232, 224, 204, 0.45)', fontSize: 13 }}>{error ?? 'No rankings yet.'}</p>
-    </div>
-  );
-
-  return (
-    <div style={{ padding: '16px 16px 32px' }}>
-      <p style={{
-        fontFamily: 'Cinzel, serif', fontSize: 10,
-        color: 'rgba(232, 224, 204, 0.45)', letterSpacing: '0.15em',
-        textTransform: 'uppercase', marginBottom: 12,
-      }}>Fate Rankings</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {board.map(entry => {
-          const isMe = entry.root_id === rootId;
-          const aColor = ALIGNMENT_COLOR[entry.fate_alignment] ?? '#9ca3af';
-          const tier   = TIER_FOR_LEVEL(entry.fate_level);
-          return (
-            <div key={entry.root_id} style={{
-              background: isMe ? 'rgba(200,160,78,0.08)' : 'var(--surface)',
-              border: `1px solid ${isMe ? 'var(--gold)' : 'var(--border)'}`,
-              borderRadius: 10, padding: '10px 14px',
-              display: 'flex', alignItems: 'center', gap: 12,
-            }}>
-              <span style={{
-                fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700,
-                color: entry.rank <= 3 ? 'var(--gold)' : 'rgba(232, 224, 204, 0.45)',
-                width: 24, textAlign: 'right', flexShrink: 0,
-              }}>
-                {entry.rank}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
-                  color: isMe ? 'var(--gold)' : '#e8e0cc', margin: '0 0 1px',
-                }}>
-                  {entry.hero_name} {isMe && '(you)'}
-                </p>
-                {entry.equipped_title && (
-                  <p style={{ fontSize: 10, color: 'rgba(232, 224, 204, 0.45)', margin: 0, letterSpacing: '0.06em' }}>
-                    {entry.equipped_title.replace(/^title_/,'').replace(/_/g,' ').toUpperCase()}
-                  </p>
-                )}
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: tier.color, margin: '0 0 1px' }}>
-                  Lv {entry.fate_level}
-                </p>
-                <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0, fontFamily: 'monospace' }}>
-                  {(entry.value ?? 0).toLocaleString()} XP
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Wristband Tab ──────────────────────────────────────────
-
+// ── Wristband Tab ─────────────────────────────────────────────
 function WristbandTab({ rootId }: { rootId: string }) {
   const [wearables, setWearables] = useState<any[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch(`${BASE}/api/wearables/${rootId}`)
@@ -354,7 +271,6 @@ function WristbandTab({ rootId }: { rootId: string }) {
         color: 'rgba(232, 224, 204, 0.45)', letterSpacing: '0.15em',
         textTransform: 'uppercase', marginBottom: 12,
       }}>Linked Wristbands</p>
-
       {wearables.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px' }}>
           <div style={{ fontSize: 32, color: 'rgba(232, 224, 204, 0.45)', opacity: 0.4, marginBottom: 12 }}>◌</div>
@@ -376,9 +292,7 @@ function WristbandTab({ rootId }: { rootId: string }) {
                 {w.friendly_name ?? 'Wristband'}
               </p>
               <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 2px' }}>
-                UID: <span style={{ fontFamily: 'monospace', color: 'var(--gold)', letterSpacing: '0.05em' }}>
-                  {w.token_uid}
-                </span>
+                UID: <span style={{ fontFamily: 'monospace', color: 'var(--gold)', letterSpacing: '0.05em' }}>{w.token_uid}</span>
               </p>
               {w.last_tap_at && (
                 <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0 }}>
