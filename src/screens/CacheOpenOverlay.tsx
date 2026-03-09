@@ -71,10 +71,10 @@ const MODIFIER_LABEL: Record<string, string> = {
   defense: 'Defense', crit_pct: 'Crit', cooldown_pct: 'Cooldown', fate_affinity: 'Fate Affinity',
 };
 const REWARD_ICON: Record<string, string> = {
-  xp_boost: '✦', title: '◈', gear: '⚔', marker: '⬡',
+  xp_boost: '✦', title: '◈', gear: '⚔', marker: '⬡', nexus: '◈',
 };
 const REWARD_TYPE_LABEL: Record<string, string> = {
-  xp_boost: 'Fate XP', title: 'Title Unlocked', gear: 'Gear Found', marker: 'Lore Fragment',
+  xp_boost: 'Fate XP', title: 'Title Unlocked', gear: 'Gear Found', marker: 'Lore Fragment', nexus: 'Nexus Earned',
 };
 
 // ── Keyframe CSS ───────────────────────────────────────────────
@@ -432,6 +432,17 @@ export function CacheOpenOverlay({ cache, reward, onDismiss }: Props) {
               animation: 'co-xp-pop 0.5s 0.48s cubic-bezier(0.34,1.56,0.64,1) both', opacity: 0,
             }}>
               +{reward.xp_granted} Fate XP
+            </p>
+          )}
+
+          {/* Nexus granted */}
+          {reward?.reward_type === 'nexus' && reward.reward_value && (
+            <p style={{
+              fontSize: 22, fontWeight: 700, margin: '0 0 12px',
+              color: '#FFA500', fontFamily: 'Cinzel, serif',
+              animation: 'co-xp-pop 0.5s 0.48s cubic-bezier(0.34,1.56,0.64,1) both', opacity: 0,
+            }}>
+              +{reward.reward_value} ◈
             </p>
           )}
 
