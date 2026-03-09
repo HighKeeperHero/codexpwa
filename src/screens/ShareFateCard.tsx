@@ -15,6 +15,7 @@
 // ============================================================
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/AuthContext';
 import { TIER_FOR_LEVEL, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '@/api/pik';
 
@@ -123,7 +124,7 @@ export function ShareFateCard({ onClose }: { onClose: () => void }) {
 
   const ac = ALIGNMENT_COLOR[hero.alignment] ?? '#C8A04E';
 
-  return (
+  return createPortal(
     <div
       onClick={onClose}
       style={{
@@ -267,7 +268,8 @@ export function ShareFateCard({ onClose }: { onClose: () => void }) {
           Close
         </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
