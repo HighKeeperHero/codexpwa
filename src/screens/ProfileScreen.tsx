@@ -58,7 +58,12 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg)' }}>
+    <div style={{
+      position: 'absolute', inset: 0,
+      bottom: 'calc(var(--tab-h) + var(--safe-bottom))',
+      display: 'flex', flexDirection: 'column',
+      overflow: 'hidden', background: 'var(--bg)',
+    }}>
       <div style={{
         display: 'flex', borderBottom: '1px solid var(--border)',
         background: 'var(--surface)', flexShrink: 0,
