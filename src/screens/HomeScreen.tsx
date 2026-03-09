@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/AuthContext';
 import { xpProgress, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '@/api/pik';
+import { ShareFateCard } from '@/screens/ShareFateCard';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
 
@@ -87,6 +88,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
   const [trainingStreak, setTrainingStreak] = useState<number | null>(null);
   const [pillars,        setPillars]        = useState<PillarData[]>([]);
   const [oath,           setOath]           = useState<Oath | null | undefined>(undefined);
+  const [showCard,       setShowCard]        = useState(false);
 
   const rootId = hero?.root_id ?? null;
 
@@ -287,6 +289,31 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
           </>
         )}
 
+        {/* ── Share Fate Card */}
+        <div style={{ marginTop: 28 }}>
+          <button
+            onClick={() => setShowCard(true)}
+            style={{
+              width: '100%',
+              padding: '16px 0',
+              background: `linear-gradient(135deg, ${ac}18, ${ac}08)`,
+              color: ac,
+              border: `1px solid ${ac}50`,
+              borderRadius: 12,
+              fontFamily: 'var(--font-serif)',
+              fontSize: 12, fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              boxShadow: `0 0 20px ${ac}15`,
+            }}
+          >
+            <span style={{ fontSize: 16 }}>◈</span>
+            Share Fate Card
+          </button>
+        </div>
+
         {/* ── Account */}
         <div style={{ marginTop: 36, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="divider"><span className="divider-label">ACCOUNT</span></div>
@@ -301,6 +328,9 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
         </div>
 
       </div>
+
+      {/* Fate Card Modal */}
+      {showCard && <ShareFateCard onClose={() => setShowCard(false)} />}
     </div>
   );
 }
