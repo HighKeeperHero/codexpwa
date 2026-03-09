@@ -30,9 +30,6 @@ interface CacheReward {
   rarity_tier:  Rarity;
   xp_granted?:  number;
   message?:     string;
-  slot?:        string;
-  description?: string;
-  modifiers?:   Record<string, number>;
 }
 
 interface TitleEntry {
@@ -85,11 +82,6 @@ const GEAR_SLOT_ICON: Record<string, string> = {
 };
 const GEAR_SLOT_LABEL: Record<string, string> = {
   weapon: 'Weapon', helm: 'Helm', chest: 'Chest', arms: 'Arms', legs: 'Legs', rune: 'Rune',
-};
-
-const MODIFIER_LABEL: Record<string, string> = {
-  xp_bonus_pct: 'XP Bonus', boss_damage_pct: 'Boss Dmg', luck_pct: 'Luck',
-  defense: 'Defense', crit_pct: 'Crit', cooldown_pct: 'Cooldown', fate_affinity: 'Fate Affinity',
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -231,15 +223,11 @@ export function VaultScreen() {
           Authorization: `Bearer ${sessionToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ inventory_id: inventoryId }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.message ?? 'Failed to equip');
-      // Force hero refresh and update local gear state from refreshed hero
+      if (!res.ok) throw new Error(json?.message ?? 'Failed');
       await refreshHero();
-    } catch (e: any) {
-      alert(e?.message ?? 'Failed to equip item');
-    }
+    } catch {}
   };
 
   const inventoryRaw = hero?.gear?.inventory;
@@ -624,34 +612,61 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
         }}>
           {rewardTypeLabel[reward.reward_type] ?? 'Reward'}
         </p>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: '#e8e0cc', margin: '0 0 4px' }}>
-          {reward.display_name}
+        {/* Rarity badge */}
+        <div style={{
+          display: 'inline-block',
+          background: `${color}22`, border: `1px solid ${color}`,
+          borderRadius: 999, padding: '3px 14px',
+          fontSize: 10, fontWeight: 700, letterSpacing: '0.15em',
+          color, textTransform: 'uppercase', marginBottom: 16,
+        }}>
+          {RARITY_LABEL[rarity]}
+        </div>
+
+        {/* Item name — primary focus */}
+        <p style={{
+          fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700,
+          color: '#e8e0cc', margin: '0 0 6px', lineHeight: 1.2,
+        }}>
+          {reward.display_name || (reward.reward_type === 'gear' ? 'Gear Item' : reward.reward_type === 'title' ? 'New Title' : 'Reward')}
         </p>
+
+        {/* Slot label for gear */}
         {reward.reward_type === 'gear' && reward.slot && (
-          <p style={{ fontSize: 11, color: 'rgba(232,224,204,0.45)', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          <p style={{ fontSize: 11, color: 'rgba(232,224,204,0.5)', margin: '0 0 14px',
+            textTransform: 'uppercase', letterSpacing: '0.12em' }}>
             {GEAR_SLOT_LABEL[reward.slot] ?? reward.slot}
           </p>
         )}
-        <p style={{ fontSize: 11, color, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px', fontWeight: 700 }}>
-          {RARITY_LABEL[rarity]}
-        </p>
-        {reward.reward_type === 'gear' && reward.modifiers && Object.keys(reward.modifiers).length > 0 && (
-          <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, textAlign: 'left' }}>
+
+        {/* Stat modifiers */}
+        {reward.modifiers && Object.keys(reward.modifiers).length > 0 && (
+          <div style={{
+            background: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: '8px 14px',
+            marginBottom: 14, textAlign: 'left',
+          }}>
             {Object.entries(reward.modifiers).map(([k, v]) => (
-              <p key={k} style={{ fontSize: 11, margin: '2px 0', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between',
+                fontSize: 11, margin: '3px 0' }}>
                 <span style={{ color: 'rgba(232,224,204,0.6)' }}>{MODIFIER_LABEL[k] ?? k}</span>
-                <span style={{ color: 'var(--gold)' }}>+{v}</span>
-              </p>
+                <span style={{ color: 'var(--gold)', fontWeight: 700 }}>+{v}</span>
+              </div>
             ))}
           </div>
         )}
+
+        {/* XP */}
         {reward.xp_granted && (
-          <p style={{ fontSize: 13, color: 'var(--gold)', margin: '0 0 12px' }}>+{reward.xp_granted} Fate XP</p>
+          <p style={{ fontSize: 13, color: 'var(--gold)', margin: '0 0 14px', fontWeight: 700 }}>
+            +{reward.xp_granted} Fate XP
+          </p>
         )}
-        {reward.description && (
-          <p style={{ fontSize: 12, color: 'rgba(232,224,204,0.6)', margin: '0 0 12px', lineHeight: 1.5 }}>{reward.description}</p>
-        )}
-        <p style={{ fontSize: 12, color: 'rgba(232,224,204,0.45)', fontStyle: 'italic', margin: '0 0 28px' }}>
+
+        {/* Flavour */}
+        <p style={{
+          fontSize: 12, color: 'rgba(232, 224, 204, 0.45)', fontStyle: 'italic',
+          margin: '0 0 28px', lineHeight: 1.5,
+        }}>
           {reward.message ?? 'The Veil has given what was kept for you.'}
         </p>
         <button
@@ -762,32 +777,55 @@ function LockedTitleCard({ title }: { title: TitleEntry }) {
 // ── Gear Slot Card ────────────────────────────────────────────
 
 function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
-  const rarity = item ? (item.rarity_tier as Rarity) : null;
-  const color  = rarity ? RARITY_COLOR[rarity] : 'var(--border)';
+  const rarity = item ? ((item.rarity_tier as Rarity) ?? 'common') : null;
+  const color  = rarity ? (RARITY_COLOR[rarity] ?? '#9ca3af') : 'rgba(232,224,204,0.12)';
+  const glow   = rarity ? RARITY_GLOW[rarity] : 'transparent';
 
   return (
     <div style={{
-      background: 'var(--surface)',
-      border: `1px solid ${color}`,
+      background: rarity
+        ? `linear-gradient(160deg, ${glow}22 0%, var(--surface) 60%)`
+        : 'var(--surface)',
+      border: `${rarity ? 2 : 1}px solid ${color}`,
       borderRadius: 10, padding: '10px 8px',
-      textAlign: 'center',
-      minHeight: 80,
-      boxShadow: rarity ? `0 0 10px ${RARITY_GLOW[rarity]}` : 'none',
+      textAlign: 'center', minHeight: 90,
+      boxShadow: rarity
+        ? `0 0 18px ${glow}, inset 0 0 12px ${glow}44`
+        : 'none',
+      transition: 'all 0.2s ease',
+      position: 'relative',
     }}>
-      <div style={{ fontSize: 18, marginBottom: 4, color: item ? color : 'var(--border)' }}>
+      {/* Equipped shimmer top edge */}
+      {rarity && (
+        <div style={{
+          position: 'absolute', top: 0, left: '10%', right: '10%', height: 2,
+          background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+          borderRadius: '0 0 4px 4px',
+        }} />
+      )}
+      <div style={{
+        fontSize: rarity ? 22 : 18, marginBottom: 4,
+        color: item ? color : 'rgba(232,224,204,0.2)',
+        filter: rarity ? `drop-shadow(0 0 6px ${color})` : 'none',
+      }}>
         {item ? (item.icon ?? GEAR_SLOT_ICON[slot]) : GEAR_SLOT_ICON[slot]}
       </div>
       <p style={{
         fontFamily: 'Cinzel, serif', fontSize: 9,
-        color: 'rgba(232, 224, 204, 0.45)', letterSpacing: '0.12em',
-        textTransform: 'uppercase', margin: '0 0 2px',
-      }}>{GEAR_SLOT_LABEL[slot]}</p>
+        color: rarity ? 'rgba(232,224,204,0.6)' : 'rgba(232,224,204,0.3)',
+        letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 3px',
+      }}>
+        {GEAR_SLOT_LABEL[slot]}
+      </p>
       {item ? (
-        <p style={{ fontSize: 10, color, margin: 0, fontWeight: 700, lineHeight: 1.3 }}>
+        <p style={{
+          fontSize: 10, color, margin: 0, fontWeight: 700, lineHeight: 1.3,
+          textShadow: `0 0 8px ${color}80`,
+        }}>
           {item.item_name}
         </p>
       ) : (
-        <p style={{ fontSize: 10, color: 'var(--border)', margin: 0, fontStyle: 'italic' }}>
+        <p style={{ fontSize: 10, color: 'rgba(232,224,204,0.2)', margin: 0, fontStyle: 'italic' }}>
           Empty
         </p>
       )}
@@ -798,47 +836,46 @@ function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
 // ── Inventory Card ────────────────────────────────────────────
 
 function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void }) {
-  const rarity = (item.rarity_tier as Rarity) ?? 'common';
-  const color  = RARITY_COLOR[rarity] ?? '#9ca3af';
-  const [equipping, setEquipping] = useState(false);
-
-  const handleEquip = () => {
-    setEquipping(true);
-    Promise.resolve(onEquip()).finally(() => setEquipping(false));
-  };
+  const rarity = item.rarity_tier as Rarity;
+  const color  = RARITY_COLOR[rarity];
 
   return (
     <div style={{
-      background: 'var(--surface)', border: `1px solid ${color}`,
+      background: 'var(--surface)',
+      border: `1px solid ${color}`,
       borderRadius: 10, padding: '12px 14px',
       display: 'flex', alignItems: 'center', gap: 12,
-      boxShadow: `0 0 10px ${RARITY_GLOW[rarity] ?? 'transparent'}`,
     }}>
       <div style={{
-        width: 40, height: 40, flexShrink: 0,
-        background: RARITY_GLOW[rarity] ?? 'transparent',
-        border: `1px solid ${color}`, borderRadius: 8,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+        width: 36, height: 36, flexShrink: 0,
+        background: RARITY_GLOW[rarity],
+        border: `1px solid ${color}`,
+        borderRadius: 6,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18,
       }}>
         {item.icon ?? '⚔'}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: '#e8e0cc', margin: '0 0 2px' }}>
-          {item.item_name}
-        </p>
+        <p style={{
+          fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
+          color: '#e8e0cc', margin: '0 0 2px',
+        }}>{item.item_name}</p>
         <p style={{ fontSize: 11, color, margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          {RARITY_LABEL[rarity] ?? rarity} · {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
+          {RARITY_LABEL[rarity]} · {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
         </p>
       </div>
-      <button onClick={handleEquip} disabled={equipping} style={{
-        padding: '8px 16px', flexShrink: 0,
-        background: color, color: '#0B0A08',
-        border: `2px solid ${color}`, borderRadius: 6,
-        fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 900,
-        cursor: equipping ? 'wait' : 'pointer', opacity: equipping ? 0.7 : 1,
-        letterSpacing: '0.08em', boxShadow: `0 0 8px ${color}60`, minWidth: 64,
-      }}>
-        {equipping ? '…' : 'EQUIP'}
+      <button
+        onClick={onEquip}
+        style={{
+          padding: '6px 12px', flexShrink: 0,
+          background: color, color: '#0B0A08',
+          border: 'none', borderRadius: 6,
+          fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700,
+          cursor: 'pointer',
+        }}
+      >
+        Equip
       </button>
     </div>
   );
