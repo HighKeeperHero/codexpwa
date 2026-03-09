@@ -113,6 +113,11 @@ export function VaultScreen() {
   const [titlesLoading, setTitlesLoading] = useState(true);
   const [equippingTitle, setEquippingTitle] = useState<string | null>(null);
 
+  // ── Gear state (local — refreshed independently from hero)
+  const [localInventory, setLocalInventory] = useState<GearItem[]>([]);
+  const [localEquipment, setLocalEquipment] = useState<Record<string, GearItem | null>>({});
+  const [gearLoading, setGearLoading] = useState(false);
+
   // ── Section state
   type Section = 'caches' | 'titles' | 'gear';
   const [section, setSection] = useState<Section>('caches');
@@ -166,6 +171,35 @@ export function VaultScreen() {
   }, [rootId, sessionToken, hero]);
 
   useEffect(() => { fetchTitles(); }, [fetchTitles]);
+
+  // ── Fetch gear ───────────────────────────────────────────
+
+  const fetchGear = useCallback(async () => {
+    if (!rootId) return;
+    setGearLoading(true);
+    try {
+      const [invRes, eqRes] = await Promise.all([
+        fetch(`${BASE}/api/users/${rootId}/inventory`),
+        fetch(`${BASE}/api/users/${rootId}/equipment`),
+      ]);
+      const invJson = invRes.ok ? await invRes.json() : null;
+      const eqJson  = eqRes.ok  ? await eqRes.json()  : null;
+      const inv = invJson?.data ?? invJson ?? [];
+      const eq  = eqJson?.data  ?? eqJson  ?? {};
+      setLocalInventory(Array.isArray(inv) ? inv as GearItem[] : []);
+      setLocalEquipment((typeof eq === 'object' && eq !== null && !Array.isArray(eq)) ? eq as Record<string, GearItem | null> : {});
+    } catch {
+      // Fallback to hero object if endpoints unavailable
+      const invRaw = hero?.gear?.inventory;
+      const eqRaw  = hero?.gear?.equipment;
+      setLocalInventory(Array.isArray(invRaw) ? invRaw as GearItem[] : []);
+      setLocalEquipment((eqRaw && typeof eqRaw === 'object') ? eqRaw as Record<string, GearItem | null> : {});
+    } finally {
+      setGearLoading(false);
+    }
+  }, [rootId, hero]);
+
+  useEffect(() => { fetchGear(); }, [fetchGear]);
 
   // ── Open cache ────────────────────────────────────────────
 
@@ -235,15 +269,20 @@ export function VaultScreen() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message ?? 'Failed to equip');
-      await refreshHero();
+      // Refresh gear locally (fast) and hero (for XP/stats)
+      await Promise.all([fetchGear(), refreshHero()]);
     } catch (e: any) {
       alert(e?.message ?? 'Failed to equip item');
     }
   };
 
-  const inventoryRaw = hero?.gear?.inventory;
-  const inventory: GearItem[] = Array.isArray(inventoryRaw) ? inventoryRaw as GearItem[] : [];
-  const equipment = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
+  // Use local gear state (refreshed after equip) — falls back to hero on first load
+  const inventory: GearItem[] = localInventory.length > 0
+    ? localInventory
+    : (Array.isArray(hero?.gear?.inventory) ? hero!.gear!.inventory as GearItem[] : []);
+  const equipment: Record<string, GearItem | null> = Object.keys(localEquipment).length > 0
+    ? localEquipment
+    : ((hero?.gear?.equipment && typeof hero.gear.equipment === 'object') ? hero.gear.equipment as Record<string, GearItem | null> : {});
 
   const safeTitles = Array.isArray(titles) ? titles : [];
   const earnedTitles  = safeTitles.filter(t => t.is_earned);
@@ -630,26 +669,18 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
           {reward.display_name}
         </p>
         {reward.reward_type === 'gear' && reward.slot && (
-          <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 8px',
+          <p style={{ fontSize: 11, color: 'rgba(232,224,204,0.45)', margin: '0 0 8px',
             textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             {GEAR_SLOT_LABEL[reward.slot] ?? reward.slot}
           </p>
         )}
-        <p style={{
-          fontSize: 11, color,
-          textTransform: 'uppercase', letterSpacing: '0.1em',
-          margin: '0 0 12px', fontWeight: 700,
-        }}>
+        <p style={{ fontSize: 11, color, textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 12px', fontWeight: 700 }}>
           {RARITY_LABEL[rarity]}
         </p>
         {reward.reward_type === 'gear' && reward.modifiers && Object.keys(reward.modifiers).length > 0 && (
-          <div style={{
-            background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '8px 12px',
-            marginBottom: 12, textAlign: 'left',
-          }}>
+          <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, textAlign: 'left' }}>
             {Object.entries(reward.modifiers).map(([k, v]) => (
-              <p key={k} style={{ fontSize: 11, margin: '2px 0',
-                display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <p key={k} style={{ fontSize: 11, margin: '2px 0', display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <span style={{ color: 'rgba(232,224,204,0.6)' }}>{MODIFIER_LABEL[k] ?? k}</span>
                 <span style={{ color: 'var(--gold)' }}>+{v}</span>
               </p>
@@ -657,19 +688,12 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
           </div>
         )}
         {reward.xp_granted && (
-          <p style={{ fontSize: 13, color: 'var(--gold)', margin: '0 0 12px' }}>
-            +{reward.xp_granted} Fate XP
-          </p>
+          <p style={{ fontSize: 13, color: 'var(--gold)', margin: '0 0 12px' }}>+{reward.xp_granted} Fate XP</p>
         )}
         {reward.description && (
-          <p style={{ fontSize: 12, color: 'rgba(232, 224, 204, 0.6)', margin: '0 0 12px', lineHeight: 1.5 }}>
-            {reward.description}
-          </p>
+          <p style={{ fontSize: 12, color: 'rgba(232,224,204,0.6)', margin: '0 0 12px', lineHeight: 1.5 }}>{reward.description}</p>
         )}
-        <p style={{
-          fontSize: 12, color: 'rgba(232, 224, 204, 0.45)', fontStyle: 'italic',
-          margin: '0 0 28px',
-        }}>
+        <p style={{ fontSize: 12, color: 'rgba(232,224,204,0.45)', fontStyle: 'italic', margin: '0 0 28px' }}>
           {reward.message ?? 'The Veil has given what was kept for you.'}
         </p>
         <button
@@ -844,10 +868,9 @@ function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void 
         {item.icon ?? '⚔'}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
-          color: '#e8e0cc', margin: '0 0 2px',
-        }}>{item.item_name}</p>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: '#e8e0cc', margin: '0 0 2px' }}>
+          {item.item_name}
+        </p>
         <p style={{ fontSize: 11, color, margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           {RARITY_LABEL[rarity] ?? rarity} · {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
         </p>
