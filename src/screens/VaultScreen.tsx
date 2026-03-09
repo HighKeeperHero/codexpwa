@@ -30,6 +30,9 @@ interface CacheReward {
   rarity_tier:  Rarity;
   xp_granted?:  number;
   message?:     string;
+  slot?:        string;
+  description?: string;
+  modifiers?:   Record<string, number>;
 }
 
 interface TitleEntry {
@@ -54,7 +57,7 @@ interface GearItem {
   modifiers:    Record<string, number>;
 }
 
-// ── Constants ─────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────
 
 const RARITY_COLOR: Record<Rarity, string> = {
   common:    '#9ca3af',
@@ -73,36 +76,53 @@ const RARITY_GLOW: Record<Rarity, string> = {
 };
 
 const RARITY_LABEL: Record<Rarity, string> = {
-  common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary',
+  common:    'Common',
+  uncommon:  'Uncommon',
+  rare:      'Rare',
+  epic:      'Epic',
+  legendary: 'Legendary',
+};
+
+const MODIFIER_LABEL: Record<string, string> = {
+  xp_bonus_pct:    'XP Bonus',
+  boss_damage_pct: 'Boss Dmg',
+  luck_pct:        'Luck',
+  defense:         'Defense',
+  crit_pct:        'Crit',
+  cooldown_pct:    'Cooldown',
+  fate_affinity:   'Fate Affinity',
 };
 
 const GEAR_SLOTS = ['weapon','helm','chest','arms','legs','rune'] as const;
+
 const GEAR_SLOT_ICON: Record<string, string> = {
   weapon: '⚔', helm: '⛑', chest: '🔰', arms: '🦾', legs: '👢', rune: '◈',
 };
+
 const GEAR_SLOT_LABEL: Record<string, string> = {
   weapon: 'Weapon', helm: 'Helm', chest: 'Chest', arms: 'Arms', legs: 'Legs', rune: 'Rune',
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
-  fate: 'Fate', boss: 'Combat', session: 'Session', meta: 'Realm', training: 'Training', general: 'General',
+  fate: 'Fate', boss: 'Combat', session: 'Session',
+  meta: 'Realm', training: 'Training', general: 'General',
 };
 
-// ── Main Component ────────────────────────────────────────────
+// ── Main Component ─────────────────────────────────────────────
 
 export function VaultScreen() {
   const { hero, sessionToken, refreshHero } = useAuth();
 
   // ── Caches state
-  const [caches, setCaches]         = useState<SealedCache[]>([]);
-  const [openingId, setOpeningId]   = useState<string | null>(null);
+  const [caches,      setCaches]      = useState<SealedCache[]>([]);
+  const [openingId,   setOpeningId]   = useState<string | null>(null);
   const [pendingOpen, setPendingOpen] = useState<SealedCache | null>(null);
-  const [reward, setReward]         = useState<CacheReward | null>(null);
+  const [reward,      setReward]      = useState<CacheReward | null>(null);
   const [cacheLoading, setCacheLoading] = useState(true);
 
   // ── Titles state
-  const [titles, setTitles]         = useState<TitleEntry[]>([]);
-  const [titlesLoading, setTitlesLoading] = useState(true);
+  const [titles,         setTitles]         = useState<TitleEntry[]>([]);
+  const [titlesLoading,  setTitlesLoading]  = useState(true);
   const [equippingTitle, setEquippingTitle] = useState<string | null>(null);
 
   // ── Section state
@@ -111,7 +131,7 @@ export function VaultScreen() {
 
   const rootId = hero?.root_id;
 
-  // ── Fetch caches ──────────────────────────────────────────
+  // ── Fetch caches ───────────────────────────────────────────
 
   const fetchCaches = useCallback(async () => {
     if (!rootId) return;
@@ -119,7 +139,7 @@ export function VaultScreen() {
     try {
       const res  = await fetch(`${BASE}/api/users/${rootId}/caches`);
       const json = await res.json();
-      const raw = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+      const raw  = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
       setCaches((raw as SealedCache[]).filter(c => c.status === 'sealed'));
     } catch {}
     finally { setCacheLoading(false); }
@@ -127,7 +147,7 @@ export function VaultScreen() {
 
   useEffect(() => { fetchCaches(); }, [fetchCaches]);
 
-  // ── Fetch titles ──────────────────────────────────────────
+  // ── Fetch titles ───────────────────────────────────────────
 
   const fetchTitles = useCallback(async () => {
     if (!rootId || !sessionToken) return;
@@ -140,7 +160,6 @@ export function VaultScreen() {
       const titleData = json?.data;
       setTitles(Array.isArray(titleData) ? titleData : Array.isArray(json) ? json : []);
     } catch {
-      // Fallback: build from hero object if endpoint not yet deployed
       if (hero?.progression?.titles) {
         const equipped = hero.progression.equipped_title;
         setTitles(hero.progression.titles.map((t: any) => ({
@@ -159,25 +178,20 @@ export function VaultScreen() {
 
   useEffect(() => { fetchTitles(); }, [fetchTitles]);
 
-  // ── Open cache ────────────────────────────────────────────
+  // ── Open cache ─────────────────────────────────────────────
 
   const handleOpenCache = async (cache: SealedCache) => {
     if (!rootId || !sessionToken) return;
     setOpeningId(cache.cache_id);
     setPendingOpen(null);
     setReward(null);
-
     try {
       const res  = await fetch(`${BASE}/api/users/${rootId}/caches/${cache.cache_id}/open`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          'Content-Type': 'application/json',
-        },
+        method:  'POST',
+        headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message ?? 'Failed to open');
-
       const r: CacheReward = json?.data ?? json;
       setReward(r);
       await fetchCaches();
@@ -190,19 +204,16 @@ export function VaultScreen() {
     }
   };
 
-  // ── Equip title ───────────────────────────────────────────
+  // ── Equip title ────────────────────────────────────────────
 
   const handleEquipTitle = async (titleId: string, isEquipped: boolean) => {
     if (!rootId || !sessionToken) return;
     setEquippingTitle(titleId);
     try {
       const target = isEquipped ? 'none' : titleId;
-      const res = await fetch(`${BASE}/api/users/${rootId}/titles/${target}/equip`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          'Content-Type': 'application/json',
-        },
+      const res    = await fetch(`${BASE}/api/users/${rootId}/titles/${target}/equip`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message ?? 'Failed');
@@ -212,33 +223,39 @@ export function VaultScreen() {
     finally { setEquippingTitle(null); }
   };
 
-  // ── Equip gear ────────────────────────────────────────────
+  // ── Equip gear ─────────────────────────────────────────────
+  // FIX: must include inventory_id in body, and refresh hero after
 
   const handleEquipGear = async (inventoryId: string) => {
     if (!rootId || !sessionToken) return;
     try {
-      const res = await fetch(`${BASE}/api/users/${rootId}/equipment/equip`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${sessionToken}`,
-          'Content-Type': 'application/json',
-        },
+      const res  = await fetch(`${BASE}/api/users/${rootId}/equipment/equip`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ inventory_id: inventoryId }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json?.message ?? 'Failed');
+      if (!res.ok) throw new Error(json?.message ?? 'Failed to equip');
       await refreshHero();
-    } catch {}
+    } catch (e: any) {
+      alert(e?.message ?? 'Failed to equip item');
+    }
   };
+
+  // ── Derived state ──────────────────────────────────────────
 
   const inventoryRaw = hero?.gear?.inventory;
   const inventory: GearItem[] = Array.isArray(inventoryRaw) ? inventoryRaw as GearItem[] : [];
   const equipment = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
 
-  const safeTitles = Array.isArray(titles) ? titles : [];
-  const earnedTitles  = safeTitles.filter(t => t.is_earned);
-  const lockedTitles  = safeTitles.filter(t => !t.is_earned);
+  // Only count unequipped items for gear badge
+  const unequippedCount = inventory.filter(i => !i.is_equipped).length;
 
-  // ── Render ────────────────────────────────────────────────
+  const safeTitles   = Array.isArray(titles) ? titles : [];
+  const earnedTitles = safeTitles.filter(t =>  t.is_earned);
+  const lockedTitles = safeTitles.filter(t => !t.is_earned);
+
+  // ── Render ─────────────────────────────────────────────────
 
   return (
     <div style={{ padding: '0 0 32px' }}>
@@ -250,12 +267,12 @@ export function VaultScreen() {
         paddingTop: 'env(safe-area-inset-top)',
         background: 'var(--bg)',
       }}>
-        {(['caches','titles','gear'] as Section[]).map(s => {
+        {(['caches', 'titles', 'gear'] as Section[]).map(s => {
           const labels = { caches: 'Fate Caches', titles: 'Titles', gear: 'Gear' };
           const counts = {
-            caches: caches.length > 0 ? caches.length : 0,
+            caches: caches.length,
             titles: earnedTitles.length,
-            gear:   inventory.length,
+            gear:   unequippedCount,   // only unequipped = actionable items
           };
           return (
             <button
@@ -263,13 +280,12 @@ export function VaultScreen() {
               onClick={() => setSection(s)}
               style={{
                 flex: 1, padding: '8px 4px',
-                background:  section === s ? 'var(--gold)' : 'var(--surface)',
-                color:       section === s ? '#0B0A08' : 'rgba(232, 224, 204, 0.45)',
-                border:      `1px solid ${section === s ? 'var(--gold)' : 'var(--border)'}`,
+                background: section === s ? 'var(--gold)' : 'var(--surface)',
+                color:      section === s ? '#0B0A08'     : 'rgba(232, 224, 204, 0.45)',
+                border:     `1px solid ${section === s ? 'var(--gold)' : 'var(--border)'}`,
                 borderRadius: 8,
-                fontFamily: 'Cinzel, serif',
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.05em',
-                cursor: 'pointer',
+                fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700,
+                letterSpacing: '0.05em', cursor: 'pointer',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
               }}
             >
@@ -277,8 +293,8 @@ export function VaultScreen() {
               {counts[s] > 0 && (
                 <span style={{
                   fontSize: 9,
-                  background: section === s ? 'rgba(0,0,0,0.2)' : 'var(--gold)',
-                  color: section === s ? '#0B0A08' : '#0B0A08',
+                  background:  section === s ? 'rgba(0,0,0,0.2)' : 'var(--gold)',
+                  color:       '#0B0A08',
                   borderRadius: 999, padding: '1px 6px',
                   fontFamily: 'monospace',
                 }}>
@@ -290,19 +306,14 @@ export function VaultScreen() {
         })}
       </div>
 
-      {/* ── CACHES ───────────────────────────────────────── */}
+      {/* ── CACHES ─────────────────────────────────────────── */}
       {section === 'caches' && (
         <div style={{ padding: '20px 16px 0' }}>
 
-          {/* Reward reveal overlay */}
           {reward && (
-            <RewardReveal
-              reward={reward}
-              onDismiss={() => setReward(null)}
-            />
+            <RewardReveal reward={reward} onDismiss={() => setReward(null)} />
           )}
 
-          {/* Pending open confirmation */}
           {pendingOpen && !reward && (
             <div style={{
               background: 'var(--surface)',
@@ -379,17 +390,13 @@ export function VaultScreen() {
         </div>
       )}
 
-      {/* ── TITLES ───────────────────────────────────────── */}
+      {/* ── TITLES ─────────────────────────────────────────── */}
       {section === 'titles' && (
         <div style={{ padding: '20px 16px 0' }}>
           {titlesLoading ? (
             <p style={{ color: 'rgba(232, 224, 204, 0.45)', textAlign: 'center', fontSize: 13, marginTop: 32 }}>Loading titles…</p>
           ) : earnedTitles.length === 0 && lockedTitles.length === 0 ? (
-            <EmptyState
-              icon="◈"
-              title="No Titles Yet"
-              body="Titles are earned through sessions, pillar mastery, and combat milestones."
-            />
+            <EmptyState icon="◈" title="No Titles Yet" body="Titles are earned through sessions, pillar mastery, and combat milestones." />
           ) : (
             <>
               {earnedTitles.length > 0 && (
@@ -398,8 +405,7 @@ export function VaultScreen() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
                     {earnedTitles.map(t => (
                       <TitleCard
-                        key={t.title_id}
-                        title={t}
+                        key={t.title_id} title={t}
                         isEquipping={equippingTitle === t.title_id}
                         onEquip={() => handleEquipTitle(t.title_id, t.is_equipped)}
                       />
@@ -422,11 +428,9 @@ export function VaultScreen() {
         </div>
       )}
 
-      {/* ── GEAR ─────────────────────────────────────────── */}
+      {/* ── GEAR ───────────────────────────────────────────── */}
       {section === 'gear' && (
         <div style={{ padding: '20px 16px 0' }}>
-
-          {/* Loadout grid */}
           <SectionLabel>Loadout</SectionLabel>
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
@@ -434,24 +438,13 @@ export function VaultScreen() {
           }}>
             {GEAR_SLOTS.map(slot => {
               const item = equipment[slot] as GearItem | null | undefined;
-              return (
-                <GearSlotCard
-                  key={slot}
-                  slot={slot}
-                  item={item ?? null}
-                />
-              );
+              return <GearSlotCard key={slot} slot={slot} item={item ?? null} />;
             })}
           </div>
 
-          {/* Inventory */}
           <SectionLabel>Inventory</SectionLabel>
           {inventory.length === 0 ? (
-            <EmptyState
-              icon="⊕"
-              title="Inventory Empty"
-              body="Open Fate Caches to earn gear. Your loadout awaits."
-            />
+            <EmptyState icon="⊕" title="Inventory Empty" body="Open Fate Caches to earn gear. Your loadout awaits." />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {inventory.filter(i => !i.is_equipped).map(item => (
@@ -470,6 +463,7 @@ export function VaultScreen() {
           )}
         </div>
       )}
+
     </div>
   );
 }
@@ -496,18 +490,15 @@ function EmptyState({ icon, title, body }: { icon: string; title: string; body: 
   );
 }
 
-// ── Cache Card ────────────────────────────────────────────────
+// ── Cache Card ─────────────────────────────────────────────────
 
 function CacheCard({ cache, isOpening, onTap }: {
-  cache: SealedCache;
-  isOpening: boolean;
-  onTap: () => void;
+  cache: SealedCache; isOpening: boolean; onTap: () => void;
 }) {
   const color = RARITY_COLOR[cache.rarity];
   const glow  = RARITY_GLOW[cache.rarity];
-
   const cacheTypeLabel: Record<string, string> = {
-    level_up:  'Level Up', boss_kill: 'Boss Kill', milestone: 'Milestone',
+    level_up: 'Level Up', boss_kill: 'Boss Kill', milestone: 'Milestone',
   };
   const triggerNum = cache.trigger.split(':')[1];
 
@@ -527,40 +518,29 @@ function CacheCard({ cache, isOpening, onTap }: {
         transition: 'box-shadow 0.2s',
       }}
     >
-      {/* Rarity hex icon */}
       <div style={{
         width: 44, height: 44, flexShrink: 0,
         background: `radial-gradient(circle, ${glow} 0%, transparent 70%)`,
-        border: `1px solid ${color}`,
-        borderRadius: 8,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 20,
-      }}>
-        ⬡
-      </div>
+        border: `1px solid ${color}`, borderRadius: 8,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+      }}>⬡</div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
-          color: '#e8e0cc', margin: '0 0 2px',
-        }}>{cache.label}</p>
-        <p style={{
-          fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 2px',
-          textTransform: 'uppercase', letterSpacing: '0.08em',
-        }}>
-          {cacheTypeLabel[cache.cache_type] ?? cache.cache_type}
-          {triggerNum ? ` · ${triggerNum}` : ''}
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: '#e8e0cc', margin: '0 0 2px' }}>
+          {cache.label}
         </p>
-        <p style={{
-          fontSize: 11, color,
-          margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700,
-        }}>{RARITY_LABEL[cache.rarity]}</p>
+        <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          {cacheTypeLabel[cache.cache_type] ?? cache.cache_type}{triggerNum ? ` · ${triggerNum}` : ''}
+        </p>
+        <p style={{ fontSize: 11, color, margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
+          {RARITY_LABEL[cache.rarity]}
+        </p>
       </div>
       <div style={{ color, fontSize: 18, flexShrink: 0 }}>›</div>
     </button>
   );
 }
 
-// ── Reward Reveal ─────────────────────────────────────────────
+// ── Reward Reveal ──────────────────────────────────────────────
 
 function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: () => void }) {
   const rarity = (reward.rarity_tier ?? 'common') as Rarity;
@@ -574,6 +554,13 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
     xp_boost: 'Fate XP', title: 'Title Unlocked', gear: 'Gear Found', marker: 'Lore Fragment',
   };
 
+  // Determine item name with sensible fallback
+  const itemName = reward.display_name ||
+    (reward.reward_type === 'gear'   ? 'Gear Item'  :
+     reward.reward_type === 'title'  ? 'New Title'  :
+     reward.reward_type === 'xp_boost' ? `${reward.reward_value ?? '?'} XP` :
+     'Reward');
+
   return (
     <div
       onClick={onDismiss}
@@ -586,7 +573,7 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
       }}
     >
       <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeIn    { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         @keyframes glowPulse { 0%,100% { box-shadow: 0 0 24px ${glow}; } 50% { box-shadow: 0 0 60px ${color}40; } }
       `}</style>
       <div
@@ -598,20 +585,19 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
           animation: 'glowPulse 2s ease infinite',
         }}
       >
-        <div style={{
-          fontSize: 52, marginBottom: 16,
-          color,
-          filter: `drop-shadow(0 0 12px ${color})`,
-        }}>
+        {/* Type icon */}
+        <div style={{ fontSize: 52, marginBottom: 12, color, filter: `drop-shadow(0 0 12px ${color})` }}>
           {rewardIcon[reward.reward_type] ?? '✦'}
         </div>
+
+        {/* Type label */}
         <p style={{
-          fontFamily: 'Cinzel, serif', fontSize: 11,
-          color, letterSpacing: '0.2em',
-          textTransform: 'uppercase', margin: '0 0 8px',
+          fontFamily: 'Cinzel, serif', fontSize: 11, color,
+          letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 10px',
         }}>
           {rewardTypeLabel[reward.reward_type] ?? 'Reward'}
         </p>
+
         {/* Rarity badge */}
         <div style={{
           display: 'inline-block',
@@ -623,18 +609,20 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
           {RARITY_LABEL[rarity]}
         </div>
 
-        {/* Item name — primary focus */}
+        {/* Item name — headline */}
         <p style={{
           fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700,
           color: '#e8e0cc', margin: '0 0 6px', lineHeight: 1.2,
         }}>
-          {reward.display_name || (reward.reward_type === 'gear' ? 'Gear Item' : reward.reward_type === 'title' ? 'New Title' : 'Reward')}
+          {itemName}
         </p>
 
         {/* Slot label for gear */}
         {reward.reward_type === 'gear' && reward.slot && (
-          <p style={{ fontSize: 11, color: 'rgba(232,224,204,0.5)', margin: '0 0 14px',
-            textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+          <p style={{
+            fontSize: 11, color: 'rgba(232,224,204,0.5)',
+            margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.12em',
+          }}>
             {GEAR_SLOT_LABEL[reward.slot] ?? reward.slot}
           </p>
         )}
@@ -642,12 +630,11 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
         {/* Stat modifiers */}
         {reward.modifiers && Object.keys(reward.modifiers).length > 0 && (
           <div style={{
-            background: 'rgba(0,0,0,0.35)', borderRadius: 8, padding: '8px 14px',
-            marginBottom: 14, textAlign: 'left',
+            background: 'rgba(0,0,0,0.35)', borderRadius: 8,
+            padding: '8px 14px', marginBottom: 14, textAlign: 'left',
           }}>
             {Object.entries(reward.modifiers).map(([k, v]) => (
-              <div key={k} style={{ display: 'flex', justifyContent: 'space-between',
-                fontSize: 11, margin: '3px 0' }}>
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, margin: '3px 0' }}>
                 <span style={{ color: 'rgba(232,224,204,0.6)' }}>{MODIFIER_LABEL[k] ?? k}</span>
                 <span style={{ color: 'var(--gold)', fontWeight: 700 }}>+{v}</span>
               </div>
@@ -664,13 +651,14 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
 
         {/* Flavour */}
         <p style={{
-          fontSize: 12, color: 'rgba(232, 224, 204, 0.45)', fontStyle: 'italic',
-          margin: '0 0 28px', lineHeight: 1.5,
+          fontSize: 12, color: 'rgba(232, 224, 204, 0.45)',
+          fontStyle: 'italic', margin: '0 0 28px', lineHeight: 1.5,
         }}>
           {reward.message ?? 'The Veil has given what was kept for you.'}
         </p>
+
         <button
-          onClick={onDismiss}
+          onClick={e => { e.stopPropagation(); onDismiss(); }}
           style={{
             width: '100%', padding: '12px 0',
             background: color, color: '#0B0A08',
@@ -686,16 +674,18 @@ function RewardReveal({ reward, onDismiss }: { reward: CacheReward; onDismiss: (
   );
 }
 
-// ── Title Card ────────────────────────────────────────────────
+// ── Title Card ─────────────────────────────────────────────────
 
 function TitleCard({ title, isEquipping, onEquip }: {
-  title: TitleEntry;
-  isEquipping: boolean;
-  onEquip: () => void;
+  title: TitleEntry; isEquipping: boolean; onEquip: () => void;
 }) {
   const catColor: Record<string, string> = {
-    fate: 'var(--gold)', boss: 'var(--ember)', session: '#60a5fa',
-    meta: '#a78bfa', training: '#34d399', general: 'rgba(232, 224, 204, 0.45)',
+    fate:     'var(--gold)',
+    boss:     'var(--ember)',
+    session:  '#60a5fa',
+    meta:     '#a78bfa',
+    training: '#34d399',
+    general:  'rgba(232, 224, 204, 0.45)',
   };
   const color = catColor[title.category] ?? 'rgba(232, 224, 204, 0.45)';
 
@@ -708,13 +698,10 @@ function TitleCard({ title, isEquipping, onEquip }: {
       boxShadow: title.is_equipped ? `0 0 12px ${color}30` : 'none',
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
-          color: '#e8e0cc', margin: '0 0 2px',
-        }}>{title.display_name}</p>
-        <p style={{
-          fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0,
-        }}>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: '#e8e0cc', margin: '0 0 2px' }}>
+          {title.display_name}
+        </p>
+        <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0 }}>
           {CATEGORY_LABEL[title.category] ?? title.category}
           {title.description ? ` · ${title.description}` : ''}
         </p>
@@ -725,13 +712,11 @@ function TitleCard({ title, isEquipping, onEquip }: {
         style={{
           padding: '6px 12px', flexShrink: 0,
           background: title.is_equipped ? 'transparent' : color,
-          color: title.is_equipped ? color : '#0B0A08',
-          border: `1px solid ${color}`,
-          borderRadius: 6,
+          color:      title.is_equipped ? color : '#0B0A08',
+          border: `1px solid ${color}`, borderRadius: 6,
           fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700,
           cursor: isEquipping ? 'wait' : 'pointer',
-          opacity: isEquipping ? 0.6 : 1,
-          letterSpacing: '0.05em',
+          opacity: isEquipping ? 0.6 : 1, letterSpacing: '0.05em',
         }}
       >
         {isEquipping ? '…' : title.is_equipped ? 'Remove' : 'Equip'}
@@ -740,7 +725,7 @@ function TitleCard({ title, isEquipping, onEquip }: {
   );
 }
 
-// ── Locked Title Card ─────────────────────────────────────────
+// ── Locked Title Card ──────────────────────────────────────────
 
 function LockedTitleCard({ title }: { title: TitleEntry }) {
   const categoryUnlockHint: Record<string, string> = {
@@ -751,21 +736,17 @@ function LockedTitleCard({ title }: { title: TitleEntry }) {
     training: 'Reach a Training Pillar mastery level',
     general:  'Complete specific challenges',
   };
-
   return (
     <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
+      background: 'var(--surface)', border: '1px solid var(--border)',
       borderRadius: 10, padding: '12px 14px',
-      display: 'flex', alignItems: 'center', gap: 12,
-      opacity: 0.5,
+      display: 'flex', alignItems: 'center', gap: 12, opacity: 0.5,
     }}>
       <div style={{ color: 'rgba(232, 224, 204, 0.45)', fontSize: 16, flexShrink: 0 }}>🔒</div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
-          color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 2px',
-        }}>{title.display_name}</p>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: 'rgba(232, 224, 204, 0.45)', margin: '0 0 2px' }}>
+          {title.display_name}
+        </p>
         <p style={{ fontSize: 11, color: 'rgba(232, 224, 204, 0.45)', margin: 0 }}>
           {categoryUnlockHint[title.category] ?? 'Complete specific challenges'}
         </p>
@@ -774,7 +755,7 @@ function LockedTitleCard({ title }: { title: TitleEntry }) {
   );
 }
 
-// ── Gear Slot Card ────────────────────────────────────────────
+// ── Gear Slot Card ─────────────────────────────────────────────
 
 function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
   const rarity = item ? ((item.rarity_tier as Rarity) ?? 'common') : null;
@@ -789,13 +770,10 @@ function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
       border: `${rarity ? 2 : 1}px solid ${color}`,
       borderRadius: 10, padding: '10px 8px',
       textAlign: 'center', minHeight: 90,
-      boxShadow: rarity
-        ? `0 0 18px ${glow}, inset 0 0 12px ${glow}44`
-        : 'none',
+      boxShadow: rarity ? `0 0 18px ${glow}, inset 0 0 12px ${glow}44` : 'none',
       transition: 'all 0.2s ease',
       position: 'relative',
     }}>
-      {/* Equipped shimmer top edge */}
       {rarity && (
         <div style={{
           position: 'absolute', top: 0, left: '10%', right: '10%', height: 2,
@@ -818,26 +796,27 @@ function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
         {GEAR_SLOT_LABEL[slot]}
       </p>
       {item ? (
-        <p style={{
-          fontSize: 10, color, margin: 0, fontWeight: 700, lineHeight: 1.3,
-          textShadow: `0 0 8px ${color}80`,
-        }}>
+        <p style={{ fontSize: 10, color, margin: 0, fontWeight: 700, lineHeight: 1.3, textShadow: `0 0 8px ${color}80` }}>
           {item.item_name}
         </p>
       ) : (
-        <p style={{ fontSize: 10, color: 'rgba(232,224,204,0.2)', margin: 0, fontStyle: 'italic' }}>
-          Empty
-        </p>
+        <p style={{ fontSize: 10, color: 'rgba(232,224,204,0.2)', margin: 0, fontStyle: 'italic' }}>Empty</p>
       )}
     </div>
   );
 }
 
-// ── Inventory Card ────────────────────────────────────────────
+// ── Inventory Card ─────────────────────────────────────────────
 
 function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void }) {
-  const rarity = item.rarity_tier as Rarity;
-  const color  = RARITY_COLOR[rarity];
+  const rarity   = (item.rarity_tier as Rarity) ?? 'common';
+  const color    = RARITY_COLOR[rarity] ?? '#9ca3af';
+  const [busy, setBusy] = useState(false);
+
+  const handleEquip = async () => {
+    setBusy(true);
+    try { await onEquip(); } finally { setBusy(false); }
+  };
 
   return (
     <div style={{
@@ -845,37 +824,37 @@ function InventoryCard({ item, onEquip }: { item: GearItem; onEquip: () => void 
       border: `1px solid ${color}`,
       borderRadius: 10, padding: '12px 14px',
       display: 'flex', alignItems: 'center', gap: 12,
+      boxShadow: `0 0 10px ${RARITY_GLOW[rarity]}`,
     }}>
       <div style={{
-        width: 36, height: 36, flexShrink: 0,
-        background: RARITY_GLOW[rarity],
-        border: `1px solid ${color}`,
-        borderRadius: 6,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 18,
+        width: 40, height: 40, flexShrink: 0,
+        background: RARITY_GLOW[rarity], border: `1px solid ${color}`,
+        borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
       }}>
         {item.icon ?? '⚔'}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
-          color: '#e8e0cc', margin: '0 0 2px',
-        }}>{item.item_name}</p>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: '#e8e0cc', margin: '0 0 2px' }}>
+          {item.item_name}
+        </p>
         <p style={{ fontSize: 11, color, margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           {RARITY_LABEL[rarity]} · {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
         </p>
       </div>
       <button
-        onClick={onEquip}
+        onClick={handleEquip}
+        disabled={busy}
         style={{
-          padding: '6px 12px', flexShrink: 0,
+          padding: '8px 16px', flexShrink: 0,
           background: color, color: '#0B0A08',
-          border: 'none', borderRadius: 6,
-          fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700,
-          cursor: 'pointer',
+          border: `2px solid ${color}`, borderRadius: 6,
+          fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 900,
+          cursor: busy ? 'wait' : 'pointer',
+          opacity: busy ? 0.7 : 1, letterSpacing: '0.08em',
+          boxShadow: `0 0 8px ${color}60`, minWidth: 64,
         }}
       >
-        Equip
+        {busy ? '…' : 'EQUIP'}
       </button>
     </div>
   );
