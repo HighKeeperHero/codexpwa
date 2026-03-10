@@ -1,26 +1,27 @@
 import './index.css';
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/AuthContext';
-import { SplashScreen }      from '@/screens/SplashScreen';
-import { LandingScreen }     from '@/screens/LandingScreen';
-import { HeroSelectScreen }  from '@/screens/HeroSelectScreen';
-import { HomeScreen }        from '@/screens/HomeScreen';
-import { TrainingScreen }    from '@/screens/TrainingScreen';
-import { QuestsScreen }      from '@/screens/QuestsScreen';
-import { ProfileScreen }     from '@/screens/ProfileScreen';
-import { AlignmentModal }    from '@/screens/AlignmentModal';
+import { SplashScreen } from '@/screens/SplashScreen';
+import { LandingScreen } from '@/screens/LandingScreen';
+import { HeroSelectScreen } from '@/screens/HeroSelectScreen';
+import { HomeScreen } from '@/screens/HomeScreen';
+import { TrainingScreen } from '@/screens/TrainingScreen';
+import { QuestsScreen } from '@/screens/QuestsScreen';
+import { ProfileScreen } from '@/screens/ProfileScreen';
+import { AlignmentModal } from '@/screens/AlignmentModal';
+import VeilTearsScreen from '@/screens/VeilTearsScreen';
 
 type AppRoute = 'landing' | 'hero-select' | 'dashboard';
-type DashTab  = 'home' | 'training' | 'hunts' | 'archive';
+type DashTab = 'home' | 'training' | 'hunts' | 'archive' | 'veil';
 
-// ── Offline banner ─────────────────────────────────────────────────────────────
+// ── Offline banner ────────────────────────────────────────────────────────────
 function OfflineBanner({ show }: { show: boolean }) {
   return (
     <div style={{
       position:'fixed', top:0, left:0, right:0, zIndex:500,
       background:'rgba(200,94,40,0.95)',
-      padding:'10px 16px', textAlign:'center',
-      fontSize:11, letterSpacing:'0.08em', color:'#fff', fontWeight:600,
+      padding:'10px 16px', textAlign:'center', fontSize:11,
+      letterSpacing:'0.08em', color:'#fff', fontWeight:600,
       transform: show ? 'translateY(0)' : 'translateY(-100%)',
       transition:'transform 0.3s ease',
     }}>
@@ -31,10 +32,11 @@ function OfflineBanner({ show }: { show: boolean }) {
 
 // ── Tab bar ───────────────────────────────────────────────────────────────────
 const TABS: { id: DashTab; label: string; icon: string }[] = [
-  { id: 'home',     label: 'Home',     icon: '◈' },
-  { id: 'training', label: 'Training', icon: '✦' },
-  { id: 'hunts',    label: 'Hunts',    icon: '◉' },
-  { id: 'archive',  label: 'Archive',  icon: '★' },
+  { id: 'home',     label: 'Home',     icon: '◈'  },
+  { id: 'training', label: 'Training', icon: '✦'  },
+  { id: 'hunts',    label: 'Hunts',    icon: '◉'  },
+  { id: 'archive',  label: 'Archive',  icon: '★'  },
+  { id: 'veil',     label: 'Veil',     icon: '⚡' },
 ];
 
 function TabBar({ active, onChange }: { active: DashTab; onChange: (t: DashTab) => void }) {
@@ -44,26 +46,51 @@ function TabBar({ active, onChange }: { active: DashTab; onChange: (t: DashTab) 
       width:'100%', maxWidth:480,
       background:'rgba(11,10,8,0.96)',
       borderTop:'1px solid var(--border)',
-      display:'grid', gridTemplateColumns:'repeat(4,1fr)',
+      display:'grid', gridTemplateColumns:'repeat(5,1fr)',
       paddingBottom:'max(env(safe-area-inset-bottom),8px)',
       zIndex:100, backdropFilter:'blur(12px)',
     }}>
       {TABS.map(tab => {
         const isActive = active === tab.id;
+        const isVeil   = tab.id === 'veil';
         return (
-          <button key={tab.id} onClick={() => onChange(tab.id)} style={{
-            display:'flex', flexDirection:'column', alignItems:'center',
-            gap:4, padding:'10px 0', background:'none', border:'none', cursor:'pointer',
-          }}>
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            style={{
+              display:'flex', flexDirection:'column', alignItems:'center',
+              gap:4, padding:'10px 0',
+              background:'none', border:'none', cursor:'pointer',
+              position:'relative',
+            }}
+          >
+            {/* Active indicator — veil gets purple/red gradient */}
+            {isActive && (
+              <div style={{
+                position:'absolute', top:0, left:'20%', right:'20%',
+                height:2, borderRadius:'0 0 2px 2px',
+                background: isVeil
+                  ? 'linear-gradient(90deg,#8040C8,#CC1020)'
+                  : 'var(--gold)',
+              }} />
+            )}
             <span style={{
               fontSize:16, lineHeight:1,
-              color: isActive ? 'var(--gold)' : 'var(--text-3)',
+              color: isActive
+                ? (isVeil ? '#A060E0' : 'var(--gold)')
+                : 'var(--text-3)',
               transition:'color 0.15s',
-              filter: isActive ? 'drop-shadow(0 0 4px rgba(200,160,78,0.5))' : 'none',
+              filter: isActive
+                ? isVeil
+                  ? 'drop-shadow(0 0 4px rgba(160,96,224,0.6))'
+                  : 'drop-shadow(0 0 4px rgba(200,160,78,0.5))'
+                : 'none',
             }}>{tab.icon}</span>
             <span style={{
               fontSize:8, letterSpacing:'0.1em', fontWeight:600,
-              color: isActive ? 'var(--gold)' : 'var(--text-3)',
+              color: isActive
+                ? (isVeil ? '#A060E0' : 'var(--gold)')
+                : 'var(--text-3)',
               transition:'color 0.15s',
             }}>{tab.label.toUpperCase()}</span>
           </button>
@@ -88,6 +115,7 @@ function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void 
         {tab === 'training' && <TrainingScreen />}
         {tab === 'hunts'    && <QuestsScreen />}
         {tab === 'archive'  && <ProfileScreen onReturnToHeroSelect={onReturnToHeroSelect} />}
+        {tab === 'veil'     && <VeilTearsScreen />}
       </div>
       <TabBar active={tab} onChange={setTab} />
       <AlignmentModal
@@ -105,7 +133,7 @@ function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void 
 function Router() {
   const { account, hero, isLoading, signOut } = useAuth();
   const [splashDone, setSplashDone] = useState(false);
-  const [route,      setRoute]      = useState<AppRoute>('landing');
+  const [route, setRoute] = useState<AppRoute>('landing');
 
   const readyToRoute = splashDone && !isLoading;
 

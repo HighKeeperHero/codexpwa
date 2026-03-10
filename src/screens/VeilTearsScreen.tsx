@@ -251,10 +251,12 @@ export default function VeilTearsScreen() {
 
   // Derived hero stats (map from PIK stats or fallback)
   const stats = {
-    power:     hero?.vigor      ?? hero?.attributes?.power      ?? 42,
-    ward:      hero?.resilience ?? hero?.attributes?.ward       ?? 28,
-    resonance: hero?.focus      ?? hero?.attributes?.resonance  ?? 35,
-    veilSense: (hero?.level ?? 1) > 5 ? Math.floor((hero?.level ?? 1) * 0.4) : 3,
+    power:     hero?.progression?.power     ?? hero?.attributes?.power     ?? 42,
+    ward:      hero?.progression?.ward      ?? hero?.attributes?.ward      ?? 28,
+    resonance: hero?.progression?.resonance ?? hero?.attributes?.resonance ?? 35,
+    veilSense: (hero?.progression?.fate_level ?? 1) > 5
+      ? Math.floor((hero?.progression?.fate_level ?? 1) * 0.4)
+      : 3,
   };
 
   // ── Countdown ──────────────────────────────────────────────────────────────
