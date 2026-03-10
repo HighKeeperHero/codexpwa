@@ -582,7 +582,7 @@ export default function VeilTearsScreen() {
       {/* ── CONVERGENCE EVENT BANNER ── */}
       {locationReady && screen === 'map' && activeEvents.length > 0 && (
         <div style={{
-          position: 'absolute', top: 80, left: 12, right: 12, zIndex: 11,
+          position: 'absolute', top: 'calc(80px + env(safe-area-inset-top, 0px))', left: 12, right: 12, zIndex: 11,
           background: 'linear-gradient(135deg, rgba(128,40,200,0.22), rgba(200,100,20,0.18))',
           border: '1px solid rgba(160,96,224,0.40)',
           borderRadius: 8, padding: '7px 14px',
@@ -903,7 +903,11 @@ const css: Record<string, React.CSSProperties> = {
     position: 'absolute', inset: 0, zIndex: 90,
     background: '#080C14',
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    gap: 20, padding: 40, textAlign: 'center',
+    gap: 20,
+    paddingTop: 'calc(40px + env(safe-area-inset-top, 0px))',
+    paddingBottom: 'calc(40px + var(--tab-h, 64px) + env(safe-area-inset-bottom, 0px))',
+    paddingLeft: 40, paddingRight: 40,
+    textAlign: 'center',
   },
   locGlyph: { fontSize: 48, color: '#8040C8', textShadow: '0 0 30px rgba(128,64,200,0.6)' },
   locTitle: { fontFamily: "'Cinzel Decorative', serif", fontSize: 18, color: 'var(--text-1)' },
@@ -912,7 +916,8 @@ const css: Record<string, React.CSSProperties> = {
   // Top HUD
   topHud: {
     position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-    padding: '14px 16px 12px',
+    paddingTop: 'calc(14px + env(safe-area-inset-top, 0px))',
+    paddingLeft: 16, paddingRight: 16, paddingBottom: 12,
     background: 'linear-gradient(to bottom, rgba(8,12,20,0.95), transparent)',
   },
   hudRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
@@ -928,8 +933,9 @@ const css: Record<string, React.CSSProperties> = {
   // Bottom HUD
   bottomHud: {
     position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
-    padding: '12px 16px 24px',
-    background: 'linear-gradient(to top, rgba(8,12,20,0.98) 60%, transparent)',
+    paddingTop: 12, paddingLeft: 16, paddingRight: 16,
+    paddingBottom: 'calc(16px + var(--tab-h, 64px) + env(safe-area-inset-bottom, 0px))',
+    background: 'linear-gradient(to top, rgba(8,12,20,0.98) 70%, transparent)',
   },
   tearCountBar: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, paddingBottom: 10 },
   tearCountItem: { display: 'flex', alignItems: 'center', gap: 5 },
@@ -950,7 +956,7 @@ const css: Record<string, React.CSSProperties> = {
 
   // Encounter modal
   modalOverlay: { position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(8,12,20,0.92)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' },
-  encounterPanel: { width: '100%', maxWidth: 480, background: 'var(--surface)', border: '1px solid var(--border-hi)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px' },
+  encounterPanel: { width: '100%', maxWidth: 480, background: 'var(--surface)', border: '1px solid var(--border-hi)', borderRadius: '24px 24px 0 0', paddingTop: 24, paddingLeft: 20, paddingRight: 20, paddingBottom: 'calc(32px + var(--tab-h, 64px) + env(safe-area-inset-bottom, 0px))' },
   dragHandle: { width: 36, height: 3, borderRadius: 2, background: 'var(--border-hi)', margin: '0 auto 20px' },
   encHeader: { display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 },
   encIcon: { width: 52, height: 52, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
@@ -970,7 +976,7 @@ const css: Record<string, React.CSSProperties> = {
   battleOverlay: { position: 'fixed', inset: 0, zIndex: 200, background: '#080C14', display: 'flex', flexDirection: 'column' },
   battleBg: { position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 60% 40% at 50% 60%, rgba(96,48,160,0.15) 0%, transparent 70%)' },
   damageFlash: { position: 'fixed', inset: 0, zIndex: 210, pointerEvents: 'none', opacity: 0.35 } as React.CSSProperties,
-  battleContent: { position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', padding: '48px 20px 0' },
+  battleContent: { position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', paddingTop: 'calc(48px + env(safe-area-inset-top, 0px))', paddingLeft: 20, paddingRight: 20, paddingBottom: 0 },
   enemyZone: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingBottom: 20 },
   enemySigil: { width: 100, height: 100, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   enemyName: { fontFamily: "'Cinzel Decorative', serif", fontSize: 16, color: 'var(--text-1)', marginBottom: 4, textAlign: 'center' },
@@ -983,11 +989,11 @@ const css: Record<string, React.CSSProperties> = {
   playerHpTrack: { flex: 1, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' },
   playerHpFill: { height: '100%', borderRadius: 2, transition: 'width 0.4s ease' },
   battleLog: { fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: 12, color: 'var(--text-2)', textAlign: 'center', padding: '8px 20px 12px', minHeight: 36 },
-  battleActions: { padding: '12px 20px 36px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 },
+  battleActions: { paddingTop: 12, paddingLeft: 20, paddingRight: 20, paddingBottom: 'calc(36px + env(safe-area-inset-bottom, 0px))', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 },
   battleBtn: { padding: '14px 10px', borderRadius: 12, border: '1px solid', background: 'transparent', cursor: 'pointer', fontFamily: "'Cinzel', serif", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'all 0.15s' },
 
   // Result
-  resultPanel: { position: 'fixed', inset: 0, zIndex: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,12,20,0.95)', backdropFilter: 'blur(6px)', flexDirection: 'column', gap: 16, padding: 40, textAlign: 'center' },
+  resultPanel: { position: 'fixed', inset: 0, zIndex: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,12,20,0.95)', backdropFilter: 'blur(6px)', flexDirection: 'column', gap: 16, paddingTop: 'calc(40px + env(safe-area-inset-top, 0px))', paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))', paddingLeft: 40, paddingRight: 40, textAlign: 'center', overflowY: 'auto' },
   resultTitle: { fontFamily: "'Cinzel Decorative', serif", fontSize: 24, fontWeight: 700, letterSpacing: '0.1em' },
   resultLore: { fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7, maxWidth: 300 },
   resultRewards: { display: 'flex', gap: 12, padding: '16px 20px', background: 'var(--surface)', border: '1px solid var(--border-hi)', borderRadius: 14 },
