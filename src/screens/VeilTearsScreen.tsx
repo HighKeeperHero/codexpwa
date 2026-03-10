@@ -846,7 +846,7 @@ const css: Record<string, React.CSSProperties> = {
 
   // Battle
   battleOverlay: { position: 'fixed', inset: 0, zIndex: 200, background: '#080C14', display: 'flex', flexDirection: 'column' },
-  battleBg: { position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 40% at 50% 60%, rgba(96,48,160,0.15) 0%, transparent 70%)' },
+  battleBg: { position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(ellipse 60% 40% at 50% 60%, rgba(96,48,160,0.15) 0%, transparent 70%)' },
   damageFlash: { position: 'fixed', inset: 0, zIndex: 210, pointerEvents: 'none', opacity: 0.35 } as React.CSSProperties,
   battleContent: { position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', padding: '48px 20px 0' },
   enemyZone: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingBottom: 20 },
