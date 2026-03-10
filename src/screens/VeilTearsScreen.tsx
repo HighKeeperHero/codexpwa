@@ -293,6 +293,14 @@ export default function VeilTearsScreen() {
       document.head.appendChild(style);
     }
 
+    // Filter only the tile layer — keeps marker colors vivid
+    if (!document.getElementById('vt-tile-filter')) {
+      const tf = document.createElement('style');
+      tf.id = 'vt-tile-filter';
+      tf.textContent = `.leaflet-tile-pane { filter: saturate(0.15) brightness(0.55) hue-rotate(200deg); }`;
+      document.head.appendChild(tf);
+    }
+
     const map = L.map(mapRef.current, {
       center: [lat, lon],
       zoom: 15,
@@ -412,6 +420,11 @@ export default function VeilTearsScreen() {
             : tear.type === 'wander' ? 17
             : tear.type === 'dormant' ? 40 : 75;
           setBattleResult({ won: true, shards });
+          try {
+            const h = JSON.parse(localStorage.getItem('vt_battles') ?? '[]');
+            h.unshift({ tear_type: tear.type, tear_name: tear.name, won: true, shards, ts: Date.now() });
+            localStorage.setItem('vt_battles', JSON.stringify(h.slice(0, 20)));
+          } catch {}
           if (tear.type === 'minor')   setQuestProgress(q => ({ ...q, warden: Math.min(3, q.warden + 1) }));
           if (tear.type === 'dormant') setQuestProgress(q => ({ ...q, gatheringdark: 1 }));
           setScreen('victory');
@@ -432,6 +445,11 @@ export default function VeilTearsScreen() {
             if (next <= 0) {
               setBattleResult({ won: false, shards: 0 });
               setScreen('defeat');
+              try {
+                const h = JSON.parse(localStorage.getItem('vt_battles') ?? '[]');
+                h.unshift({ tear_type: tear.type, tear_name: tear.name, won: false, shards: 0, ts: Date.now() });
+                localStorage.setItem('vt_battles', JSON.stringify(h.slice(0, 20)));
+              } catch {}
             }
             return next;
           });
@@ -764,7 +782,6 @@ const css: Record<string, React.CSSProperties> = {
   },
   map: {
     position: 'absolute', inset: 0,
-    filter: 'saturate(0.15) brightness(0.55) hue-rotate(200deg)',
     zIndex: 0,
   },
   vignette: {

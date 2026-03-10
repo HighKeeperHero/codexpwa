@@ -1,11 +1,10 @@
 // src/screens/ProfileScreen.tsx
-// Sprint 10: Trophy Room — MILESTONES section added to Profile tab
-// Pure client-side computation from hero data; no new backend calls needed.
+// Sprint 12: Added VeilBattleStats + VeilBattleHistory to Profile tab
 import { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
-import { VaultScreen } from './VaultScreen';
+import { VaultScreen }       from './VaultScreen';
 import { LeaderboardScreen } from './LeaderboardScreen';
-import { ChronicleScreen } from './ChronicleScreen';
+import { ChronicleScreen }   from './ChronicleScreen';
 import { TIER_FOR_LEVEL, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '../api/pik';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
@@ -17,55 +16,192 @@ function unwrap(json: any): any {
   return d ?? json;
 }
 
-// ── Trophy definitions ────────────────────────────────────────────────────────
+// ── Veil tier lookup ───────────────────────────────────────────────────────────
+const VT_TIER: Record<string, { color: string; glyph: string; label: string; tier: string }> = {
+  minor:   { color: '#1A6ED4', glyph: '✦', label: 'Minor Threat',    tier: 'T1' },
+  wander:  { color: '#8040C8', glyph: '◉', label: 'Wandering Shade', tier: 'T2' },
+  dormant: { color: '#E8820A', glyph: '⊛', label: 'Dormant Rift',    tier: 'T3' },
+  double:  { color: '#CC1020', glyph: '⚡', label: 'Double Rift',     tier: 'T4' },
+};
+
+interface BattleRecord {
+  tear_type: string; tear_name: string; won: boolean; shards: number; ts: number;
+}
+
+function loadVTHistory(): BattleRecord[] {
+  try { return JSON.parse(localStorage.getItem('vt_battles') ?? '[]'); }
+  catch { return []; }
+}
+
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ago`;
+  if (h > 0) return `${h}h ago`;
+  if (m > 0) return `${m}m ago`;
+  return 'just now';
+}
+
+// ── Veil Battle Stats (aggregate) ─────────────────────────────────────────────
+function VeilBattleStats({ history }: { history: BattleRecord[] }) {
+  if (history.length === 0) return null;
+
+  const totalWins   = history.filter(b => b.won).length;
+  const totalLosses = history.filter(b => !b.won).length;
+  const winRate     = Math.round((totalWins / history.length) * 100);
+  const totalShards = history.filter(b => b.won).reduce((s, b) => s + b.shards, 0);
+
+  const tierKeys = ['minor', 'wander', 'dormant', 'double'] as const;
+  const byTier = tierKeys.map(k => {
+    const battles = history.filter(b => b.tear_type === k);
+    return { key: k, battles: battles.length, wins: battles.filter(b => b.won).length };
+  }).filter(t => t.battles > 0);
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 14px', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, fontWeight: 700, letterSpacing: '0.22em', color: '#8040C8', margin: 0, textTransform: 'uppercase' }}>
+          ⚡ Veil Battles
+        </p>
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: 'var(--text-3)' }}>{history.length} total</span>
+      </div>
+
+      {/* Top stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 14 }}>
+        {[
+          { val: totalWins,          label: 'SEALED',    color: '#34d399' },
+          { val: totalLosses,        label: 'RETREATED', color: '#CC1020' },
+          { val: `${winRate}%`,      label: 'WIN RATE',  color: winRate >= 70 ? '#FFA500' : winRate >= 50 ? '#8040C8' : 'var(--text-2)' },
+          { val: `${totalShards}◆`,  label: 'SHARDS',    color: '#FFA500' },
+        ].map(s => (
+          <div key={s.label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 4px', textAlign: 'center' }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: s.color, margin: '0 0 3px' }}>{s.val}</p>
+            <p style={{ fontSize: 7, color: 'var(--text-3)', margin: 0, letterSpacing: '0.12em' }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Win rate bar */}
+      <div style={{ marginBottom: byTier.length > 0 ? 14 : 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+          <span style={{ fontSize: 8, color: '#34d399', letterSpacing: '0.1em' }}>{totalWins} SEALED</span>
+          <span style={{ fontSize: 8, color: '#CC1020', letterSpacing: '0.1em' }}>{totalLosses} RETREATED</span>
+        </div>
+        <div style={{ height: 6, background: '#CC102030', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${winRate}%`, background: 'linear-gradient(90deg, #1A6ED4, #34d399)', borderRadius: 3, transition: 'width 0.6s ease' }} />
+        </div>
+      </div>
+
+      {/* Per-tier breakdown */}
+      {byTier.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <p style={{ fontSize: 8, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', margin: '0 0 2px' }}>By Tier</p>
+          {byTier.map(t => {
+            const td  = VT_TIER[t.key];
+            const pct = Math.round((t.wins / t.battles) * 100);
+            return (
+              <div key={t.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: `${td.color}15`, border: `1px solid ${td.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: td.color }}>
+                  {td.glyph}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <span style={{ fontSize: 8, color: td.color, letterSpacing: '0.08em' }}>{td.tier} · {td.label}</span>
+                    <span style={{ fontSize: 8, color: 'var(--text-3)', fontFamily: 'monospace' }}>{t.wins}/{t.battles}</span>
+                  </div>
+                  <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: td.color, borderRadius: 2, opacity: 0.7, transition: 'width 0.5s ease' }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Veil Battle History list ───────────────────────────────────────────────────
+function VeilBattleHistory({ history }: { history: BattleRecord[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (history.length === 0) return null;
+
+  const visible = expanded ? history : history.slice(0, 5);
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 14px', marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, fontWeight: 700, letterSpacing: '0.18em', color: 'var(--text-3)', margin: 0, textTransform: 'uppercase' }}>Recent Battles</p>
+        {history.length > 5 && (
+          <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', color: 'var(--gold)', fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: '0.08em', padding: 0 }}>
+            {expanded ? 'Show Less' : `Show All (${history.length})`}
+          </button>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {visible.map((b, i) => {
+          const td = VT_TIER[b.tear_type] ?? VT_TIER.minor;
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: 'var(--bg)', border: `1px solid var(--border)`, borderLeft: `3px solid ${td.color}` }}>
+              <div style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 6, background: `${td.color}15`, border: `1px solid ${td.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: td.color }}>
+                {td.glyph}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.tear_name}</p>
+                <p style={{ fontSize: 7, color: `${td.color}99`, margin: 0, letterSpacing: '0.1em' }}>{td.tier} · {td.label}</p>
+              </div>
+              <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                <p style={{ fontSize: 8, fontWeight: 700, color: b.won ? '#34d399' : '#CC1020', margin: '0 0 2px', letterSpacing: '0.06em' }}>
+                  {b.won ? `+${b.shards}◆` : 'FLED'}
+                </p>
+                <p style={{ fontSize: 7, color: 'var(--text-3)', margin: 0 }}>{timeAgo(b.ts)}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Trophy definitions ─────────────────────────────────────────────────────────
 interface TrophyDef {
-  id: string;
-  name: string;
-  lore: string;
-  hint: string;
-  icon: string;
+  id: string; name: string; lore: string; hint: string; icon: string;
   rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
   check: (h: any, extras: { fateSeals: number }) => boolean;
 }
 
 const RARITY_COLOR: Record<string, string> = {
-  legendary: '#FFA500',
-  epic: '#A855F7',
-  rare: '#1E90FF',
-  uncommon: '#34d399',
-  common: '#8899AA',
+  legendary: '#FFA500', epic: '#A855F7', rare: '#1E90FF', uncommon: '#34d399', common: '#8899AA',
 };
 
 const TROPHIES: TrophyDef[] = [
-  // common
-  { id: 'first_session', name: 'First Blood', rarity: 'common', lore: 'The Veil has tasted your resolve.', hint: 'Complete your first session.', icon: '⚔', check: h => (h.progression?.sessions_completed ?? 0) >= 1 },
-  { id: 'wristband_linked', name: 'Marked', rarity: 'common', lore: 'Your wrist bears the sigil of the Codex.', hint: 'Link a wristband to your hero.', icon: '⌚', check: h => !!h.wearable && h.wearable.status !== undefined },
-  { id: 'first_gear', name: 'Armed', rarity: 'common', lore: 'A warrior without steel is just noise.', hint: 'Acquire your first piece of gear.', icon: '⬡', check: h => (h.gear?.inventory ?? []).length >= 1 },
-  { id: 'first_title', name: 'Named', rarity: 'common', lore: 'The Chronicle whispers your title.', hint: 'Earn your first title.', icon: '◇', check: h => (h.progression?.titles ?? []).length >= 1 },
-  // uncommon
-  { id: 'first_cache', name: 'Fate Sealed', rarity: 'uncommon', lore: 'The Veil delivers what it owes.', hint: 'Receive your first Fate Seal.', icon: '⊕', check: (_h, ex) => ex.fateSeals >= 1 },
-  { id: 'sessions_5', name: 'Returning', rarity: 'uncommon', lore: 'Five times the dark could not hold you.', hint: 'Complete 5 sessions.', icon: '⚔', check: h => (h.progression?.sessions_completed ?? 0) >= 5 },
-  { id: 'fate_5', name: 'Fate Rising', rarity: 'uncommon', lore: 'The Codex records your growth.', hint: 'Reach Fate Level 5.', icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 5 },
-  { id: 'gear_3', name: 'Arsenal', rarity: 'uncommon', lore: "You carry the weight of the Veil's debt.", hint: 'Acquire 3 pieces of gear.', icon: '⬡', check: h => (h.gear?.inventory ?? []).length >= 3 },
-  // rare
-  { id: 'first_boss', name: 'Veil Hunter', rarity: 'rare', lore: 'Something ancient noticed you. Good.', hint: 'Slay your first boss.', icon: '◈', check: h => (h.progression?.boss_kills ?? 0) >= 1 },
-  { id: 'titles_3', name: 'Renowned', rarity: 'rare', lore: 'Three names. The same story.', hint: 'Earn 3 titles.', icon: '◇', check: h => (h.progression?.titles ?? []).length >= 3 },
-  { id: 'sessions_10', name: 'Veteran', rarity: 'rare', lore: 'Ten descents. Still standing.', hint: 'Complete 10 sessions.', icon: '⚔', check: h => (h.progression?.sessions_completed ?? 0) >= 10 },
-  { id: 'fate_10', name: 'Fate Hardened', rarity: 'rare', lore: 'The Kernel acknowledges what you are.', hint: 'Reach Fate Level 10.', icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 10 },
-  // epic
-  { id: 'boss_5', name: 'Beast Slayer', rarity: 'epic', lore: 'Five kills. The dark remembers.', hint: 'Defeat 5 bosses.', icon: '◈', check: h => (h.progression?.boss_kills ?? 0) >= 5 },
-  { id: 'fate_15', name: 'Fate Ascendant', rarity: 'epic', lore: 'What you were before does not apply.', hint: 'Reach Fate Level 15.', icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 15 },
-  // legendary
-  { id: 'veil_cleared', name: 'Veil Shattered', rarity: 'legendary', lore: 'You ran the dark to its end. Now what?', hint: 'Clear the Veil at 100%.', icon: '◈', check: h => (h.source_progression ?? []).some((v: any) => v.best_boss_pct >= 100) },
-  { id: 'fate_100', name: 'Mythic', rarity: 'legendary', lore: 'The Codex has no more words for what you are.', hint: 'Reach Fate Level 100.', icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 100 },
+  { id: 'first_session',   name: 'First Blood',   rarity: 'common',    lore: 'The Veil has tasted your resolve.',              hint: 'Complete your first session.',     icon: '⚔', check: h => (h.progression?.sessions_completed ?? 0) >= 1 },
+  { id: 'wristband_linked',name: 'Marked',         rarity: 'common',    lore: 'Your wrist bears the sigil of the Codex.',       hint: 'Link a wristband to your hero.',   icon: '⌚', check: h => !!h.wearable && h.wearable.status !== undefined },
+  { id: 'first_gear',      name: 'Armed',          rarity: 'common',    lore: 'A warrior without steel is just noise.',         hint: 'Acquire your first piece of gear.',icon: '⬡', check: h => (h.gear?.inventory ?? []).length >= 1 },
+  { id: 'first_title',     name: 'Named',          rarity: 'common',    lore: 'The Chronicle whispers your title.',             hint: 'Earn your first title.',           icon: '◇', check: h => (h.progression?.titles ?? []).length >= 1 },
+  { id: 'first_cache',     name: 'Fate Sealed',    rarity: 'uncommon',  lore: 'The Veil delivers what it owes.',                hint: 'Receive your first Fate Seal.',    icon: '⊕', check: (_h, ex) => ex.fateSeals >= 1 },
+  { id: 'sessions_5',      name: 'Returning',      rarity: 'uncommon',  lore: 'Five times the dark could not hold you.',        hint: 'Complete 5 sessions.',             icon: '⚔', check: h => (h.progression?.sessions_completed ?? 0) >= 5 },
+  { id: 'fate_5',          name: 'Fate Rising',    rarity: 'uncommon',  lore: 'The Codex records your growth.',                 hint: 'Reach Fate Level 5.',              icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 5 },
+  { id: 'gear_3',          name: 'Arsenal',        rarity: 'uncommon',  lore: "You carry the weight of the Veil's debt.",       hint: 'Acquire 3 pieces of gear.',        icon: '⬡', check: h => (h.gear?.inventory ?? []).length >= 3 },
+  { id: 'first_boss',      name: 'Veil Hunter',    rarity: 'rare',      lore: 'Something ancient noticed you. Good.',           hint: 'Slay your first boss.',            icon: '◈', check: h => (h.progression?.boss_kills ?? 0) >= 1 },
+  { id: 'titles_3',        name: 'Renowned',       rarity: 'rare',      lore: 'Three names. The same story.',                   hint: 'Earn 3 titles.',                   icon: '◇', check: h => (h.progression?.titles ?? []).length >= 3 },
+  { id: 'sessions_10',     name: 'Veteran',        rarity: 'rare',      lore: 'Ten descents. Still standing.',                  hint: 'Complete 10 sessions.',            icon: '⚔', check: h => (h.progression?.sessions_completed ?? 0) >= 10 },
+  { id: 'fate_10',         name: 'Fate Hardened',  rarity: 'rare',      lore: 'The Kernel acknowledges what you are.',          hint: 'Reach Fate Level 10.',             icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 10 },
+  { id: 'boss_5',          name: 'Beast Slayer',   rarity: 'epic',      lore: 'Five kills. The dark remembers.',                hint: 'Defeat 5 bosses.',                 icon: '◈', check: h => (h.progression?.boss_kills ?? 0) >= 5 },
+  { id: 'fate_15',         name: 'Fate Ascendant', rarity: 'epic',      lore: 'What you were before does not apply.',           hint: 'Reach Fate Level 15.',             icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 15 },
+  { id: 'veil_cleared',    name: 'Veil Shattered', rarity: 'legendary', lore: 'You ran the dark to its end. Now what?',         hint: 'Clear the Veil at 100%.',          icon: '◈', check: h => (h.source_progression ?? []).some((v: any) => v.best_boss_pct >= 100) },
+  { id: 'fate_100',        name: 'Mythic',         rarity: 'legendary', lore: 'The Codex has no more words for what you are.', hint: 'Reach Fate Level 100.',            icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 100 },
 ];
 
-// ── Trophy Room ───────────────────────────────────────────────────────────────
 function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
   const extras = { fateSeals };
   const earned = TROPHIES.filter(t => t.check(hero, extras));
   const locked = TROPHIES.filter(t => !t.check(hero, extras));
-  const pct = Math.round((earned.length / TROPHIES.length) * 100);
+  const pct    = Math.round((earned.length / TROPHIES.length) * 100);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const toggle = (id: string) => setExpandedId(prev => prev === id ? null : id);
 
@@ -85,9 +221,7 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
         <>
           <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Earned</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
-            {earned.map(t => (
-              <TrophyCard key={t.id} trophy={t} earned expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />
-            ))}
+            {earned.map(t => <TrophyCard key={t.id} trophy={t} earned expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />)}
           </div>
         </>
       )}
@@ -95,9 +229,7 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
         <>
           <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Locked</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {locked.map(t => (
-              <TrophyCard key={t.id} trophy={t} earned={false} expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />
-            ))}
+            {locked.map(t => <TrophyCard key={t.id} trophy={t} earned={false} expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />)}
           </div>
         </>
       )}
@@ -105,30 +237,27 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
   );
 }
 
-// Per-trophy earn context — what specifically achieved each milestone
 const TROPHY_EARN_DETAIL: Record<string, string> = {
-  first_session: 'Completed your first Heroes Veritas session. The Veil now knows your name.',
+  first_session:    'Completed your first Heroes Veritas session. The Veil now knows your name.',
   wristband_linked: 'Linked a wristband token to your hero identity.',
-  first_gear: 'Opened your first Fate Seal and received a piece of gear.',
-  first_title: 'Earned a pillar title through training progression.',
-  first_cache: 'Received a Fate Seal from venue play or a training streak milestone.',
-  sessions_5: 'Five sessions completed. The Veil has learned to expect you.',
-  fate_5: 'Accumulated enough Fate XP to reach Level 5.',
-  gear_3: 'Collected 3 pieces of gear across sessions and Fate Seals.',
-  first_boss: 'Dealt the killing blow to a boss enemy during a session.',
-  titles_3: 'Reached Level 3 in at least three different training pillars.',
-  sessions_10: 'Ten sessions completed. A pattern emerges.',
-  fate_10: 'Reached Fate Level 10 through combined session and training XP.',
-  boss_5: 'Five boss kills across any combination of venues and sessions.',
-  fate_15: 'Reached Fate Level 15. Only the Mythic tier remains.',
-  veil_cleared: 'Achieved 100% boss completion in a single session run.',
-  fate_100: 'Reached the maximum Fate Level. The Codex is complete.',
+  first_gear:       'Opened your first Fate Seal and received a piece of gear.',
+  first_title:      'Earned a pillar title through training progression.',
+  first_cache:      'Received a Fate Seal from venue play or a training streak milestone.',
+  sessions_5:       'Five sessions completed. The Veil has learned to expect you.',
+  fate_5:           'Accumulated enough Fate XP to reach Level 5.',
+  gear_3:           'Collected 3 pieces of gear across sessions and Fate Seals.',
+  first_boss:       'Dealt the killing blow to a boss enemy during a session.',
+  titles_3:         'Reached Level 3 in at least three different training pillars.',
+  sessions_10:      'Ten sessions completed. A pattern emerges.',
+  fate_10:          'Reached Fate Level 10 through combined session and training XP.',
+  boss_5:           'Five boss kills across any combination of venues and sessions.',
+  fate_15:          'Reached Fate Level 15. Only the Mythic tier remains.',
+  veil_cleared:     'Achieved 100% boss completion in a single session run.',
+  fate_100:         'Reached the maximum Fate Level. The Codex is complete.',
 };
 
-function TrophyCard({ trophy, earned, expanded, onToggle }: {
-  trophy: TrophyDef; earned: boolean; expanded?: boolean; onToggle?: () => void;
-}) {
-  const rc = RARITY_COLOR[trophy.rarity];
+function TrophyCard({ trophy, earned, expanded, onToggle }: { trophy: TrophyDef; earned: boolean; expanded?: boolean; onToggle?: () => void }) {
+  const rc     = RARITY_COLOR[trophy.rarity];
   const detail = TROPHY_EARN_DETAIL[trophy.id];
   return (
     <div onClick={onToggle} style={{ background: earned ? `linear-gradient(90deg, var(--surface), ${rc}0A)` : 'var(--surface)', border: `1px solid ${earned ? (expanded ? rc + '70' : rc + '35') : 'var(--border)'}`, borderRadius: 10, padding: '10px 13px', opacity: earned ? 1 : 0.45, cursor: 'pointer', transition: 'border-color 0.15s', boxShadow: expanded && earned ? `0 0 12px ${rc}20` : 'none' }}>
@@ -138,12 +267,8 @@ function TrophyCard({ trophy, earned, expanded, onToggle }: {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: earned ? 'var(--text-1)' : 'var(--text-3)', margin: 0 }}>
-              {earned ? trophy.name : '???'}
-            </p>
-            {earned && (
-              <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: rc, background: `${rc}15`, border: `1px solid ${rc}30`, borderRadius: 3, padding: '1px 5px', textTransform: 'uppercase' }}>{trophy.rarity}</span>
-            )}
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: earned ? 'var(--text-1)' : 'var(--text-3)', margin: 0 }}>{earned ? trophy.name : '???'}</p>
+            {earned && <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: rc, background: `${rc}15`, border: `1px solid ${rc}30`, borderRadius: 3, padding: '1px 5px', textTransform: 'uppercase' }}>{trophy.rarity}</span>}
           </div>
           <p style={{ fontSize: 11, margin: 0, lineHeight: 1.4, color: earned ? 'var(--text-2)' : 'var(--text-3)', fontStyle: earned ? 'italic' : 'normal' }}>
             {earned ? trophy.lore : trophy.hint}
@@ -166,10 +291,10 @@ function TrophyCard({ trophy, earned, expanded, onToggle }: {
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Main ────────────────────────────────────────────────────────────────────────
 export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?: () => void }) {
   const { hero, signOut } = useAuth();
-  const [tab, setTab] = useState<Tab>('profile');
+  const [tab,         setTab]         = useState<Tab>('profile');
   const [sealedCount, setSealedCount] = useState(0);
 
   useEffect(() => {
@@ -182,9 +307,9 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
   }, [hero?.root_id]);
 
   const tabs: { id: Tab; label: string; badge?: number }[] = [
-    { id: 'profile', label: 'Profile' },
-    { id: 'rankings', label: 'Leaderboard' },
-    { id: 'vault', label: 'Vault', badge: sealedCount },
+    { id: 'profile',   label: 'Profile' },
+    { id: 'rankings',  label: 'Leaderboard' },
+    { id: 'vault',     label: 'Vault', badge: sealedCount },
     { id: 'chronicle', label: 'Chronicle' },
     { id: 'wristband', label: 'Wristband' },
   ];
@@ -202,17 +327,15 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
           <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: '12px 2px', background: 'none', border: 'none', borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent', color: tab === t.id ? 'var(--gold)' : 'var(--text-3)', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: '0.04em', textTransform: 'uppercase', cursor: 'pointer', position: 'relative' }}>
             {t.label}
             {t.badge != null && t.badge > 0 && (
-              <span style={{ position: 'absolute', top: 6, right: 'calc(50% - 18px)', background: 'var(--ember)', color: '#fff', borderRadius: 999, fontSize: 9, fontFamily: 'monospace', padding: '1px 5px', fontWeight: 700, lineHeight: 1.4 }}>
-                {t.badge}
-              </span>
+              <span style={{ position: 'absolute', top: 6, right: 'calc(50% - 18px)', background: 'var(--ember)', color: '#fff', borderRadius: 999, fontSize: 9, fontFamily: 'monospace', padding: '1px 5px', fontWeight: 700, lineHeight: 1.4 }}>{t.badge}</span>
             )}
           </button>
         ))}
       </div>
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {tab === 'profile' && <ProfileTab hero={hero} onSignOut={signOut} onReturnToHeroSelect={onReturnToHeroSelect} />}
-        {tab === 'rankings' && <LeaderboardScreen />}
-        {tab === 'vault' && <VaultScreen />}
+        {tab === 'profile'   && <ProfileTab hero={hero} onSignOut={signOut} onReturnToHeroSelect={onReturnToHeroSelect} />}
+        {tab === 'rankings'  && <LeaderboardScreen />}
+        {tab === 'vault'     && <VaultScreen />}
         {tab === 'chronicle' && <ChronicleScreen />}
         {tab === 'wristband' && <WristbandTab rootId={hero.root_id} />}
       </div>
@@ -220,18 +343,20 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
   );
 }
 
-function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSignOut: () => void; onReturnToHeroSelect?: () => void; }) {
-  const prog = hero.progression;
-  const level = prog?.fate_level ?? 1;
-  const xp = prog?.total_xp ?? prog?.fate_xp ?? 0;
-  const xpToNext = prog?.xp_to_next_level ?? 500;
-  const xpIn = prog?.xp_in_current_level ?? (xp % xpToNext);
-  const pct = Math.min(100, Math.round((xpIn / xpToNext) * 100));
-  const tier = TIER_FOR_LEVEL(level);
+// ── Profile Tab ────────────────────────────────────────────────────────────────
+function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSignOut: () => void; onReturnToHeroSelect?: () => void }) {
+  const prog      = hero.progression;
+  const level     = prog?.fate_level ?? 1;
+  const xp        = prog?.total_xp ?? prog?.fate_xp ?? 0;
+  const xpToNext  = prog?.xp_to_next_level ?? 500;
+  const xpIn      = prog?.xp_in_current_level ?? (xp % xpToNext);
+  const pct       = Math.min(100, Math.round((xpIn / xpToNext) * 100));
+  const tier      = TIER_FOR_LEVEL(level);
   const alignment = hero.alignment ?? 'NONE';
-  const aColor = ALIGNMENT_COLOR[alignment] ?? '#9ca3af';
+  const aColor    = ALIGNMENT_COLOR[alignment] ?? '#9ca3af';
+
   const equippedTitleId = prog?.equipped_title as string | null;
-  const titlesArr = (prog?.titles ?? []) as any[];
+  const titlesArr       = (prog?.titles ?? []) as any[];
   const equippedDisplay = (() => {
     if (!equippedTitleId) return null;
     const match = titlesArr.find((t: any) => (t.title_id ?? t) === equippedTitleId);
@@ -239,16 +364,17 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
     return equippedTitleId.replace(/^title_/, '').replace(/_/g, ' ').toUpperCase();
   })();
 
-  const fateSeals = (hero.source_progression ?? [])
-    .reduce((sum: number, v: any) => sum + (v.caches_granted ?? 0), 0);
+  const fateSeals = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.caches_granted ?? 0), 0);
   const gearFound = (hero.gear?.inventory ?? []).length;
 
   const statBlocks = [
-    { label: 'Sessions', value: prog?.sessions_completed ?? 0 },
-    { label: 'Boss Kills', value: prog?.boss_kills ?? 0 },
-    { label: 'Fate Seals', value: fateSeals },
-    { label: 'Gear Found', value: gearFound },
+    { label: 'Sessions',  value: prog?.sessions_completed ?? 0 },
+    { label: 'Boss Kills',value: prog?.boss_kills ?? 0 },
+    { label: 'Fate Seals',value: fateSeals },
+    { label: 'Gear Found',value: gearFound },
   ];
+
+  const [battleHistory] = useState<BattleRecord[]>(() => loadVTHistory());
 
   return (
     <div style={{ padding: 16 }}>
@@ -259,17 +385,9 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
             {(hero.display_name ?? hero.hero_name ?? '?')[0].toUpperCase()}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 17, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>
-              {hero.display_name ?? hero.hero_name}
-            </p>
-            {equippedDisplay && (
-              <p style={{ fontSize: 11, color: 'var(--gold)', margin: '0 0 4px', letterSpacing: '0.06em' }}>
-                {equippedDisplay}
-              </p>
-            )}
-            <p style={{ fontSize: 12, color: aColor, margin: 0, letterSpacing: '0.05em' }}>
-              {ALIGNMENT_LABEL[alignment] ?? alignment}
-            </p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 17, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>{hero.display_name ?? hero.hero_name}</p>
+            {equippedDisplay && <p style={{ fontSize: 11, color: 'var(--gold)', margin: '0 0 4px', letterSpacing: '0.06em' }}>{equippedDisplay}</p>}
+            <p style={{ fontSize: 12, color: aColor, margin: 0, letterSpacing: '0.05em' }}>{ALIGNMENT_LABEL[alignment] ?? alignment}</p>
           </div>
           <div style={{ background: 'var(--bg)', border: `1px solid ${tier.color}`, borderRadius: 8, padding: '4px 10px', flexShrink: 0, textAlign: 'center' }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: tier.color, margin: '0 0 1px', letterSpacing: '0.1em' }}>{tier.name}</p>
@@ -295,6 +413,12 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
         ))}
       </div>
 
+      {/* ── Veil Battle Stats */}
+      <VeilBattleStats history={battleHistory} />
+
+      {/* ── Veil Battle History */}
+      <VeilBattleHistory history={battleHistory} />
+
       {/* Trophy Room */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 14px', marginBottom: 14 }}>
         <TrophyRoom hero={hero} fateSeals={fateSeals} />
@@ -305,47 +429,31 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
         {onReturnToHeroSelect && (
           <button onClick={onReturnToHeroSelect} style={{ width: '100%', padding: '12px 0', background: 'var(--surface)', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer', letterSpacing: '0.05em' }}>Switch Hero</button>
         )}
-        <button onClick={onSignOut} style={{ width: '100%', padding: '12px 0', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer', letterSpacing: '0.05em' }}>
-          Sign Out
-        </button>
+        <button onClick={onSignOut} style={{ width: '100%', padding: '12px 0', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer', letterSpacing: '0.05em' }}>Sign Out</button>
       </div>
     </div>
   );
 }
 
+// ── Wristband Tab ──────────────────────────────────────────────────────────────
 function WristbandTab({ rootId }: { rootId: string }) {
-  const [wearables, setWearables] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [wearables,  setWearables]  = useState<any[]>([]);
+  const [loading,    setLoading]    = useState(true);
   const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    setFetchError(false);
+    setLoading(true); setFetchError(false);
     fetch(`${BASE}/api/wearable/player/${rootId}`)
-      .then(r => r.json())
-      .then(j => {
-        const raw = unwrap(j);
-        setWearables(Array.isArray(raw) ? raw : []);
-      })
-      .catch(() => setFetchError(true))
-      .finally(() => setLoading(false));
+      .then(r => r.json()).then(j => { const raw = unwrap(j); setWearables(Array.isArray(raw) ? raw : []); })
+      .catch(() => setFetchError(true)).finally(() => setLoading(false));
   }, [rootId]);
 
-  if (loading) return (
-    <div style={{ textAlign: 'center', padding: 48 }}>
-      <p style={{ color: 'var(--text-3)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Scanning…</p>
-    </div>
-  );
-
+  if (loading) return <div style={{ textAlign: 'center', padding: 48 }}><p style={{ color: 'var(--text-3)', fontFamily: 'Cinzel, serif', fontSize: 13 }}>Scanning…</p></div>;
   if (fetchError) return (
     <div style={{ textAlign: 'center', padding: '48px 24px' }}>
       <div style={{ fontSize: 28, color: 'var(--text-3)', opacity: 0.4, marginBottom: 12 }}>◌</div>
-      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'var(--text-2)', margin: '0 0 6px' }}>
-        Could not reach wristband service
-      </p>
-      <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, lineHeight: 1.6 }}>
-        The wristband endpoint is unavailable. Your linked wristbands will appear here once the service is active.
-      </p>
+      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'var(--text-2)', margin: '0 0 6px' }}>Could not reach wristband service</p>
+      <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, lineHeight: 1.6 }}>The wristband endpoint is unavailable. Your linked wristbands will appear here once the service is active.</p>
     </div>
   );
 
@@ -356,25 +464,15 @@ function WristbandTab({ rootId }: { rootId: string }) {
         <div style={{ textAlign: 'center', padding: '48px 24px' }}>
           <div style={{ fontSize: 32, color: 'var(--text-3)', opacity: 0.4, marginBottom: 12 }}>◌</div>
           <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: 'var(--text-2)', margin: '0 0 8px' }}>No Wristband Linked</p>
-          <p style={{ fontSize: 13, color: 'var(--text-3)', opacity: 0.7, margin: 0, lineHeight: 1.6 }}>
-            Tap your wristband at a Heroes Veritas terminal to link it to this hero.
-          </p>
+          <p style={{ fontSize: 13, color: 'var(--text-3)', opacity: 0.7, margin: 0, lineHeight: 1.6 }}>Tap your wristband at a Heroes Veritas terminal to link it to this hero.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {wearables.map((w: any) => (
             <div key={w.token_id ?? w.token_uid} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
-              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'var(--text-1)', margin: '0 0 4px' }}>
-                {w.friendly_name ?? 'Wristband'}
-              </p>
-              <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 0 2px' }}>
-                UID: <span style={{ fontFamily: 'monospace', color: 'var(--gold)', letterSpacing: '0.05em' }}>{w.token_uid}</span>
-              </p>
-              {w.last_tap_at && (
-                <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>
-                  Last tap: {new Date(w.last_tap_at).toLocaleDateString()}
-                </p>
-              )}
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'var(--text-1)', margin: '0 0 4px' }}>{w.friendly_name ?? 'Wristband'}</p>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 0 2px' }}>UID: <span style={{ fontFamily: 'monospace', color: 'var(--gold)', letterSpacing: '0.05em' }}>{w.token_uid}</span></p>
+              {w.last_tap_at && <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>Last tap: {new Date(w.last_tap_at).toLocaleDateString()}</p>}
             </div>
           ))}
         </div>
