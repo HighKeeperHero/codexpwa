@@ -8,19 +8,43 @@ import { useAuth } from '../AuthContext';
 
 const PIK_BASE = 'https://pik-prd-production.up.railway.app';
 
-// Fire-and-forget: persist battle to backend. localStorage stays as offline fallback.
-async function postEncounter(rootId: string | undefined, payload: {
-  tear_type: string; tear_name: string; outcome: 'won' | 'fled';
-  shards: number; lat?: number; lon?: number;
-}) {
-  if (!rootId) return;
+interface ServerResult {
+  shards: number;
+  multiplier?: number;
+  convergence_event?: string;
+  cache_earned?: { cache_id: string; cache_type: string; rarity: string } | null;
+  quests_completed?: Array<{ quest_id: string; name: string; cache: object | null }>;
+}
+
+interface ActiveEvent {
+  event_id: string; name: string; description?: string; flavor_text?: string;
+  affected_tiers: string[]; shard_multiplier: number; cache_bonus: boolean; ends_at: number;
+}
+
+// Posts encounter to backend and returns enriched server result.
+async function postEncounter(
+  rootId: string | undefined,
+  payload: { tear_type: string; tear_name: string; outcome: 'won' | 'fled'; shards: number; lat?: number; lon?: number; }
+): Promise<ServerResult | null> {
+  if (!rootId) return null;
   try {
-    await fetch(`${PIK_BASE}/api/veil/encounter`, {
+    const res = await fetch(`${PIK_BASE}/api/veil/encounter`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ root_id: rootId, ...payload }),
     });
-  } catch { /* silent — localStorage record is the fallback */ }
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; /* localStorage record is the fallback */ }
+}
+
+// Fetches active convergence events (global, no auth needed).
+async function fetchActiveEvents(): Promise<ActiveEvent[]> {
+  try {
+    const res = await fetch(`${PIK_BASE}/api/veil/events/active`);
+    if (!res.ok) return [];
+    return await res.json();
+  } catch { return []; }
 }
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -260,6 +284,13 @@ export default function VeilTearsScreen() {
   const [battleBusy, setBattleBusy]         = useState(false);
   const [damageFlash, setDamageFlash]       = useState<string | null>(null);
   const [battleResult, setBattleResult]     = useState<{ won: boolean; shards: number } | null>(null);
+  const [serverResult, setServerResult]     = useState<ServerResult | null>(null);
+  const [activeEvents, setActiveEvents]     = useState<ActiveEvent[]>([]);
+
+  // Load convergence events on mount
+  useEffect(() => {
+    fetchActiveEvents().then(setActiveEvents);
+  }, []);
 
   // Quest progress
   const [questProgress, setQuestProgress]   = useState<Record<string, number>>({
@@ -400,6 +431,7 @@ export default function VeilTearsScreen() {
     setTelegraph(pickRand(TELEGRAPHS[tear.type]));
     setBattleBusy(false);
     setBattleResult(null);
+    setServerResult(null);
     setActiveTear(null);
     setScreen('battle');
   }, []);
@@ -442,7 +474,8 @@ export default function VeilTearsScreen() {
             h.unshift({ tear_type: tear.type, tear_name: tear.name, won: true, shards, ts: Date.now() });
             localStorage.setItem('vt_battles', JSON.stringify(h.slice(0, 20)));
           } catch {}
-          postEncounter(hero?.root_id, { tear_type: tear.type, tear_name: tear.name, outcome: 'won', shards, lat: coords[0], lon: coords[1] });
+          postEncounter(hero?.root_id, { tear_type: tear.type, tear_name: tear.name, outcome: 'won', shards, lat: coords[0], lon: coords[1] })
+            .then(r => setServerResult(r));
           if (tear.type === 'minor')   setQuestProgress(q => ({ ...q, warden: Math.min(3, q.warden + 1) }));
           if (tear.type === 'dormant') setQuestProgress(q => ({ ...q, gatheringdark: 1 }));
           setScreen('victory');
@@ -468,7 +501,8 @@ export default function VeilTearsScreen() {
                 h.unshift({ tear_type: tear.type, tear_name: tear.name, won: false, shards: 0, ts: Date.now() });
                 localStorage.setItem('vt_battles', JSON.stringify(h.slice(0, 20)));
               } catch {}
-              postEncounter(hero?.root_id, { tear_type: tear.type, tear_name: tear.name, outcome: 'fled', shards: 0, lat: coords[0], lon: coords[1] });
+              postEncounter(hero?.root_id, { tear_type: tear.type, tear_name: tear.name, outcome: 'fled', shards: 0, lat: coords[0], lon: coords[1] })
+                .then(r => setServerResult(r));
             }
             return next;
           });
@@ -541,6 +575,29 @@ export default function VeilTearsScreen() {
                 <span style={css.statLabel}>{s.label}</span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── CONVERGENCE EVENT BANNER ── */}
+      {locationReady && screen === 'map' && activeEvents.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 80, left: 12, right: 12, zIndex: 11,
+          background: 'linear-gradient(135deg, rgba(128,40,200,0.22), rgba(200,100,20,0.18))',
+          border: '1px solid rgba(160,96,224,0.40)',
+          borderRadius: 8, padding: '7px 14px',
+          display: 'flex', alignItems: 'center', gap: 8,
+          pointerEvents: 'none',
+        }}>
+          <span style={{ fontSize: 14, color: '#A060E0' }}>⚡</span>
+          <div>
+            <div style={{ fontSize: 9, letterSpacing: '0.12em', color: '#A060E0', fontWeight: 700 }}>
+              CONVERGENCE EVENT ACTIVE
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-2)', fontFamily: "'IM Fell English', serif", fontStyle: 'italic' }}>
+              {activeEvents[0].name} — ×{activeEvents[0].shard_multiplier} shards
+              {activeEvents[0].cache_bonus ? ', bonus caches' : ''}
+            </div>
           </div>
         </div>
       )}
@@ -757,14 +814,43 @@ export default function VeilTearsScreen() {
               </p>
               <div style={css.resultRewards}>
                 <div style={css.resultRewardItem}>
-                  <div style={{ ...css.resultRewardVal, color: 'var(--gold)' }}>+{battleResult.shards}</div>
+                  <div style={{ ...css.resultRewardVal, color: 'var(--gold)' }}>
+                    +{serverResult?.shards ?? battleResult.shards}
+                    {serverResult?.multiplier && (
+                      <span style={{ fontSize: 9, color: '#E8B040', marginLeft: 4 }}>×{serverResult.multiplier}</span>
+                    )}
+                  </div>
                   <div style={css.resultRewardLabel}>VEIL SHARDS</div>
                 </div>
-                <div style={{ ...css.resultRewardItem, paddingLeft: 12, borderLeft: '1px solid var(--border)' }}>
-                  <div style={{ ...css.resultRewardVal, color: 'var(--text-2)' }}>+1</div>
-                  <div style={css.resultRewardLabel}>LORE FRAGMENT</div>
-                </div>
+                {serverResult?.cache_earned && (
+                  <div style={{ ...css.resultRewardItem, paddingLeft: 12, borderLeft: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 22 }}>🎁</div>
+                    <div style={{ ...css.resultRewardLabel, color: serverResult.cache_earned.rarity === 'epic' ? '#A855F7' : serverResult.cache_earned.rarity === 'rare' ? '#1E90FF' : serverResult.cache_earned.rarity === 'uncommon' ? '#34d399' : '#8899AA', textTransform: 'uppercase' }}>
+                      {serverResult.cache_earned.rarity} cache
+                    </div>
+                  </div>
+                )}
+                {!serverResult && (
+                  <div style={{ ...css.resultRewardItem, paddingLeft: 12, borderLeft: '1px solid var(--border)', opacity: 0.5 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>checking rewards…</div>
+                  </div>
+                )}
               </div>
+              {serverResult?.quests_completed && serverResult.quests_completed.length > 0 && (
+                <div style={{ margin: '8px 0 12px', padding: '10px 16px', background: 'rgba(255,165,0,0.08)', border: '1px solid rgba(255,165,0,0.25)', borderRadius: 8, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'var(--gold)', marginBottom: 4 }}>QUEST COMPLETE</div>
+                  {serverResult.quests_completed.map(q => (
+                    <div key={q.quest_id} style={{ fontSize: 12, color: 'var(--text-1)', fontFamily: "'IM Fell English', serif", fontStyle: 'italic' }}>
+                      ◈ {q.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {serverResult?.convergence_event && (
+                <div style={{ fontSize: 9, color: '#A060E0', letterSpacing: '0.1em', marginBottom: 8, opacity: 0.8 }}>
+                  ⚡ {serverResult.convergence_event} BONUS APPLIED
+                </div>
+              )}
               <button style={css.btnPrimary} onClick={() => setScreen('map')}>Return to the World</button>
             </>
           ) : (
