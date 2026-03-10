@@ -35,8 +35,8 @@ interface BattleRecord {
   tear_type: string; tear_name: string; won: boolean; shards: number; ts: number;
 }
 
-function loadVTHistory(): BattleRecord[] {
-  try { return JSON.parse(localStorage.getItem('vt_battles') ?? '[]'); }
+function loadVTHistory(rootId?: string): BattleRecord[] {
+  try { return JSON.parse(localStorage.getItem(`vt_battles_${rootId ?? 'anon'}`) ?? '[]'); }
   catch { return []; }
 }
 
@@ -100,14 +100,16 @@ function useCountdown(targetMs: number) {
 
 // ── Veil Activity Section ──────────────────────────────────────────────────────
 function VeilActivitySection() {
+  const { hero } = useAuth();
+  const rootId = hero?.root_id;
   const [history, setHistory] = useState<BattleRecord[]>([]);
 
   useEffect(() => {
-    setHistory(loadVTHistory().slice(0, 5));
-    const onFocus = () => setHistory(loadVTHistory().slice(0, 5));
+    setHistory(loadVTHistory(rootId).slice(0, 5));
+    const onFocus = () => setHistory(loadVTHistory(rootId).slice(0, 5));
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, []);
+  }, [rootId]);
 
   if (history.length === 0) return null;
 
