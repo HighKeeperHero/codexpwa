@@ -321,7 +321,7 @@ function WristbandTab({ rootId }: { rootId: string }) {
   useEffect(() => {
     setLoading(true);
     setFetchError(false);
-    fetch(`${BASE}/api/wearables/${rootId}`)
+    fetch(`${BASE}/api/wearable/player/${rootId}`)
       .then(r => r.json())
       .then(j => {
         const raw = unwrap(j);
