@@ -28,9 +28,28 @@ interface BattleRecord {
   tear_type: string; tear_name: string; won: boolean; shards: number; ts: number;
 }
 
-function loadVTHistory(): BattleRecord[] {
-  try { return JSON.parse(localStorage.getItem('vt_battles') ?? '[]'); }
+function loadVTLocal(rootId?: string | null): BattleRecord[] {
+  try { return JSON.parse(localStorage.getItem(`vt_battles_${rootId ?? 'anon'}`) ?? '[]'); }
   catch { return []; }
+}
+
+async function fetchVTHistory(rootId: string): Promise<BattleRecord[]> {
+  try {
+    const res  = await fetch(`${BASE}/api/veil/encounters/${rootId}?limit=20`);
+    const json = await res.json();
+    const rows = (json?.data ?? json) as any[];
+    if (Array.isArray(rows) && rows.length > 0) {
+      return rows.map(r => ({
+        tear_type: r.tear_type  ?? r.tearType  ?? 'minor',
+        tear_name: r.tear_name  ?? r.tearName  ?? 'Unknown',
+        won:       r.outcome === 'won',
+        shards:    r.shards     ?? 0,
+        ts:        r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+      }));
+    }
+  } catch {}
+  // Fallback: hero-scoped localStorage
+  return loadVTLocal(rootId);
 }
 
 function timeAgo(ts: number): string {
@@ -374,7 +393,12 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
     { label: 'Gear Found',value: gearFound },
   ];
 
-  const [battleHistory] = useState<BattleRecord[]>(() => loadVTHistory());
+  const [battleHistory, setBattleHistory] = useState<BattleRecord[]>([]);
+
+  useEffect(() => {
+    if (!hero?.root_id) return;
+    fetchVTHistory(hero.root_id).then(setBattleHistory);
+  }, [hero?.root_id]);
 
   return (
     <div style={{ padding: 16 }}>
