@@ -6,6 +6,23 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../AuthContext';
 
+const PIK_BASE = 'https://pik-prd-production.up.railway.app';
+
+// Fire-and-forget: persist battle to backend. localStorage stays as offline fallback.
+async function postEncounter(rootId: string | undefined, payload: {
+  tear_type: string; tear_name: string; outcome: 'won' | 'fled';
+  shards: number; lat?: number; lon?: number;
+}) {
+  if (!rootId) return;
+  try {
+    await fetch(`${PIK_BASE}/api/veil/encounter`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ root_id: rootId, ...payload }),
+    });
+  } catch { /* silent — localStorage record is the fallback */ }
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 type TearType = 'minor' | 'wander' | 'dormant' | 'double';
@@ -425,6 +442,7 @@ export default function VeilTearsScreen() {
             h.unshift({ tear_type: tear.type, tear_name: tear.name, won: true, shards, ts: Date.now() });
             localStorage.setItem('vt_battles', JSON.stringify(h.slice(0, 20)));
           } catch {}
+          postEncounter(hero?.root_id, { tear_type: tear.type, tear_name: tear.name, outcome: 'won', shards, lat: coords[0], lon: coords[1] });
           if (tear.type === 'minor')   setQuestProgress(q => ({ ...q, warden: Math.min(3, q.warden + 1) }));
           if (tear.type === 'dormant') setQuestProgress(q => ({ ...q, gatheringdark: 1 }));
           setScreen('victory');
@@ -450,6 +468,7 @@ export default function VeilTearsScreen() {
                 h.unshift({ tear_type: tear.type, tear_name: tear.name, won: false, shards: 0, ts: Date.now() });
                 localStorage.setItem('vt_battles', JSON.stringify(h.slice(0, 20)));
               } catch {}
+              postEncounter(hero?.root_id, { tear_type: tear.type, tear_name: tear.name, outcome: 'fled', shards: 0, lat: coords[0], lon: coords[1] });
             }
             return next;
           });
