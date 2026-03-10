@@ -839,7 +839,7 @@ const css: Record<string, React.CSSProperties> = {
   locateBtn: { width: 44, height: 44, borderRadius: '50%', background: 'rgba(15,21,32,0.9)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-2)', fontSize: 18 },
 
   // Encounter modal
-  modalOverlay: { position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(8,12,20,0.92)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' },
+  modalOverlay: { position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(8,12,20,0.92)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' },
   encounterPanel: { width: '100%', maxWidth: 480, background: 'var(--surface)', border: '1px solid var(--border-hi)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px' },
   dragHandle: { width: 36, height: 3, borderRadius: 2, background: 'var(--border-hi)', margin: '0 auto 20px' },
   encHeader: { display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 },
@@ -857,9 +857,9 @@ const css: Record<string, React.CSSProperties> = {
   btnClose: { width: 52, padding: 16, borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)', cursor: 'pointer', fontSize: 18 },
 
   // Battle
-  battleOverlay: { position: 'fixed', inset: 0, zIndex: 60, background: '#080C14', display: 'flex', flexDirection: 'column' },
+  battleOverlay: { position: 'fixed', inset: 0, zIndex: 200, background: '#080C14', display: 'flex', flexDirection: 'column' },
   battleBg: { position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 40% at 50% 60%, rgba(96,48,160,0.15) 0%, transparent 70%)' },
-  damageFlash: { position: 'fixed', inset: 0, zIndex: 70, pointerEvents: 'none', opacity: 0.35 } as React.CSSProperties,
+  damageFlash: { position: 'fixed', inset: 0, zIndex: 210, pointerEvents: 'none', opacity: 0.35 } as React.CSSProperties,
   battleContent: { position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', padding: '48px 20px 0' },
   enemyZone: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingBottom: 20 },
   enemySigil: { width: 100, height: 100, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
@@ -877,7 +877,7 @@ const css: Record<string, React.CSSProperties> = {
   battleBtn: { padding: '14px 10px', borderRadius: 12, border: '1px solid', background: 'transparent', cursor: 'pointer', fontFamily: "'Cinzel', serif", display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'all 0.15s' },
 
   // Result
-  resultPanel: { position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,12,20,0.95)', backdropFilter: 'blur(6px)', flexDirection: 'column', gap: 16, padding: 40, textAlign: 'center' },
+  resultPanel: { position: 'fixed', inset: 0, zIndex: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,12,20,0.95)', backdropFilter: 'blur(6px)', flexDirection: 'column', gap: 16, padding: 40, textAlign: 'center' },
   resultTitle: { fontFamily: "'Cinzel Decorative', serif", fontSize: 24, fontWeight: 700, letterSpacing: '0.1em' },
   resultLore: { fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7, maxWidth: 300 },
   resultRewards: { display: 'flex', gap: 12, padding: '16px 20px', background: 'var(--surface)', border: '1px solid var(--border-hi)', borderRadius: 14 },
