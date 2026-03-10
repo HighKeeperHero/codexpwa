@@ -35,7 +35,7 @@ interface BattleRecord {
   tear_type: string; tear_name: string; won: boolean; shards: number; ts: number;
 }
 
-function loadVTHistory(rootId?: string): BattleRecord[] {
+function loadVTLocal(rootId?: string | null): BattleRecord[] {
   try { return JSON.parse(localStorage.getItem(`vt_battles_${rootId ?? 'anon'}`) ?? '[]'); }
   catch { return []; }
 }
@@ -101,15 +101,36 @@ function useCountdown(targetMs: number) {
 // ── Veil Activity Section ──────────────────────────────────────────────────────
 function VeilActivitySection() {
   const { hero } = useAuth();
-  const rootId = hero?.root_id;
+  const rootId   = hero?.root_id ?? null;
   const [history, setHistory] = useState<BattleRecord[]>([]);
 
+  const fetchHistory = useCallback(async () => {
+    if (!rootId) return;
+    try {
+      const res  = await fetch(`${BASE}/api/veil/encounters/${rootId}?limit=5`);
+      const json = await res.json();
+      const rows = (json?.data ?? json) as any[];
+      if (Array.isArray(rows) && rows.length > 0) {
+        setHistory(rows.map(r => ({
+          tear_type: r.tear_type  ?? r.tearType  ?? 'minor',
+          tear_name: r.tear_name  ?? r.tearName  ?? 'Unknown',
+          won:       r.outcome === 'won',
+          shards:    r.shards     ?? 0,
+          ts:        r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+        })));
+        return;
+      }
+    } catch {}
+    // Fallback: hero-scoped localStorage key
+    setHistory(loadVTLocal(rootId).slice(0, 5));
+  }, [rootId]);
+
   useEffect(() => {
-    setHistory(loadVTHistory(rootId).slice(0, 5));
-    const onFocus = () => setHistory(loadVTHistory(rootId).slice(0, 5));
+    fetchHistory();
+    const onFocus = () => fetchHistory();
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, [rootId]);
+  }, [fetchHistory]);
 
   if (history.length === 0) return null;
 
@@ -374,16 +395,71 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
             {hero.gear && <span className="badge" style={{ color: 'var(--bronze-hi)', borderColor: 'rgba(154,114,72,0.3)' }}>⚔ GEARED</span>}
           </div>
 
-          <div style={{ marginBottom: 4 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 7, alignItems: 'baseline' }}>
-              <span style={{ fontSize: 10, letterSpacing: 1, color: 'var(--text-3)' }}>FATE LEVEL <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 13 }}>{progression.fate_level}</span></span>
-              <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{progression.total_xp.toLocaleString()} XP</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
+
+            {/* ── Fate Level — account-wide, quiet/secondary ── */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                <span style={{ fontSize: 9, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase' }}>
+                  Fate Level{' '}
+                  <span style={{ color: 'rgba(200,160,78,0.65)', fontWeight: 700, fontSize: 11 }}>{progression.fate_level}</span>
+                </span>
+                <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{progression.total_xp.toLocaleString()} xp</span>
+              </div>
+              <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 2,
+                  width: `${prog * 100}%`,
+                  background: 'rgba(200,160,78,0.35)',
+                  transition: 'width 0.7s ease',
+                }} />
+              </div>
+              <div style={{ fontSize: 8, color: 'var(--text-3)', textAlign: 'right', marginTop: 3, opacity: 0.6 }}>
+                {progression.xp_in_current_level.toLocaleString()} / {progression.xp_to_next_level.toLocaleString()} to Lv {progression.fate_level + 1}
+              </div>
             </div>
-            <div className="xp-track"><div className="xp-fill" style={{ width: `${prog * 100}%` }} /></div>
-            <div style={{ fontSize: 9, color: 'var(--text-3)', textAlign: 'right', marginTop: 5 }}>
-              {progression.xp_in_current_level.toLocaleString()} / {progression.xp_to_next_level.toLocaleString()} to level {progression.fate_level + 1}
-            </div>
+
+            {/* ── Hero Level — character-specific, prominent ── */}
+            {(() => {
+              const heroLv   = progression.hero_level  ?? progression.fate_level;
+              const heroXp   = progression.hero_xp     ?? progression.total_xp;
+              const heroIn   = progression.hero_xp_in_level ?? progression.xp_in_current_level;
+              const heroTo   = progression.hero_xp_to_next  ?? progression.xp_to_next_level;
+              const heroFill = heroTo > 0 ? Math.min(1, Math.max(0, heroIn / heroTo)) : prog;
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, letterSpacing: '0.08em', color: 'var(--text-1)', textTransform: 'uppercase' }}>
+                      Hero Level{' '}
+                      <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--font-serif)', letterSpacing: 0 }}>{heroLv}</span>
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600 }}>
+                      {heroXp.toLocaleString()}{' '}
+                      <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 400 }}>xp</span>
+                    </span>
+                  </div>
+                  <div style={{
+                    height: 7, borderRadius: 4,
+                    background: 'rgba(255,255,255,0.08)',
+                    overflow: 'hidden',
+                    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)',
+                  }}>
+                    <div style={{
+                      height: '100%', borderRadius: 4,
+                      width: `${heroFill * 100}%`,
+                      background: 'linear-gradient(90deg, #C8820A 0%, var(--gold) 60%, #FFD86A 100%)',
+                      boxShadow: '0 0 10px rgba(255,165,0,0.45)',
+                      transition: 'width 0.7s ease',
+                    }} />
+                  </div>
+                  <div style={{ fontSize: 9, color: 'rgba(220,170,60,0.85)', textAlign: 'right', marginTop: 4 }}>
+                    {heroIn.toLocaleString()} / {heroTo.toLocaleString()} to Lv {heroLv + 1}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
+
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', background: 'var(--surface)', marginTop: 8 }}>
             {[

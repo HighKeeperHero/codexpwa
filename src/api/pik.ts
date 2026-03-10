@@ -6,7 +6,7 @@ const PIK_BASE = 'https://pik-prd-production.up.railway.app';
 
 // ── Types ─────────────────────────────────────────────
 
-export type Alignment = 'ORDER' | 'CHAOS' | 'LIGHT' | 'DARK' | 'NONE';
+export type Alignment = 'ORDER' | 'VEIL' | 'WILD' | 'DARK' | 'NONE' | 'LIGHT';
 export type Rarity    = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythic';
 
 export interface GearItem {
@@ -62,8 +62,12 @@ export interface ActivityEvent {
 }
 
 export interface Progression {
+  // Account-wide (FateAccount)
   fate_level: number; total_xp: number;
   xp_to_next_level: number; xp_in_current_level: number;
+  // Character-specific (RootIdentity) — Sprint 15
+  hero_level: number; hero_xp: number;
+  hero_xp_in_level: number; hero_xp_to_next: number;
   sessions_completed: number; fate_markers: string[];
   titles: HeroTitle[]; equipped_title: string | null;
 }
@@ -91,11 +95,9 @@ export interface LeaderboardEntry {
 // ── Alignment ─────────────────────────────────────────
 
 export const ALIGNMENT_COLOR: Record<string, string> = {
-  ORDER: '#4A7EC8',
-  CHAOS: '#C85E28',
-  LIGHT: '#C8A04E',
-  DARK:  '#7A5888',
-  NONE:  '#5A4E3C', '': '#5A4E3C',
+  ORDER: '#C8A04E', LIGHT: '#C8A04E',
+  VEIL:  '#7A5888', DARK:  '#7A5888',
+  WILD:  '#486E48', NONE:  '#5A4E3C', '': '#5A4E3C',
 };
 
 // ── Tiers ──────────────────────────────────────────────
@@ -113,9 +115,9 @@ export function TIER_FOR_LEVEL(level: number): Tier {
 }
 
 export const ALIGNMENT_LABEL: Record<string, string> = {
-  ORDER: 'ORDER', CHAOS: 'CHAOS',
-  LIGHT: 'LIGHT', DARK:  'DARK',
-  NONE:  'NONE',  '':    'NONE',
+  ORDER: 'ORDER', LIGHT: 'LIGHT',
+  VEIL: 'VEIL',   DARK: 'DARK',
+  WILD: 'WILD',   NONE: 'NONE', '': 'NONE',
 };
 
 // ── Narrative (deterministic from root_id) ────────────
@@ -261,6 +263,20 @@ function mapFullUser(r: Record<string, unknown>): Hero {
 
   const activeWearable = wearables.find(w => w.status === 'active');
 
+  // ── Hero XP (character-specific) — Sprint 15 ──────────────────────────────
+  // hero_xp / hero_level live directly on root_identities row, returned in
+  // the identity sub-object of the API response.
+  const XP_PER_LEVEL = 500;
+  const heroXpRaw  = (identity.hero_xp  ?? prog.hero_xp  ?? (prog.fate_xp ?? 0)) as number;
+  const heroLvRaw  = (identity.hero_level ?? prog.hero_level ?? (prog.fate_level ?? 1)) as number;
+  const heroInLvl  = heroXpRaw - (heroLvRaw - 1) * XP_PER_LEVEL;
+  const heroToNext = XP_PER_LEVEL;
+
+  // ── Fate XP (account-wide) ────────────────────────────────────────────────
+  const fateXpRaw = (prog.fate_xp ?? 0) as number;
+  const fateLvRaw = (prog.fate_level ?? 1) as number;
+  const fateInLvl = (prog.xp_in_current_level ?? (fateXpRaw - (fateLvRaw - 1) * XP_PER_LEVEL)) as number;
+
   return {
     root_id:      rootId,
     display_name: (persona.hero_name ?? persona.display_name ?? 'Unknown Hero') as string,
@@ -268,10 +284,14 @@ function mapFullUser(r: Record<string, unknown>): Hero {
     account_type: (identity.status ?? 'registered') as string,
     created_at:   (identity.enrolled_at ?? '') as string,
     progression: {
-      fate_level:          (prog.fate_level ?? 1) as number,
-      total_xp:            (prog.fate_xp ?? 0) as number,
-      xp_to_next_level:    (prog.xp_needed_for_next ?? 500) as number,
-      xp_in_current_level: (prog.xp_in_current_level ?? 0) as number,
+      fate_level:          fateLvRaw,
+      total_xp:            fateXpRaw,
+      xp_to_next_level:    (prog.xp_needed_for_next ?? XP_PER_LEVEL) as number,
+      xp_in_current_level: fateInLvl,
+      hero_level:          heroLvRaw,
+      hero_xp:             heroXpRaw,
+      hero_xp_in_level:    Math.max(0, heroInLvl),
+      hero_xp_to_next:     heroToNext,
       // Use total_sessions from progression object (authoritative)
       sessions_completed:  (prog.total_sessions ?? srcProg.reduce((a, s) => a + ((s.sessions as number) ?? 0), 0)) as number,
       fate_markers:        (prog.fate_markers ?? []) as string[],
