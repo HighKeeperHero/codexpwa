@@ -206,11 +206,11 @@ const TROPHIES: TrophyDef[] = [
   { id: 'sessions_5',      name: 'Returning',      rarity: 'uncommon',  lore: 'Five times the dark could not hold you.',        hint: 'Complete 5 sessions.',             icon: '⚔', check: h => (h.progression?.sessions_completed ?? 0) >= 5 },
   { id: 'fate_5',          name: 'Fate Rising',    rarity: 'uncommon',  lore: 'The Codex records your growth.',                 hint: 'Reach Fate Level 5.',              icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 5 },
   { id: 'gear_3',          name: 'Arsenal',        rarity: 'uncommon',  lore: "You carry the weight of the Veil's debt.",       hint: 'Acquire 3 pieces of gear.',        icon: '⬡', check: h => (h.gear?.inventory ?? []).length >= 3 },
-  { id: 'first_boss',      name: 'Veil Hunter',    rarity: 'rare',      lore: 'Something ancient noticed you. Good.',           hint: 'Slay your first boss.',            icon: '◈', check: h => (h.progression?.boss_kills ?? 0) >= 1 },
+  { id: 'first_boss',      name: 'Veil Hunter',    rarity: 'rare',      lore: 'Something ancient noticed you. Good.',           hint: 'Slay your first boss.',            icon: '◈', check: (h: any) => (h.source_progression ?? []).reduce((s: number, v: any) => s + (v.boss_kills ?? 0), 0) >= 1 },
   { id: 'titles_3',        name: 'Renowned',       rarity: 'rare',      lore: 'Three names. The same story.',                   hint: 'Earn 3 titles.',                   icon: '◇', check: h => (h.progression?.titles ?? []).length >= 3 },
   { id: 'sessions_10',     name: 'Veteran',        rarity: 'rare',      lore: 'Ten descents. Still standing.',                  hint: 'Complete 10 sessions.',            icon: '⚔', check: h => (h.progression?.sessions_completed ?? 0) >= 10 },
   { id: 'fate_10',         name: 'Fate Hardened',  rarity: 'rare',      lore: 'The Kernel acknowledges what you are.',          hint: 'Reach Fate Level 10.',             icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 10 },
-  { id: 'boss_5',          name: 'Beast Slayer',   rarity: 'epic',      lore: 'Five kills. The dark remembers.',                hint: 'Defeat 5 bosses.',                 icon: '◈', check: h => (h.progression?.boss_kills ?? 0) >= 5 },
+  { id: 'boss_5',          name: 'Beast Slayer',   rarity: 'epic',      lore: 'Five kills. The dark remembers.',                hint: 'Defeat 5 bosses.',                 icon: '◈', check: (h: any) => (h.source_progression ?? []).reduce((s: number, v: any) => s + (v.boss_kills ?? 0), 0) >= 5 },
   { id: 'fate_15',         name: 'Fate Ascendant', rarity: 'epic',      lore: 'What you were before does not apply.',           hint: 'Reach Fate Level 15.',             icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 15 },
   { id: 'veil_cleared',    name: 'Veil Shattered', rarity: 'legendary', lore: 'You ran the dark to its end. Now what?',         hint: 'Clear the Veil at 100%.',          icon: '◈', check: h => (h.source_progression ?? []).some((v: any) => v.best_boss_pct >= 100) },
   { id: 'fate_100',        name: 'Mythic',         rarity: 'legendary', lore: 'The Codex has no more words for what you are.', hint: 'Reach Fate Level 100.',            icon: '◈', check: h => (h.progression?.fate_level ?? 1) >= 100 },
@@ -383,14 +383,15 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
     return equippedTitleId.replace(/^title_/, '').replace(/_/g, ' ').toUpperCase();
   })();
 
-  const fateSeals = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.caches_granted ?? 0), 0);
-  const gearFound = (hero.gear?.inventory ?? []).length;
+  const fateSeals  = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.caches_granted ?? 0), 0);
+  const bossKills  = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.boss_kills    ?? 0), 0);
+  const gearFound  = (hero.gear?.inventory ?? []).length;
 
   const statBlocks = [
-    { label: 'Sessions',  value: prog?.sessions_completed ?? 0 },
-    { label: 'Boss Kills',value: prog?.boss_kills ?? 0 },
-    { label: 'Fate Seals',value: fateSeals },
-    { label: 'Gear Found',value: gearFound },
+    { label: 'Sessions',   value: prog?.sessions_completed ?? 0 },
+    { label: 'Boss Kills', value: bossKills },
+    { label: 'Fate Seals', value: fateSeals },
+    { label: 'Gear Found', value: gearFound },
   ];
 
   const [battleHistory, setBattleHistory] = useState<BattleRecord[]>([]);
