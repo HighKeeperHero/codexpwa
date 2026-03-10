@@ -361,101 +361,91 @@ export default function VeilTearsScreen() {
   }, [coords]);
 
   // ── Battle ─────────────────────────────────────────────────────────────────
+  // ── Battle tear ref — set DIRECTLY in startBattle, never via useEffect ──────
+  const battleTearRef = useRef<Tear | null>(null);
+
   const startBattle = useCallback((tear: Tear) => {
+    // Set ref first — this is what handleBattleAction reads
+    battleTearRef.current = tear;
     const td = TEAR_TYPES[tear.type];
     setEnemyMaxHp(td.hp);
     setEnemyHp(td.hp);
     setPlayerHp(100);
-    setBattleLog("The Veil tears open before you.");
+    setBattleLog('The Veil tears open before you.');
     setTelegraph(pickRand(TELEGRAPHS[tear.type]));
     setBattleBusy(false);
-    setScreen('battle');
+    setBattleResult(null);
     setActiveTear(null);
+    setScreen('battle');
   }, []);
 
-  const doBattleAction = useCallback(async (action: BattleAction) => {
-    if (battleBusy || !activeTear) return;
-    // activeTear is set before opening battle, captured in closure via ref below
-  }, [battleBusy, activeTear]);
-
-  // Use a ref so the callback always sees latest state
-  const battleTearRef = useRef<Tear | null>(null);
-  useEffect(() => { if (activeTear) battleTearRef.current = activeTear; }, [activeTear]);
-
-  const handleBattleAction = useCallback(async (action: BattleAction) => {
-    if (battleBusy) return;
+  // Fully synchronous — no async/await, no stale closure issues
+  const handleBattleAction = useCallback((action: BattleAction) => {
     const tear = battleTearRef.current;
     if (!tear) return;
 
-    setBattleBusy(true);
-
+    // Item: heal only, no enemy counter
     if (action === 'item') {
       const heal = 20 + Math.floor(Math.random() * 10);
       setPlayerHp(hp => Math.min(100, hp + heal));
       setBattleLog(`${pickRand(BATTLE_LOGS.item)} (+${heal} HP)`);
-      setBattleBusy(false);
       return;
     }
 
-    let dmg = 0;
-    if (action === 'strike')  dmg = 12 + Math.floor(Math.random() * 10);
-    if (action === 'ability') dmg = 20 + Math.floor(Math.random() * 15);
+    // Player attack
+    const dmg = action === 'strike'
+      ? 12 + Math.floor(Math.random() * 10)
+      : 20 + Math.floor(Math.random() * 15);
+    setBattleLog(`${pickRand(BATTLE_LOGS[action])} (${dmg} dmg)`);
 
-    setBattleLog(`${pickRand(BATTLE_LOGS[action as 'strike' | 'ability'])} (${dmg} dmg)`);
+    setEnemyHp(prevHp => {
+      const nextHp = Math.max(0, prevHp - dmg);
 
-    let newEnemyHp = 0;
-    setEnemyHp(hp => {
-      newEnemyHp = Math.max(0, hp - dmg);
-      return newEnemyHp;
-    });
-
-    // Small delay then check win / enemy counter
-    await new Promise(r => setTimeout(r, 400));
-
-    setEnemyHp(hp => {
-      if (hp <= 0) {
+      if (nextHp <= 0) {
+        // Victory — schedule state updates outside updater
         setTimeout(() => {
-          // Victory
           if (tear.marker && leafletRef.current) leafletRef.current.removeLayer(tear.marker);
-          tearsRef.current = tearsRef.current.map(t => t.id === tear.id ? { ...t, sealed: true } : t);
-          const shards = tear.type === 'minor' ? 10 : tear.type === 'wander' ? 17 : tear.type === 'dormant' ? 40 : 75;
+          tearsRef.current = tearsRef.current.map(t =>
+            t.id === tear.id ? { ...t, sealed: true } : t
+          );
+          const shards = tear.type === 'minor' ? 10
+            : tear.type === 'wander' ? 17
+            : tear.type === 'dormant' ? 40 : 75;
           setBattleResult({ won: true, shards });
-          // Update quest progress
-          if (tear.type === 'minor') setQuestProgress(q => ({ ...q, warden: Math.min(3, q.warden + 1) }));
+          if (tear.type === 'minor')   setQuestProgress(q => ({ ...q, warden: Math.min(3, q.warden + 1) }));
           if (tear.type === 'dormant') setQuestProgress(q => ({ ...q, gatheringdark: 1 }));
           setScreen('victory');
-        }, 200);
-        setBattleBusy(false);
+        }, 0);
         return 0;
       }
 
-      // Enemy counter-attack
-      const isDouble = tear.type === 'double';
-      if (Math.random() > 0.25) {
-        const eDmg = isDouble
-          ? 18 + Math.floor(Math.random() * 16)
-          : 8 + Math.floor(Math.random() * 12);
-
-        setPlayerHp(php => {
-          const next = Math.max(0, php - eDmg);
+      // Enemy counter — schedule outside updater
+      setTimeout(() => {
+        const isDouble = tear.type === 'double';
+        if (Math.random() > 0.25) {
+          const eDmg = isDouble
+            ? 18 + Math.floor(Math.random() * 16)
+            : 8  + Math.floor(Math.random() * 12);
           setBattleLog(`${pickRand(BATTLE_LOGS.hit)} (${eDmg} dmg)`);
-          if (next <= 0) {
-            setBattleResult({ won: false, shards: 0 });
-            setScreen('defeat');
-          }
-          return next;
-        });
-        setDamageFlash(isDouble ? '#CC1020' : '#C84020');
-        setTimeout(() => setDamageFlash(null), 350);
-      } else {
-        setBattleLog(pickRand(BATTLE_LOGS.miss));
-      }
+          setPlayerHp(php => {
+            const next = Math.max(0, php - eDmg);
+            if (next <= 0) {
+              setBattleResult({ won: false, shards: 0 });
+              setScreen('defeat');
+            }
+            return next;
+          });
+          setDamageFlash(isDouble ? '#CC1020' : '#C84020');
+          setTimeout(() => setDamageFlash(null), 350);
+        } else {
+          setBattleLog(pickRand(BATTLE_LOGS.miss));
+        }
+        setTelegraph(pickRand(TELEGRAPHS[tear.type]));
+      }, 0);
 
-      setTelegraph(pickRand(TELEGRAPHS[tear.type]));
-      setBattleBusy(false);
-      return hp;
+      return nextHp;
     });
-  }, [battleBusy]);
+  }, []);
 
   // ── Render helpers ─────────────────────────────────────────────────────────
   const hpPct   = Math.max(0, (enemyHp / Math.max(1, enemyMaxHp)) * 100);
@@ -698,7 +688,6 @@ export default function VeilTearsScreen() {
             ]).map(b => (
               <button
                 key={b.action}
-                disabled={battleBusy}
                 onClick={() => {
                   if (b.action === 'retreat') { setScreen('map'); return; }
                   handleBattleAction(b.action);
@@ -707,7 +696,6 @@ export default function VeilTearsScreen() {
                   ...css.battleBtn,
                   borderColor: `${b.color}66`,
                   color: b.color,
-                  opacity: battleBusy ? 0.5 : 1,
                 }}
               >
                 <span style={{ fontSize: 22 }}>{b.icon}</span>
