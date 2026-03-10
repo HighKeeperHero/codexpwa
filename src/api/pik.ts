@@ -263,19 +263,31 @@ function mapFullUser(r: Record<string, unknown>): Hero {
 
   const activeWearable = wearables.find(w => w.status === 'active');
 
-  // ── Hero XP (character-specific) — Sprint 15 ──────────────────────────────
-  // hero_xp / hero_level live directly on root_identities row, returned in
-  // the identity sub-object of the API response.
-  const XP_PER_LEVEL = 500;
-  const heroXpRaw  = (identity.hero_xp  ?? prog.hero_xp  ?? (prog.fate_xp ?? 0)) as number;
-  const heroLvRaw  = (identity.hero_level ?? prog.hero_level ?? (prog.fate_level ?? 1)) as number;
-  const heroInLvl  = heroXpRaw - (heroLvRaw - 1) * XP_PER_LEVEL;
-  const heroToNext = XP_PER_LEVEL;
+  // ── Hero XP (character-specific) — Sprint 15/16 ──────────────────────────
+  // hero_xp / hero_level come from root_identities (added Sprint 15).
+  // The backend identity service returns them in progression.hero_xp/hero_level
+  // after the Sprint 16 identity service patch. Falls back to fate_xp/fate_level
+  // (the values from before the split) so old sessions still work.
+  const heroXpRaw  = (prog.hero_xp   ?? identity.hero_xp   ?? (prog.fate_xp   ?? 0)) as number;
+  const heroLvRaw  = (prog.hero_level ?? identity.hero_level ?? (prog.fate_level ?? 1)) as number;
 
-  // ── Fate XP (account-wide) ────────────────────────────────────────────────
-  const fateXpRaw = (prog.fate_xp ?? 0) as number;
-  const fateLvRaw = (prog.fate_level ?? 1) as number;
-  const fateInLvl = (prog.xp_in_current_level ?? (fateXpRaw - (fateLvRaw - 1) * XP_PER_LEVEL)) as number;
+  // ── Fate XP (account-wide) — Sprint 16 ───────────────────────────────────
+  // fate_xp / fate_level on the progression object now come from fate_accounts
+  // (the account-wide sum) after the Sprint 16 identity service patch.
+  // Before the patch, fate_xp equals the hero's individual XP — in that case
+  // fall back to heroXp so both bars show something meaningful.
+  const fateXpRaw = (prog.fate_xp   ?? heroXpRaw) as number;
+  const fateLvRaw = (prog.fate_level ?? heroLvRaw) as number;
+
+  // XP within current level and XP needed to next — prefer values from backend,
+  // then compute a best-effort estimate (linear 500 xp/level fallback).
+  const fateInLvl  = (prog.xp_in_current_level ?? Math.max(0, fateXpRaw - (fateLvRaw - 1) * 500)) as number;
+  const fateToNext = (prog.xp_needed_for_next  ?? 500) as number;
+
+  // Hero-level progress within current level (linear 500 xp/level fallback
+  // until backend returns hero_xp_in_level)
+  const heroInLvl  = (prog.hero_xp_in_level ?? Math.max(0, heroXpRaw - (heroLvRaw - 1) * 500)) as number;
+  const heroToNext = (prog.hero_xp_to_next  ?? 500) as number;
 
   return {
     root_id:      rootId,
@@ -286,11 +298,11 @@ function mapFullUser(r: Record<string, unknown>): Hero {
     progression: {
       fate_level:          fateLvRaw,
       total_xp:            fateXpRaw,
-      xp_to_next_level:    (prog.xp_needed_for_next ?? XP_PER_LEVEL) as number,
+      xp_to_next_level:    fateToNext,
       xp_in_current_level: fateInLvl,
       hero_level:          heroLvRaw,
       hero_xp:             heroXpRaw,
-      hero_xp_in_level:    Math.max(0, heroInLvl),
+      hero_xp_in_level:    heroInLvl,
       hero_xp_to_next:     heroToNext,
       // Use total_sessions from progression object (authoritative)
       sessions_completed:  (prog.total_sessions ?? srcProg.reduce((a, s) => a + ((s.sessions as number) ?? 0), 0)) as number,
