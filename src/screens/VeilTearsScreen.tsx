@@ -345,7 +345,7 @@ export default function VeilTearsScreen() {
     if (!document.getElementById('vt-tile-filter')) {
       const tf = document.createElement('style');
       tf.id = 'vt-tile-filter';
-      tf.textContent = `.leaflet-tile-pane { filter: saturate(0.35) brightness(0.80) hue-rotate(200deg); }`;
+      tf.textContent = `.leaflet-tile-pane { filter: saturate(0.4) brightness(0.85) hue-rotate(20deg); }`;
       document.head.appendChild(tf);
     }
 
