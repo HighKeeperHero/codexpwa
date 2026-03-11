@@ -342,12 +342,11 @@ export default function VeilTearsScreen() {
     }
 
     // Filter only the tile layer — keeps marker colors vivid
-    if (!document.getElementById('vt-tile-filter')) {
-      const tf = document.createElement('style');
-      tf.id = 'vt-tile-filter';
-      tf.textContent = `.leaflet-tile-pane { filter: saturate(0.4) brightness(0.85) hue-rotate(20deg); }`;
-      document.head.appendChild(tf);
-    }
+    // Always overwrite so deploy changes take effect without requiring a full cache clear
+    const existingTf = document.getElementById('vt-tile-filter');
+    const tf = existingTf ?? document.createElement('style');
+    if (!existingTf) { tf.id = 'vt-tile-filter'; document.head.appendChild(tf); }
+    (tf as HTMLStyleElement).textContent = `.leaflet-tile-pane { filter: saturate(0.4) brightness(0.85) hue-rotate(20deg); }`;
 
     const map = L.map(mapRef.current, {
       center: [lat, lon],
