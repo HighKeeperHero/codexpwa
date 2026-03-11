@@ -149,7 +149,7 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
               const detail    = heroDetails[h.root_id];
               const heroLevel = detail?.hero_level ?? h.fate_level;
               const fateLevel = detail?.fate_level ?? h.fate_level;
-              const tier = TIER_FOR_LEVEL(fateLevel);
+              const tier = TIER_FOR_LEVEL(heroLevel);
               const ac   = ALIGNMENT_COLOR[h.fate_alignment] ?? 'var(--gold)';
               const al   = ALIGNMENT_LABEL[h.fate_alignment] ?? null;
               const alignIcon = h.fate_alignment === 'ORDER' ? '⚖' : h.fate_alignment === 'CHAOS' ? '🜲' : h.fate_alignment === 'LIGHT' ? '☀' : h.fate_alignment === 'DARK' ? '☽' : '◈';
