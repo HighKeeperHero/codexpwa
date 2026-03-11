@@ -43,10 +43,10 @@ export function ChronicleScreen() {
     </div>
   );
 
+  const prog       = hero.progression;
   const heroLevel  = prog.hero_level ?? prog.fate_level;
   const tier       = TIER_FOR_LEVEL(heroLevel);
   const alignColor = ALIGNMENT_COLOR[hero.alignment] ?? '#5A4E3C';
-  const prog       = hero.progression;
   const modifiers  = hero.gear?.computed_modifiers;
   const hasModifiers = modifiers && Object.values(modifiers).some(v => v !== 0);
   const venues     = hero.source_progression ?? [];
