@@ -292,7 +292,7 @@ function LiveSessionFeed({ rootId, wearable }: { rootId: string; wearable: any }
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────────
-export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVeil }: { onSwitchHero?: () => void; onNavigateToChronicle?: () => void; onNavigateToVeil?: () => void }) {
+export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVeil, onNavigateToTraining }: { onSwitchHero?: () => void; onNavigateToChronicle?: () => void; onNavigateToVeil?: () => void; onNavigateToTraining?: () => void }) {
   const { hero, isMock, isRefreshing, refreshHero, signOut, lastUpdated } = useAuth() as any;
   const [pullDist, setPullDist] = useState(0);
   const [pulling,  setPulling]  = useState(false);
@@ -515,7 +515,11 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
             return (
               <>
                 <button
-                  onClick={() => onNavigateToVeil?.()}
+                  onClick={() => {
+                    if (isInSession) onNavigateToVeil?.();
+                    else if (activeOath) onNavigateToTraining?.();
+                    else onNavigateToVeil?.();
+                  }}
                   style={{
                     width: '100%', height: 56,
                     background: ctaBg,
