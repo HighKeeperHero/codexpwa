@@ -490,31 +490,57 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
           </div>
         </div>
 
-        {/* ── 18.1 Primary CTA */}
+        {/* ── 18.1 / 19.2 Primary CTA — context-aware */}
         <div style={{ marginBottom: 16 }}>
-          <button
-            onClick={() => onNavigateToVeil?.()}
-            style={{
-              width: '100%', height: 56,
-              background: `linear-gradient(135deg, rgba(255,165,0,0.12), rgba(255,165,0,0.06))`,
-              border: '1px solid rgba(255,165,0,0.6)',
-              borderRadius: 'var(--radius)',
-              color: 'var(--gold)',
-              fontFamily: 'var(--font-serif)',
-              fontSize: 16, fontWeight: 700,
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase' as const,
-              cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-              boxShadow: '0 0 24px rgba(255,165,0,0.12)',
-            }}
-          >
-            <span style={{ fontSize: 18 }}>◈</span>
-            Enter the Veil
-          </button>
-          <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: 7 }}>
-            Hunt tears · Earn shards · Advance your legend
-          </p>
+          {(() => {
+            // Priority: active session > pending oath > default
+            const ctaLabel    = isInSession  ? 'Return to Session'
+                              : activeOath   ? 'Honour Your Oath'
+                              : 'Enter the Veil';
+            const ctaSubtitle = isInSession  ? 'Your session is live — check in at the venue'
+                              : activeOath   ? `${activeOath.pillar.charAt(0).toUpperCase() + activeOath.pillar.slice(1)} oath awaits — fulfil it today`
+                              : 'Hunt tears · Earn shards · Advance your legend';
+            const ctaBorderColor = isInSession  ? 'rgba(52,211,153,0.7)'
+                                 : activeOath   ? 'rgba(30,144,255,0.6)'
+                                 : 'rgba(255,165,0,0.6)';
+            const ctaBg          = isInSession  ? 'linear-gradient(135deg, rgba(52,211,153,0.12), rgba(52,211,153,0.06))'
+                                 : activeOath   ? 'linear-gradient(135deg, rgba(30,144,255,0.12), rgba(30,144,255,0.06))'
+                                 : 'linear-gradient(135deg, rgba(255,165,0,0.12), rgba(255,165,0,0.06))';
+            const ctaColor       = isInSession  ? '#34d399'
+                                 : activeOath   ? 'var(--sapphire, #1E90FF)'
+                                 : 'var(--gold)';
+            const ctaGlow        = isInSession  ? 'rgba(52,211,153,0.12)'
+                                 : activeOath   ? 'rgba(30,144,255,0.12)'
+                                 : 'rgba(255,165,0,0.12)';
+            return (
+              <>
+                <button
+                  onClick={() => onNavigateToVeil?.()}
+                  style={{
+                    width: '100%', height: 56,
+                    background: ctaBg,
+                    border: `1px solid ${ctaBorderColor}`,
+                    borderRadius: 'var(--radius)',
+                    color: ctaColor,
+                    fontFamily: 'var(--font-serif)',
+                    fontSize: 16, fontWeight: 700,
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase' as const,
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                    boxShadow: `0 0 24px ${ctaGlow}`,
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>◈</span>
+                  {ctaLabel}
+                </button>
+                <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: 7 }}>
+                  {ctaSubtitle}
+                </p>
+              </>
+            );
+          })()}
         </div>
 
         {/* ── Share Fate Card */}
