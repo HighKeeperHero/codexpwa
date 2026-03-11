@@ -99,7 +99,7 @@ function useCountdown(targetMs: number) {
 }
 
 // ── Veil Activity Section ──────────────────────────────────────────────────────
-function VeilActivitySection() {
+function VeilActivitySection({ onViewAll }: { onViewAll?: () => void }) {
   const { hero } = useAuth();
   const rootId   = hero?.root_id ?? null;
   const [history, setHistory] = useState<BattleRecord[]>([]);
@@ -107,7 +107,7 @@ function VeilActivitySection() {
   const fetchHistory = useCallback(async () => {
     if (!rootId) return;
     try {
-      const res  = await fetch(`${BASE}/api/veil/encounters/${rootId}?limit=5`);
+      const res  = await fetch(`${BASE}/api/veil/encounters/${rootId}?limit=3`);
       const json = await res.json();
       const rows = (json?.data ?? json) as any[];
       if (Array.isArray(rows) && rows.length > 0) {
@@ -122,7 +122,7 @@ function VeilActivitySection() {
       }
     } catch {}
     // Fallback: hero-scoped localStorage key
-    setHistory(loadVTLocal(rootId).slice(0, 5));
+    setHistory(loadVTLocal(rootId).slice(0, 3));
   }, [rootId]);
 
   useEffect(() => {
@@ -161,7 +161,7 @@ function VeilActivitySection() {
       </div>
 
       {/* Recent battles */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
         {history.map((b, i) => {
           const tier = VT_TIER[b.tear_type] ?? VT_TIER.minor;
           return (
@@ -198,6 +198,13 @@ function VeilActivitySection() {
           );
         })}
       </div>
+
+      {/* View Full Record link */}
+      {onViewAll && (
+        <button onClick={onViewAll} style={{ display: 'block', width: '100%', textAlign: 'center', padding: '9px 0', background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--font-serif)', letterSpacing: '0.1em', cursor: 'pointer', marginBottom: 4 }}>
+          View Full Record →
+        </button>
+      )}
     </>
   );
 }
@@ -285,7 +292,7 @@ function LiveSessionFeed({ rootId, wearable }: { rootId: string; wearable: any }
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────────
-export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
+export function HomeScreen({ onSwitchHero, onNavigateToChronicle }: { onSwitchHero?: () => void; onNavigateToChronicle?: () => void }) {
   const { hero, isMock, isRefreshing, refreshHero, signOut, lastUpdated } = useAuth() as any;
   const [pullDist, setPullDist] = useState(0);
   const [pulling,  setPulling]  = useState(false);
@@ -393,6 +400,15 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
             )}
           </div>
 
+          {/* 18.2 — Streak pill */}
+          {displayStreak > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 16, padding: '8px 18px', borderRadius: 'var(--radius)', background: 'linear-gradient(135deg, var(--surface), rgba(255,165,0,0.07))', border: '1px solid rgba(255,165,0,0.22)', alignSelf: 'center' }}>
+              <span style={{ fontSize: 20 }}>🔥</span>
+              <span style={{ fontFamily: 'var(--font-serif)', fontSize: 18, fontWeight: 700, color: 'var(--gold)', lineHeight: 1 }}>{displayStreak}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', letterSpacing: '0.1em' }}>DAY STREAK</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
 
             {/* ── Fate Level — account-wide, quiet/secondary ── */}
@@ -413,7 +429,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
                 }} />
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'right', marginTop: 3, opacity: 0.6 }}>
-                {progression.xp_in_current_level.toLocaleString()} / {progression.xp_to_next_level.toLocaleString()} to Lv {progression.fate_level + 1}
+                {progression.xp_in_current_level.toLocaleString()} / {progression.xp_to_next_level.toLocaleString()} · {Math.round(prog * 100)}%
               </div>
             </div>
 
@@ -451,7 +467,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
                     }} />
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(220,170,60,0.85)', textAlign: 'right', marginTop: 4 }}>
-                    {heroIn.toLocaleString()} / {heroTo.toLocaleString()} to Lv {heroLv + 1}
+                    {heroIn.toLocaleString()} / {heroTo.toLocaleString()} · {Math.round(heroFill * 100)}%
                   </div>
                 </div>
               );
@@ -474,6 +490,30 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
           </div>
         </div>
 
+        {/* ── 18.1 Primary CTA */}
+        <div style={{ marginBottom: 16 }}>
+          <button
+            onClick={() => {/* Tab navigation handled by parent */}}
+            style={{
+              width: '100%', height: 56,
+              background: `linear-gradient(135deg, rgba(255,165,0,0.12), rgba(255,165,0,0.06))`,
+              border: '1px solid rgba(255,165,0,0.6)',
+              borderRadius: 'var(--radius)',
+              color: 'var(--gold)',
+              fontFamily: 'var(--font-serif)',
+              fontSize: 16, fontWeight: 700,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase' as const,
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+              boxShadow: '0 0 24px rgba(255,165,0,0.12)',
+            }}
+          >
+            <span style={{ fontSize: 18 }}>◈</span>
+            Enter the Veil
+          </button>
+        </div>
+
         {/* ── Share Fate Card */}
         <div style={{ marginBottom: 4 }}>
           <button onClick={() => setShowCard(true)} style={{ width: '100%', padding: '10px 0', background: `linear-gradient(135deg, ${ac}18, ${ac}08)`, color: ac, border: `1px solid ${ac}50`, borderRadius: 'var(--radius)', fontFamily: 'var(--font-serif)', fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: `0 0 20px ${ac}15` }}>
@@ -482,7 +522,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
         </div>
 
         {/* ── Veil Activity (appears once there's history) */}
-        <VeilActivitySection />
+        <VeilActivitySection onViewAll={onNavigateToChronicle} />
 
         {/* ── Training Snapshot */}
         <TrainingSection displayStreak={displayStreak} topStreak={topStreak} pillars={pillars} activeOath={activeOath} oathLoaded={oath !== undefined} weekEndMs={weekEndMs} />
