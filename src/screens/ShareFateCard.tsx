@@ -27,6 +27,20 @@ export function ShareFateCard({ onClose }: { onClose: () => void }) {
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fontsOk, setFontsOk] = useState(false);
+  const [streak, setStreak] = useState(0);
+
+  // Fetch streak from training/daily — not on hero object
+  useEffect(() => {
+    const rootId = hero?.root_id;
+    if (!rootId) return;
+    fetch(`https://pik-prd-production.up.railway.app/api/training/daily/${rootId}`)
+      .then(r => r.json())
+      .then(d => {
+        const p = d?.data ?? d;
+        if (typeof p?.streak === 'number') setStreak(p.streak);
+      })
+      .catch(() => {});
+  }, [hero?.root_id]);
 
   useEffect(() => {
     const load = async () => {
@@ -46,9 +60,9 @@ export function ShareFateCard({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!fontsOk || !hero || !canvasRef.current) return;
-    drawCard(canvasRef.current, hero);
+    drawCard(canvasRef.current, hero, streak);
     setReady(true);
-  }, [fontsOk, hero]);
+  }, [fontsOk, hero, streak]);
 
   const handleShare = useCallback(async () => {
     if (!canvasRef.current || !hero) return;
@@ -188,7 +202,7 @@ export function ShareFateCard({ onClose }: { onClose: () => void }) {
 }
 
 // ── Canvas drawing engine ───────────────────────────────────
-function drawCard(canvas: HTMLCanvasElement, hero: any) {
+function drawCard(canvas: HTMLCanvasElement, hero: any, streak: number) {
   const ctx = canvas.getContext('2d')!;
   const w = W; const h = H;
   const alignment = hero.alignment ?? 'NONE';
@@ -208,7 +222,6 @@ function drawCard(canvas: HTMLCanvasElement, hero: any) {
   const level = fateLevel;
   const xp = prog?.total_xp ?? 0;
   const sessions = prog?.sessions_completed ?? 0;
-  const streak = hero.training?.streak ?? hero.progression?.streak ?? 0;
   const titleCount = (prog?.titles ?? []).length;
 
   // ── Background ────────────────────────────────────────────
@@ -338,37 +351,46 @@ function drawCard(canvas: HTMLCanvasElement, hero: any) {
   drawDivider(ctx, w/2, divY, ac, 560);
 
   // ── TIER + LEVEL BLOCK ────────────────────────────────────
-  const tierY = divY + 80;
-  const tierBoxW = 380; const tierBoxH = 120;
-  const tierBoxX = w/2 - tierBoxW/2; const tierBoxY = tierY - tierBoxH/2;
+  const tierY = divY + 100;
+  const tierBoxW = 520; const tierBoxH = 160;
+  const tierBoxX = w/2 - tierBoxW/2; const tierBoxY = tierY - 30;
 
   const tierBg = ctx.createLinearGradient(tierBoxX, tierBoxY, tierBoxX + tierBoxW, tierBoxY + tierBoxH);
-  tierBg.addColorStop(0, `${tier.color}1A`); tierBg.addColorStop(1, `${tier.color}0A`);
-  ctx.fillStyle = tierBg; roundRect(ctx, tierBoxX, tierBoxY, tierBoxW, tierBoxH, 16); ctx.fill();
-  ctx.strokeStyle = `${tier.color}55`; ctx.lineWidth = 1.5;
-  roundRect(ctx, tierBoxX, tierBoxY, tierBoxW, tierBoxH, 16); ctx.stroke();
+  tierBg.addColorStop(0, `${tier.color}18`); tierBg.addColorStop(1, `${tier.color}08`);
+  ctx.fillStyle = tierBg; roundRect(ctx, tierBoxX, tierBoxY, tierBoxW, tierBoxH, 20); ctx.fill();
+  ctx.strokeStyle = `${tier.color}40`; ctx.lineWidth = 1.5;
+  roundRect(ctx, tierBoxX, tierBoxY, tierBoxW, tierBoxH, 20); ctx.stroke();
 
-  ctx.fillStyle = tier.color; ctx.font = `600 20px 'Cinzel', serif`;
-  ctx.textAlign = 'center'; ctx.letterSpacing = '5px';
-  ctx.fillText(tier.name.toUpperCase(), w/2, tierY - 20);
+  // Tier name centred at top of box
+  ctx.fillStyle = `${tier.color}99`; ctx.font = `600 19px 'Cinzel', serif`;
+  ctx.textAlign = 'center'; ctx.letterSpacing = '6px';
+  ctx.fillText(tier.name.toUpperCase(), w/2, tierBoxY + 36);
 
-  // Hero Lv + Fate Lv side by side
-  const lvSep = 140;
-  ctx.font = `700 50px 'Cinzel', serif`; ctx.letterSpacing = '2px';
-  ctx.fillStyle = CREAM;
-  ctx.textAlign = 'center'; ctx.fillText(`LV ${heroLevel}`, w/2 - lvSep/2, tierY + 34);
-  ctx.fillStyle = `${tier.color}CC`;
-  ctx.textAlign = 'center'; ctx.fillText(`LV ${fateLevel}`, w/2 + lvSep/2, tierY + 34);
-  ctx.fillStyle = 'rgba(240,237,230,0.20)'; ctx.font = `400 22px 'Cinzel', serif`;
-  ctx.textAlign = 'center'; ctx.fillText('·', w/2, tierY + 34);
-  ctx.fillStyle = CREAM_FAINT; ctx.font = `500 17px 'Cinzel', serif`; ctx.letterSpacing = '3px';
-  ctx.fillStyle = 'rgba(240,237,230,0.35)'; ctx.textAlign = 'left';
-  ctx.fillText('HERO', w/2 - lvSep/2 - 38, tierY + 62);
-  ctx.textAlign = 'right';
-  ctx.fillText('FATE', w/2 + lvSep/2 + 38, tierY + 62);
+  // Dividing line between tier name and levels
+  ctx.strokeStyle = `${tier.color}22`; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(tierBoxX + 40, tierBoxY + 50); ctx.lineTo(tierBoxX + tierBoxW - 40, tierBoxY + 50); ctx.stroke();
+
+  // Hero LV  |  ·  |  Fate LV — well spaced
+  const lvY = tierBoxY + 110;
+  const col1 = w/2 - 160; const col2 = w/2 + 160;
+
+  ctx.font = `700 58px 'Cinzel', serif`; ctx.letterSpacing = '2px';
+  ctx.fillStyle = CREAM;       ctx.textAlign = 'center'; ctx.fillText(`LV ${heroLevel}`, col1, lvY);
+  ctx.fillStyle = `${tier.color}DD`; ctx.textAlign = 'center'; ctx.fillText(`LV ${fateLevel}`, col2, lvY);
+
+  // Separator dot
+  ctx.fillStyle = 'rgba(240,237,230,0.18)'; ctx.font = `400 36px 'Cinzel', serif`;
+  ctx.textAlign = 'center'; ctx.fillText('·', w/2, lvY);
+
+  // Labels below each number
+  ctx.font = `500 17px 'Cinzel', serif`; ctx.letterSpacing = '4px';
+  ctx.fillStyle = 'rgba(240,237,230,0.30)';
+  ctx.textAlign = 'center'; ctx.fillText('HERO', col1, lvY + 30);
+  ctx.fillStyle = `${tier.color}66`;
+  ctx.textAlign = 'center'; ctx.fillText('FATE', col2, lvY + 30);
 
   // ── XP PROGRESS BAR ───────────────────────────────────────
-  const barY = tierY + 100;
+  const barY = tierBoxY + tierBoxH + 36;
   const barW = w - 200; const barH = 8; const barX = 100;
   const xpPct = Math.min(1, (prog?.xp_in_current_level ?? 0) / Math.max(1, prog?.xp_to_next_level ?? 500));
 
