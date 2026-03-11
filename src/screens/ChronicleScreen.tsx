@@ -197,6 +197,7 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function TierCard({ tier, hero, alignColor }: { tier: any; hero: any; alignColor: string }) {
   const prog = hero.progression;
+  const heroLevel = prog.hero_level ?? prog.fate_level;
   const pct = xpProgress(prog);
   const label = ALIGNMENT_LABEL[hero.alignment] ?? hero.alignment;
   return (
