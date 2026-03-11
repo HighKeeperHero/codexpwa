@@ -353,7 +353,7 @@ export default function VeilTearsScreen() {
     // tileload so late-loading tiles don't reset it.
     const applyTileFilter = () => {
       const tp = map.getPanes().tilePane as HTMLElement | undefined;
-      if (tp) tp.style.filter = 'saturate(0.55) brightness(1.0)';
+      if (tp) tp.style.filter = 'saturate(0.45) brightness(0.72)';
     };
     const tl = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap contributors © CARTO',
@@ -361,6 +361,7 @@ export default function VeilTearsScreen() {
       maxZoom: 19,
     }).addTo(map);
     tl.on('tileload', applyTileFilter);
+    map.on('load', applyTileFilter);
     applyTileFilter(); // also apply immediately in case pane already exists
 
     // Player marker
