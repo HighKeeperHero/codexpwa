@@ -341,13 +341,6 @@ export default function VeilTearsScreen() {
       document.head.appendChild(style);
     }
 
-    // Filter only the tile layer — keeps marker colors vivid
-    // Always overwrite so deploy changes take effect without requiring a full cache clear
-    const existingTf = document.getElementById('vt-tile-filter');
-    const tf = existingTf ?? document.createElement('style');
-    if (!existingTf) { tf.id = 'vt-tile-filter'; document.head.appendChild(tf); }
-    (tf as HTMLStyleElement).textContent = `.leaflet-tile-pane { filter: saturate(0.55) brightness(1.0); }`;
-
     const map = L.map(mapRef.current, {
       center: [lat, lon],
       zoom: 15,
@@ -386,6 +379,14 @@ export default function VeilTearsScreen() {
 
     tearsRef.current = tears;
     leafletRef.current = map;
+
+    // Apply filter directly on the tile pane element — inline style wins over
+    // all CSS class rules and is immune to specificity/order issues.
+    // Use a short timeout to let Leaflet finish its own DOM setup first.
+    setTimeout(() => {
+      const tilePaneEl = mapRef.current?.querySelector('.leaflet-tile-pane') as HTMLElement | null;
+      if (tilePaneEl) tilePaneEl.style.filter = 'saturate(0.55) brightness(1.0)';
+    }, 100);
   }, []);
 
   // ── Location permission ────────────────────────────────────────────────────
