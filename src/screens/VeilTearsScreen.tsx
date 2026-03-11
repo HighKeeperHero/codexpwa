@@ -346,7 +346,7 @@ export default function VeilTearsScreen() {
     const existingTf = document.getElementById('vt-tile-filter');
     const tf = existingTf ?? document.createElement('style');
     if (!existingTf) { tf.id = 'vt-tile-filter'; document.head.appendChild(tf); }
-    (tf as HTMLStyleElement).textContent = `.leaflet-tile-pane { filter: saturate(0.4) brightness(0.85) hue-rotate(20deg); }`;
+    (tf as HTMLStyleElement).textContent = `.leaflet-tile-pane { filter: saturate(0.55) brightness(1.0); }`;
 
     const map = L.map(mapRef.current, {
       center: [lat, lon],
