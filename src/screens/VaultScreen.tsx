@@ -16,6 +16,7 @@
 //   POST /api/users/:id/workshop/craft      → { gear_item, nexus_spent, components_spent }
 // ============================================================
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../AuthContext';
 import { CacheOpenOverlay, type CacheRewardPayload } from './CacheOpenOverlay';
 import { DismantleOverlay, type DismantleResult } from './DismantleOverlay';
@@ -930,20 +931,166 @@ function LockedTitleCard({ title }: { title: TitleEntry }) {
   );
 }
 
+// ── Gear Item Modal ────────────────────────────────────────────
+function GearItemModal({ item, onClose }: { item: GearItem; onClose: () => void }) {
+  const rarity  = (item.rarity as Rarity) ?? 'common';
+  const color   = RARITY_COLOR[rarity] ?? '#8899AA';
+  const glow    = RARITY_GLOW[rarity];
+  const mods    = Object.entries(item.modifiers ?? {}).filter(([, v]) => v !== 0);
+
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        padding: '0 0 max(env(safe-area-inset-bottom),16px)',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 480,
+          background: 'var(--surface)',
+          border: `1px solid ${color}`,
+          borderRadius: '16px 16px 0 0',
+          boxShadow: `0 -8px 40px ${glow}, 0 -2px 0 ${color}`,
+          padding: '0 0 24px',
+          animation: 'slideUp 0.22s ease',
+        }}
+      >
+        <style>{`@keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
+
+        {/* Drag handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.12)' }} />
+        </div>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '16px 20px 0' }}>
+          <div style={{
+            width: 56, height: 56, flexShrink: 0,
+            background: `radial-gradient(circle, ${glow} 0%, var(--surface) 70%)`,
+            border: `2px solid ${color}`, borderRadius: 12,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 26, boxShadow: `0 0 20px ${glow}`,
+          }}>
+            {item.icon ?? GEAR_SLOT_ICON[item.slot] ?? '⚔'}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px', lineHeight: 1.2 }}>
+              {item.item_name}
+            </p>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+                color, background: `${color}15`, border: `1px solid ${color}40`,
+                borderRadius: 4, padding: '2px 7px',
+              }}>
+                {RARITY_LABEL[rarity]}
+              </span>
+              <span style={{
+                fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: 'var(--text-3)', background: 'rgba(255,255,255,0.04)',
+                border: '1px solid var(--border)', borderRadius: 4, padding: '2px 7px',
+              }}>
+                {GEAR_SLOT_ICON[item.slot]} {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
+              </span>
+              {item.is_equipped && (
+                <span style={{
+                  fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  color: '#34d399', background: 'rgba(52,211,153,0.08)',
+                  border: '1px solid rgba(52,211,153,0.3)', borderRadius: 4, padding: '2px 7px',
+                }}>
+                  Equipped
+                </span>
+              )}
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', color: 'var(--text-3)',
+            fontSize: 20, cursor: 'pointer', padding: '0 0 0 8px', lineHeight: 1, flexShrink: 0,
+          }}>×</button>
+        </div>
+
+        {/* Lore / description */}
+        {item.description && (
+          <p style={{
+            fontSize: 13, color: 'var(--text-3)', fontStyle: 'italic',
+            lineHeight: 1.6, margin: '14px 20px 0',
+            padding: '10px 12px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+          }}>
+            "{item.description}"
+          </p>
+        )}
+
+        {/* Stats */}
+        {mods.length > 0 && (
+          <div style={{ margin: '14px 20px 0' }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.2em', textTransform: 'uppercase', margin: '0 0 8px' }}>
+              Stats
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {mods.map(([key, val]) => (
+                <div key={key} style={{
+                  background: `${color}0D`, border: `1px solid ${color}30`,
+                  borderRadius: 6, padding: '5px 10px',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <span style={{ fontSize: 12, color, fontFamily: 'Cinzel, serif', fontWeight: 700 }}>
+                    +{typeof val === 'number' && val < 1 ? `${Math.round(val * 100)}%` : val}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.08em' }}>
+                    {MODIFIER_LABEL[key] ?? key}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Close button */}
+        <div style={{ padding: '20px 20px 0' }}>
+          <button onClick={onClose} style={{
+            width: '100%', padding: '12px 0',
+            background: 'transparent', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius)', color: 'var(--text-3)',
+            fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: '0.1em',
+            cursor: 'pointer',
+          }}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 // ── Gear Slot Card ─────────────────────────────────────────────
 function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
+  const [modalOpen, setModalOpen] = useState(false);
   const rarity = item ? ((item.rarity as Rarity) ?? 'common') : null;
   const color  = rarity ? (RARITY_COLOR[rarity] ?? '#8899AA') : 'rgba(232,224,204,0.10)';
   const glow   = rarity ? RARITY_GLOW[rarity] : 'transparent';
   return (
-    <div style={{
-      background: rarity ? `linear-gradient(160deg, ${glow}30 0%, var(--surface) 55%)` : 'var(--surface)',
-      border: `${rarity ? 2 : 1}px solid ${color}`,
-      borderRadius: 'var(--radius)', padding: '10px 6px 8px', textAlign: 'center', minHeight: 94,
-      boxShadow: rarity ? `0 0 20px ${glow}, inset 0 0 10px ${glow}33` : 'none',
-      transition: 'all 0.2s ease', position: 'relative',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
-    }}>
+    <>
+      {modalOpen && item && <GearItemModal item={item} onClose={() => setModalOpen(false)} />}
+      <div
+        onClick={() => item && setModalOpen(true)}
+        style={{
+          background: rarity ? `linear-gradient(160deg, ${glow}30 0%, var(--surface) 55%)` : 'var(--surface)',
+          border: `${rarity ? 2 : 1}px solid ${color}`,
+          borderRadius: 'var(--radius)', padding: '10px 6px 8px', textAlign: 'center', minHeight: 94,
+          boxShadow: rarity ? `0 0 20px ${glow}, inset 0 0 10px ${glow}33` : 'none',
+          transition: 'all 0.2s ease', position: 'relative',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+          cursor: item ? 'pointer' : 'default',
+        }}>
       {rarity && (
         <div style={{
           position: 'absolute', top: 0, left: '8%', right: '8%', height: 2,
@@ -976,6 +1123,7 @@ function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
         </>
       )}
     </div>
+    </>
   );
 }
 
@@ -983,8 +1131,9 @@ function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
 function InventoryCard({ item, onEquip, onDismantle }: { item: GearItem; onEquip: () => void; onDismantle: () => void }) {
   const rarity      = (item.rarity as Rarity) ?? 'common';
   const color       = RARITY_COLOR[rarity] ?? '#8899AA';
-  const [busy, setBusy]           = useState(false);
+  const [busy, setBusy]               = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [modalOpen, setModalOpen]     = useState(false);
   const yield_ = DISMANTLE_YIELD[rarity];
 
   const handleEquip = async () => {
@@ -1030,45 +1179,51 @@ function InventoryCard({ item, onEquip, onDismantle }: { item: GearItem; onEquip
   }
 
   return (
-    <div style={{
-      background: 'var(--surface)', border: `1px solid ${color}`,
-      borderRadius: 'var(--radius)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
-      boxShadow: `0 0 10px ${RARITY_GLOW[rarity]}`,
-    }}>
+    <>
+      {modalOpen && <GearItemModal item={item} onClose={() => setModalOpen(false)} />}
       <div style={{
-        width: 40, height: 40, flexShrink: 0, background: RARITY_GLOW[rarity],
-        border: `1px solid ${color}`, borderRadius: 8,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+        background: 'var(--surface)', border: `1px solid ${color}`,
+        borderRadius: 'var(--radius)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
+        boxShadow: `0 0 10px ${RARITY_GLOW[rarity]}`,
       }}>
-        {item.icon ?? '⚔'}
+        {/* Tappable icon + name area */}
+        <div onClick={() => setModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+          <div style={{
+            width: 40, height: 40, flexShrink: 0, background: RARITY_GLOW[rarity],
+            border: `1px solid ${color}`, borderRadius: 8,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+          }}>
+            {item.icon ?? '⚔'}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color, margin: '0 0 2px' }}>
+              {item.item_name}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              {RARITY_LABEL[rarity]} · {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
+            </p>
+          </div>
+        </div>
+        {/* Equip */}
+        <button onClick={handleEquip} disabled={busy} style={{
+          padding: '8px 12px', flexShrink: 0, background: color, color: '#0B0A08',
+          border: `2px solid ${color}`, borderRadius: 6,
+          fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 900,
+          cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.7 : 1,
+          letterSpacing: '0.06em', boxShadow: `0 0 8px ${color}60`, minWidth: 52,
+        }}>
+          {busy ? '…' : 'EQUIP'}
+        </button>
+        {/* Dismantle */}
+        <button onClick={() => setShowConfirm(true)} title="Dismantle for components" style={{
+          padding: '8px 10px', flexShrink: 0, background: 'transparent',
+          color: 'rgba(232,224,204,0.3)', border: '1px solid var(--border)',
+          borderRadius: 6, cursor: 'pointer', fontSize: 14,
+          transition: 'all 0.15s',
+        }}>
+          🔨
+        </button>
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color, margin: '0 0 2px' }}>
-          {item.item_name}
-        </p>
-        <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          {RARITY_LABEL[rarity]} · {GEAR_SLOT_LABEL[item.slot] ?? item.slot}
-        </p>
-      </div>
-      {/* Equip */}
-      <button onClick={handleEquip} disabled={busy} style={{
-        padding: '8px 12px', flexShrink: 0, background: color, color: '#0B0A08',
-        border: `2px solid ${color}`, borderRadius: 6,
-        fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 900,
-        cursor: busy ? 'wait' : 'pointer', opacity: busy ? 0.7 : 1,
-        letterSpacing: '0.06em', boxShadow: `0 0 8px ${color}60`, minWidth: 52,
-      }}>
-        {busy ? '…' : 'EQUIP'}
-      </button>
-      {/* Dismantle */}
-      <button onClick={() => setShowConfirm(true)} title="Dismantle for components" style={{
-        padding: '8px 10px', flexShrink: 0, background: 'transparent',
-        color: 'rgba(232,224,204,0.3)', border: '1px solid var(--border)',
-        borderRadius: 6, cursor: 'pointer', fontSize: 14,
-        transition: 'all 0.15s',
-      }}>
-        🔨
-      </button>
-    </div>
+    </>
   );
 }
