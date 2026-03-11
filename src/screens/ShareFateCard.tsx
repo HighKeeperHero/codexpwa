@@ -117,24 +117,32 @@ export function ShareFateCard({ onClose }: { onClose: () => void }) {
           <p style={{ fontSize: 11, color: 'rgba(240,237,230,0.25)' }}>Share your identity with the world</p>
         </div>
 
-        {/* Card preview */}
+        {/* Card preview — gradient border wrapper */}
         <div style={{
-          position: 'relative', borderRadius: 16, overflow: 'hidden',
+          padding: 2,
+          borderRadius: 18,
+          background: ready
+            ? `linear-gradient(160deg, ${ac}80 0%, ${ac}20 40%, transparent 70%, ${ac}40 100%)`
+            : 'rgba(240,237,230,0.08)',
           boxShadow: ready
-            ? `0 0 0 1px ${ac}40, 0 0 40px ${ac}20, 0 24px 48px rgba(0,0,0,0.6)`
-            : '0 0 0 1px rgba(240,237,230,0.1)',
-          transition: 'box-shadow 0.6s ease',
-          width: '100%', maxWidth: 300, aspectRatio: '9/16',
-          background: BG_DARK,
+            ? `0 0 60px ${ac}25, 0 24px 48px rgba(0,0,0,0.7)`
+            : '0 0 0 1px rgba(240,237,230,0.06)',
+          transition: 'all 0.6s ease',
+          width: '100%', maxWidth: 300,
         }}>
-          <canvas ref={canvasRef} width={W} height={H}
-            style={{ width: '100%', height: '100%', display: 'block', opacity: ready ? 1 : 0, transition: 'opacity 0.4s ease' }} />
-          {!ready && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-              <div style={{ fontSize: 24, color: ac, opacity: 0.6 }}>◈</div>
-              <p style={{ fontSize: 10, color: CREAM_DIM, letterSpacing: '0.2em', fontFamily: 'Cinzel, serif' }}>INSCRIBING…</p>
-            </div>
-          )}
+          <div style={{
+            borderRadius: 16, overflow: 'hidden',
+            aspectRatio: '9/16', background: BG_DARK, position: 'relative',
+          }}>
+            <canvas ref={canvasRef} width={W} height={H}
+              style={{ width: '100%', height: '100%', display: 'block', opacity: ready ? 1 : 0, transition: 'opacity 0.4s ease' }} />
+            {!ready && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <div style={{ fontSize: 24, color: ac, opacity: 0.6 }}>◈</div>
+                <p style={{ fontSize: 10, color: CREAM_DIM, letterSpacing: '0.2em', fontFamily: 'Cinzel, serif' }}>INSCRIBING…</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Actions */}
@@ -195,10 +203,12 @@ function drawCard(canvas: HTMLCanvasElement, hero: any) {
     ?? prog?.equipped_title?.replace(/^title_/,'').replace(/_/g,' ').toUpperCase()
     ?? null;
   const rootId = hero.root_id ?? '';
-  const level = prog?.fate_level ?? 1;
+  const fateLevel = prog?.fate_level ?? 1;
+  const heroLevel = prog?.hero_level ?? prog?.level ?? fateLevel;
+  const level = fateLevel;
   const xp = prog?.total_xp ?? 0;
   const sessions = prog?.sessions_completed ?? 0;
-  const gearCount = (hero.gear?.inventory ?? []).length;
+  const streak = hero.training?.streak ?? hero.progression?.streak ?? 0;
   const titleCount = (prog?.titles ?? []).length;
 
   // ── Background ────────────────────────────────────────────
@@ -225,6 +235,23 @@ function drawCard(canvas: HTMLCanvasElement, hero: any) {
     ctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#000';
     ctx.fillRect(x, y, 1, 1);
   }
+  ctx.restore();
+
+  // Inner card frame — thin inset border for collectible feel
+  const frameInset = 28;
+  ctx.save();
+  ctx.strokeStyle = `${ac}22`; ctx.lineWidth = 1.5;
+  roundRect(ctx, frameInset, frameInset, w - frameInset*2, h - frameInset*2, 24);
+  ctx.stroke();
+  ctx.strokeStyle = `${ac}10`; ctx.lineWidth = 1;
+  roundRect(ctx, frameInset + 8, frameInset + 8, w - (frameInset+8)*2, h - (frameInset+8)*2, 18);
+  ctx.stroke();
+  // Corner accent diamonds
+  const corners = [[frameInset, frameInset],[w-frameInset, frameInset],[w-frameInset, h-frameInset],[frameInset, h-frameInset]];
+  corners.forEach(([cx2, cy2]) => {
+    ctx.fillStyle = `${ac}45`; ctx.save(); ctx.translate(cx2, cy2); ctx.rotate(Math.PI/4);
+    ctx.fillRect(-5, -5, 10, 10); ctx.restore();
+  });
   ctx.restore();
 
   // Top accent bar
@@ -312,7 +339,7 @@ function drawCard(canvas: HTMLCanvasElement, hero: any) {
 
   // ── TIER + LEVEL BLOCK ────────────────────────────────────
   const tierY = divY + 80;
-  const tierBoxW = 280; const tierBoxH = 110;
+  const tierBoxW = 380; const tierBoxH = 120;
   const tierBoxX = w/2 - tierBoxW/2; const tierBoxY = tierY - tierBoxH/2;
 
   const tierBg = ctx.createLinearGradient(tierBoxX, tierBoxY, tierBoxX + tierBoxW, tierBoxY + tierBoxH);
@@ -323,9 +350,22 @@ function drawCard(canvas: HTMLCanvasElement, hero: any) {
 
   ctx.fillStyle = tier.color; ctx.font = `600 20px 'Cinzel', serif`;
   ctx.textAlign = 'center'; ctx.letterSpacing = '5px';
-  ctx.fillText(tier.name.toUpperCase(), w/2, tierY - 14);
-  ctx.font = `700 56px 'Cinzel', serif`; ctx.letterSpacing = '2px';
-  ctx.fillText(`LV ${level}`, w/2, tierY + 40);
+  ctx.fillText(tier.name.toUpperCase(), w/2, tierY - 20);
+
+  // Hero Lv + Fate Lv side by side
+  const lvSep = 140;
+  ctx.font = `700 50px 'Cinzel', serif`; ctx.letterSpacing = '2px';
+  ctx.fillStyle = CREAM;
+  ctx.textAlign = 'center'; ctx.fillText(`LV ${heroLevel}`, w/2 - lvSep/2, tierY + 34);
+  ctx.fillStyle = `${tier.color}CC`;
+  ctx.textAlign = 'center'; ctx.fillText(`LV ${fateLevel}`, w/2 + lvSep/2, tierY + 34);
+  ctx.fillStyle = 'rgba(240,237,230,0.20)'; ctx.font = `400 22px 'Cinzel', serif`;
+  ctx.textAlign = 'center'; ctx.fillText('·', w/2, tierY + 34);
+  ctx.fillStyle = CREAM_FAINT; ctx.font = `500 17px 'Cinzel', serif`; ctx.letterSpacing = '3px';
+  ctx.fillStyle = 'rgba(240,237,230,0.35)'; ctx.textAlign = 'left';
+  ctx.fillText('HERO', w/2 - lvSep/2 - 38, tierY + 62);
+  ctx.textAlign = 'right';
+  ctx.fillText('FATE', w/2 + lvSep/2 + 38, tierY + 62);
 
   // ── XP PROGRESS BAR ───────────────────────────────────────
   const barY = tierY + 100;
@@ -369,9 +409,8 @@ function drawCard(canvas: HTMLCanvasElement, hero: any) {
   const statY = div2Y + 90;
   const stats = [
     { label: 'SESSIONS', value: String(sessions) },
-    { label: 'GEAR',     value: String(gearCount) },
+    { label: 'STREAK',   value: streak > 0 ? `${streak}` : '—', accent: streak > 0, streakFire: streak > 0 },
     { label: 'TITLES',   value: String(titleCount) },
-    // FATE XP: use gold (#FFA500) — NOT ember — so it reads as positive
     { label: 'FATE XP',  value: xp >= 1000 ? `${(xp/1000).toFixed(1)}K` : String(xp), accent: true },
   ];
   const statColW = w / stats.length;
@@ -381,10 +420,13 @@ function drawCard(canvas: HTMLCanvasElement, hero: any) {
       ctx.strokeStyle = 'rgba(240,237,230,0.10)'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(statColW * i, statY - 40); ctx.lineTo(statColW * i, statY + 60); ctx.stroke();
     }
-    // ← FIXED: was ember/red, now golden orange for FATE XP
     ctx.fillStyle = s.accent ? '#FFA500' : CREAM;
     ctx.font = `700 52px 'Cinzel', serif`; ctx.textAlign = 'center'; ctx.letterSpacing = '1px';
     ctx.fillText(s.value, sx, statY);
+    if ((s as any).streakFire) {
+      const valW = ctx.measureText(s.value).width;
+      ctx.font = `44px serif`; ctx.fillText('🔥', sx + valW / 2 + 24, statY);
+    }
     ctx.fillStyle = CREAM_FAINT; ctx.font = `600 18px 'Cinzel', serif`;
     ctx.textAlign = 'center'; ctx.letterSpacing = '4px';
     ctx.fillText(s.label, sx, statY + 40);
