@@ -348,11 +348,20 @@ export default function VeilTearsScreen() {
       attributionControl: true,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Apply filter via Leaflet's own pane reference + tile load event.
+    // getPanes().tilePane is the authoritative handle; re-apply on every
+    // tileload so late-loading tiles don't reset it.
+    const applyTileFilter = () => {
+      const tp = map.getPanes().tilePane as HTMLElement | undefined;
+      if (tp) tp.style.filter = 'saturate(0.55) brightness(1.0)';
+    };
+    const tl = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap contributors © CARTO',
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
+    tl.on('tileload', applyTileFilter);
+    applyTileFilter(); // also apply immediately in case pane already exists
 
     // Player marker
     const playerIcon = L.divIcon({
@@ -379,14 +388,6 @@ export default function VeilTearsScreen() {
 
     tearsRef.current = tears;
     leafletRef.current = map;
-
-    // Apply filter directly on the tile pane element — inline style wins over
-    // all CSS class rules and is immune to specificity/order issues.
-    // Use a short timeout to let Leaflet finish its own DOM setup first.
-    setTimeout(() => {
-      const tilePaneEl = mapRef.current?.querySelector('.leaflet-tile-pane') as HTMLElement | null;
-      if (tilePaneEl) tilePaneEl.style.filter = 'saturate(0.55) brightness(1.0)';
-    }, 100);
   }, []);
 
   // ── Location permission ────────────────────────────────────────────────────
