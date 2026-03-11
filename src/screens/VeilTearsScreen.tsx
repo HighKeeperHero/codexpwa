@@ -353,7 +353,7 @@ export default function VeilTearsScreen() {
     // tileload so late-loading tiles don't reset it.
     const applyTileFilter = () => {
       const tp = map.getPanes().tilePane as HTMLElement | undefined;
-      if (tp) tp.style.filter = 'saturate(0.45) brightness(0.72)';
+      if (tp) tp.style.filter = 'saturate(0.6) brightness(0.88)';
     };
     const tl = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap contributors © CARTO',
