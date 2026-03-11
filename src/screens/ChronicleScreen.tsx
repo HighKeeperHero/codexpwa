@@ -43,7 +43,8 @@ export function ChronicleScreen() {
     </div>
   );
 
-  const tier       = TIER_FOR_LEVEL(hero.progression.fate_level);
+  const heroLevel  = prog.hero_level ?? prog.fate_level;
+  const tier       = TIER_FOR_LEVEL(heroLevel);
   const alignColor = ALIGNMENT_COLOR[hero.alignment] ?? '#5A4E3C';
   const prog       = hero.progression;
   const modifiers  = hero.gear?.computed_modifiers;
@@ -202,7 +203,7 @@ function TierCard({ tier, hero, alignColor }: { tier: any; hero: any; alignColor
     <div style={{ background: `linear-gradient(135deg, var(--surface), ${tier.color}12)`, border: `1px solid ${tier.color}60`, borderRadius: 'var(--radius)', padding: '16px 14px', boxShadow: `0 0 20px ${tier.color}18` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <div style={{ width: 48, height: 48, flexShrink: 0, background: `radial-gradient(circle, ${tier.color}30 0%, transparent 70%)`, border: `2px solid ${tier.color}`, borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 18, fontWeight: 700, color: tier.color }}>
-          {prog.fate_level}
+          {tier.isJob ? '✦' : heroLevel}
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ fontFamily: 'Cinzel, serif', fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>{hero.display_name}</p>

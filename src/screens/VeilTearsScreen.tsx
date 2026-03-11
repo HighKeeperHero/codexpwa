@@ -345,7 +345,7 @@ export default function VeilTearsScreen() {
     if (!document.getElementById('vt-tile-filter')) {
       const tf = document.createElement('style');
       tf.id = 'vt-tile-filter';
-      tf.textContent = `.leaflet-tile-pane { filter: saturate(0.15) brightness(0.55) hue-rotate(200deg); }`;
+      tf.textContent = `.leaflet-tile-pane { filter: saturate(0.35) brightness(0.80) hue-rotate(200deg); }`;
       document.head.appendChild(tf);
     }
 
@@ -470,9 +470,9 @@ export default function VeilTearsScreen() {
             : tear.type === 'dormant' ? 40 : 75;
           setBattleResult({ won: true, shards });
           try {
-            const h = JSON.parse(localStorage.getItem(`vt_battles_${hero?.root_id ?? 'anon'}`) ?? '[]');
+            const h = JSON.parse(localStorage.getItem('vt_battles') ?? '[]');
             h.unshift({ tear_type: tear.type, tear_name: tear.name, won: true, shards, ts: Date.now() });
-            localStorage.setItem(`vt_battles_${hero?.root_id ?? 'anon'}`, JSON.stringify(h.slice(0, 20)));
+            localStorage.setItem('vt_battles', JSON.stringify(h.slice(0, 20)));
           } catch {}
           postEncounter(hero?.root_id, { tear_type: tear.type, tear_name: tear.name, outcome: 'won', shards, lat: coords[0], lon: coords[1] })
             .then(r => setServerResult(r));
@@ -497,9 +497,9 @@ export default function VeilTearsScreen() {
               setBattleResult({ won: false, shards: 0 });
               setScreen('defeat');
               try {
-                const h = JSON.parse(localStorage.getItem(`vt_battles_${hero?.root_id ?? 'anon'}`) ?? '[]');
+                const h = JSON.parse(localStorage.getItem('vt_battles') ?? '[]');
                 h.unshift({ tear_type: tear.type, tear_name: tear.name, won: false, shards: 0, ts: Date.now() });
-                localStorage.setItem(`vt_battles_${hero?.root_id ?? 'anon'}`, JSON.stringify(h.slice(0, 20)));
+                localStorage.setItem('vt_battles', JSON.stringify(h.slice(0, 20)));
               } catch {}
               postEncounter(hero?.root_id, { tear_type: tear.type, tear_name: tear.name, outcome: 'fled', shards: 0, lat: coords[0], lon: coords[1] })
                 .then(r => setServerResult(r));

@@ -101,14 +101,17 @@ export const ALIGNMENT_COLOR: Record<string, string> = {
 };
 
 // ── Tiers ──────────────────────────────────────────────
-export interface Tier { name: string; color: string; min: number; max: number; }
+export interface Tier { name: string; color: string; min: number; max: number; isJob?: boolean; }
 export const TIERS: Tier[] = [
   { name: 'Bronze',     color: '#cd7f32', min: 1,  max: 6  },
   { name: 'Copper',     color: '#b87333', min: 7,  max: 13 },
   { name: 'Silver',     color: '#c0c0c0', min: 14, max: 21 },
   { name: 'Gold',       color: '#ffd700', min: 22, max: 29 },
   { name: 'Platinum',   color: '#e5e4e2', min: 30, max: 39 },
-  { name: 'Adamantium', color: '#4ff0d0', min: 40, max: 999 },
+  { name: 'Adamantium', color: '#4ff0d0', min: 40, max: 40 },
+  // Level 40+ — Hero has completed Adventurer progression and is eligible
+  // for a Job Quest. Job Level is tracked separately (future system).
+  { name: 'Job Quest',  color: '#C9A24B', min: 41, max: 999, isJob: true },
 ];
 export function TIER_FOR_LEVEL(level: number): Tier {
   return TIERS.find(t => level >= t.min && level <= t.max) ?? TIERS[0];

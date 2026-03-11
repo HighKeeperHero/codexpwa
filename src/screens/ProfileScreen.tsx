@@ -8,7 +8,7 @@ import { ChronicleScreen }   from './ChronicleScreen';
 import { TIER_FOR_LEVEL, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '../api/pik';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
-type Tab = 'profile' | 'rankings' | 'vault' | 'chronicle' | 'wristband';
+type Tab = 'profile' | 'rankings' | 'vault' | 'chronicle';
 
 function unwrap(json: any): any {
   const d = json?.data;
@@ -330,7 +330,6 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
     { id: 'rankings',  label: 'Leaderboard' },
     { id: 'vault',     label: 'Vault', badge: sealedCount },
     { id: 'chronicle', label: 'Chronicle' },
-    { id: 'wristband', label: 'Wristband' },
   ];
 
   if (!hero) return (
@@ -356,7 +355,6 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
         {tab === 'rankings'  && <LeaderboardScreen />}
         {tab === 'vault'     && <VaultScreen />}
         {tab === 'chronicle' && <ChronicleScreen />}
-        {tab === 'wristband' && <WristbandTab rootId={hero.root_id} />}
       </div>
     </div>
   );
@@ -365,12 +363,13 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
 // ── Profile Tab ────────────────────────────────────────────────────────────────
 function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSignOut: () => void; onReturnToHeroSelect?: () => void }) {
   const prog      = hero.progression;
-  const level     = prog?.fate_level ?? 1;
+  const heroLevel = prog?.hero_level ?? prog?.fate_level ?? 1;
+  const level     = prog?.fate_level ?? 1;       // fate level — shown on XP bar
   const xp        = prog?.total_xp ?? prog?.fate_xp ?? 0;
   const xpToNext  = prog?.xp_to_next_level ?? 500;
   const xpIn      = prog?.xp_in_current_level ?? (xp % xpToNext);
   const pct       = Math.min(100, Math.round((xpIn / xpToNext) * 100));
-  const tier      = TIER_FOR_LEVEL(level);
+  const tier      = TIER_FOR_LEVEL(heroLevel);   // adventurer tier uses hero level
   const alignment = hero.alignment ?? 'NONE';
   const aColor    = ALIGNMENT_COLOR[alignment] ?? '#9ca3af';
 
@@ -395,6 +394,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
   ];
 
   const [battleHistory, setBattleHistory] = useState<BattleRecord[]>([]);
+  const [wristbandOpen, setWristbandOpen] = useState(false);
 
   useEffect(() => {
     if (!hero?.root_id) return;
@@ -416,7 +416,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
           </div>
           <div style={{ background: 'var(--bg)', border: `1px solid ${tier.color}`, borderRadius: 8, padding: '4px 10px', flexShrink: 0, textAlign: 'center' }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: tier.color, margin: '0 0 1px', letterSpacing: '0.1em' }}>{tier.name}</p>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: tier.color, margin: 0 }}>Lv {level}</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: tier.color, margin: 0 }}>{tier.isJob ? '✦ Job' : `Lv ${heroLevel}`}</p>
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -447,6 +447,22 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
       {/* Trophy Room */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '16px 14px', marginBottom: 14 }}>
         <TrophyRoom hero={hero} fateSeals={fateSeals} />
+      </div>
+
+      {/* Wristband — collapsible section */}
+      <div style={{ marginBottom: 14 }}>
+        <button
+          onClick={() => setWristbandOpen(o => !o)}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: wristbandOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
+        >
+          <span>⌚ Wristband</span>
+          <span style={{ color: 'var(--text-3)', fontSize: 12, transition: 'transform 0.2s', transform: wristbandOpen ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>▾</span>
+        </button>
+        {wristbandOpen && (
+          <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 var(--radius) var(--radius)', overflow: 'hidden' }}>
+            <WristbandTab rootId={hero.root_id} />
+          </div>
+        )}
       </div>
 
       {/* Actions */}

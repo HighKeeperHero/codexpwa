@@ -156,9 +156,9 @@ export function QuestsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const fateLevel = hero?.progression.fate_level ?? 0;
+  const heroLevel    = hero?.progression.hero_level ?? hero?.progression.fate_level ?? 0;
   const hasAlignment = !!(alignment && alignment !== 'NONE' && alignment !== '');
-  const isLocked = fateLevel < 20;
+  const isLocked     = heroLevel < 20;
   const meta = hasAlignment ? ALIGNMENT_META[alignment!] : null;
   const ac = meta?.color ?? 'var(--bronze)';
 
@@ -270,14 +270,14 @@ export function QuestsScreen() {
             <div style={{ fontSize: 28, opacity: 0.3, marginBottom: 12 }}>◈</div>
             <p className="serif" style={{ fontSize: 16, color: 'var(--text-2)', marginBottom: 8 }}>Realm Alignment Locked</p>
             <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.7, marginBottom: 12 }}>
-              Reach Fate Level 20 to choose your realm and unlock alignment hunts.
+              Reach Hero Level 20 to choose your realm and unlock alignment hunts.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div className="xp-track" style={{ flex: 1, height: 4 }}>
-                <div className="xp-fill" style={{ width: `${Math.min(100, (fateLevel / 20) * 100)}%` }} />
+                <div className="xp-fill" style={{ width: `${Math.min(100, (heroLevel / 20) * 100)}%` }} />
               </div>
               {/* ← FIXED: was var(--ember)/red, now var(--gold) — progress reads as positive */}
-              <span style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, flexShrink: 0 }}>Lv {fateLevel} / 20</span>
+              <span style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600, flexShrink: 0 }}>Lv {heroLevel} / 20</span>
             </div>
           </div>
         )}
