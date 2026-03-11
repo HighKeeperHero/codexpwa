@@ -111,7 +111,7 @@ function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void 
     <>
       <OfflineBanner show={!isOnline} />
       <div style={{ paddingBottom:0 }}>
-        {tab === 'home'     && <HomeScreen onSwitchHero={onReturnToHeroSelect} />}
+        {tab === 'home'     && <HomeScreen onSwitchHero={onReturnToHeroSelect} onNavigateToVeil={() => setTab('veil')} onNavigateToChronicle={() => setTab('archive')} />}
         {tab === 'training' && <TrainingScreen />}
         {tab === 'hunts'    && <QuestsScreen />}
         {tab === 'archive'  && <ProfileScreen onReturnToHeroSelect={onReturnToHeroSelect} />}

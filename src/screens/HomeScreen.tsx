@@ -292,7 +292,7 @@ function LiveSessionFeed({ rootId, wearable }: { rootId: string; wearable: any }
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────────
-export function HomeScreen({ onSwitchHero, onNavigateToChronicle }: { onSwitchHero?: () => void; onNavigateToChronicle?: () => void }) {
+export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVeil }: { onSwitchHero?: () => void; onNavigateToChronicle?: () => void; onNavigateToVeil?: () => void }) {
   const { hero, isMock, isRefreshing, refreshHero, signOut, lastUpdated } = useAuth() as any;
   const [pullDist, setPullDist] = useState(0);
   const [pulling,  setPulling]  = useState(false);
@@ -493,7 +493,7 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle }: { onSwitchHe
         {/* ── 18.1 Primary CTA */}
         <div style={{ marginBottom: 16 }}>
           <button
-            onClick={() => {/* Tab navigation handled by parent */}}
+            onClick={() => onNavigateToVeil?.()}
             style={{
               width: '100%', height: 56,
               background: `linear-gradient(135deg, rgba(255,165,0,0.12), rgba(255,165,0,0.06))`,
@@ -512,6 +512,9 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle }: { onSwitchHe
             <span style={{ fontSize: 18 }}>◈</span>
             Enter the Veil
           </button>
+          <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: 7 }}>
+            Hunt tears · Earn shards · Advance your legend
+          </p>
         </div>
 
         {/* ── Share Fate Card */}
