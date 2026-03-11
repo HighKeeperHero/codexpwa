@@ -14,8 +14,9 @@
   --bg:             #0B0F1A;
   --bg-2:           #0F1525;
   --surface:        #141E30;
-  --surface-2:      #1A2640;
-  --surface-inset:  #090D14;
+  --surface-2:      #1E2D48;
+  --surface-hi:     #22354F;
+  --surface-inset:  #080C13;
 
   /* Borders — blue-tinted for depth */
   --border:         #1E2E48;
@@ -76,8 +77,18 @@
   /* Layout */
   --tab-h:    58px;
   --max-w:    430px;
-  --radius:   10px;
-  --radius-lg:16px;
+  --radius:   12px;
+  --radius-lg:18px;
+
+  /* Spacing scale — 4px base unit */
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  24px;
+  --sp-6:  32px;
+  --sp-7:  48px;
+  --sp-8:  64px;
 
   /* Easing */
   --ease-out:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -244,14 +255,45 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .card-pressable {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.15s var(--ease-out), border-color 0.2s;
+  transition: transform 0.15s var(--ease-out), border-color 0.2s, box-shadow 0.2s;
 }
-.card-pressable:active { transform: scale(0.98); }
+.card-pressable:active {
+  transform: scale(0.98);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Card with accent highlight (rarity/tier) */
+.card-accent-gold {
+  border-color: rgba(255, 165, 0, 0.35);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 165, 0, 0.08),
+    inset 0 1px 0 rgba(255, 165, 0, 0.06);
+}
+
+/* ── Elevated panel — shared inline card base ─────────── */
+/* Applied via className="panel" on surface divs that aren't .card */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
 
 /* ── Ornament ─────────────────────────────────────────── */
 .orn-row { display: flex; align-items: center; gap: 12px; width: 100%; }
@@ -377,3 +419,13 @@ a { color: inherit; text-decoration: none; }
 .screen::-webkit-scrollbar { width: 3px; }
 .screen::-webkit-scrollbar-track { background: transparent; }
 .screen::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 999px; }
+
+/* ── Reduced motion ───────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .xp-fill { transition: none; }
+}

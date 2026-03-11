@@ -79,12 +79,12 @@ function VeilBattleStats({ history }: { history: BattleRecord[] }) {
   }).filter(t => t.battles > 0);
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 14px', marginBottom: 10 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '16px 14px', marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, fontWeight: 700, letterSpacing: '0.22em', color: '#8040C8', margin: 0, textTransform: 'uppercase' }}>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700, letterSpacing: '0.22em', color: '#8040C8', margin: 0, textTransform: 'uppercase' }}>
           ⚡ Veil Battles
         </p>
-        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: 'var(--text-3)' }}>{history.length} total</span>
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-3)' }}>{history.length} total</span>
       </div>
 
       {/* Top stats */}
@@ -97,7 +97,7 @@ function VeilBattleStats({ history }: { history: BattleRecord[] }) {
         ].map(s => (
           <div key={s.label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 4px', textAlign: 'center' }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: s.color, margin: '0 0 3px' }}>{s.val}</p>
-            <p style={{ fontSize: 7, color: 'var(--text-3)', margin: 0, letterSpacing: '0.12em' }}>{s.label}</p>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, letterSpacing: '0.12em' }}>{s.label}</p>
           </div>
         ))}
       </div>
@@ -105,8 +105,8 @@ function VeilBattleStats({ history }: { history: BattleRecord[] }) {
       {/* Win rate bar */}
       <div style={{ marginBottom: byTier.length > 0 ? 14 : 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-          <span style={{ fontSize: 8, color: '#34d399', letterSpacing: '0.1em' }}>{totalWins} SEALED</span>
-          <span style={{ fontSize: 8, color: '#CC1020', letterSpacing: '0.1em' }}>{totalLosses} RETREATED</span>
+          <span style={{ fontSize: 11, color: '#34d399', letterSpacing: '0.1em' }}>{totalWins} SEALED</span>
+          <span style={{ fontSize: 11, color: '#CC1020', letterSpacing: '0.1em' }}>{totalLosses} RETREATED</span>
         </div>
         <div style={{ height: 6, background: '#CC102030', borderRadius: 3, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${winRate}%`, background: 'linear-gradient(90deg, #1A6ED4, #34d399)', borderRadius: 3, transition: 'width 0.6s ease' }} />
@@ -116,19 +116,19 @@ function VeilBattleStats({ history }: { history: BattleRecord[] }) {
       {/* Per-tier breakdown */}
       {byTier.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <p style={{ fontSize: 8, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', margin: '0 0 2px' }}>By Tier</p>
+          <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', margin: '0 0 2px' }}>By Tier</p>
           {byTier.map(t => {
             const td  = VT_TIER[t.key];
             const pct = Math.round((t.wins / t.battles) * 100);
             return (
               <div key={t.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: `${td.color}15`, border: `1px solid ${td.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: td.color }}>
+                <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: `${td.color}15`, border: `1px solid ${td.color}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: td.color }}>
                   {td.glyph}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <span style={{ fontSize: 8, color: td.color, letterSpacing: '0.08em' }}>{td.tier} · {td.label}</span>
-                    <span style={{ fontSize: 8, color: 'var(--text-3)', fontFamily: 'monospace' }}>{t.wins}/{t.battles}</span>
+                    <span style={{ fontSize: 11, color: td.color, letterSpacing: '0.08em' }}>{td.tier} · {td.label}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'monospace' }}>{t.wins}/{t.battles}</span>
                   </div>
                   <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: td.color, borderRadius: 2, opacity: 0.7, transition: 'width 0.5s ease' }} />
@@ -151,11 +151,11 @@ function VeilBattleHistory({ history }: { history: BattleRecord[] }) {
   const visible = expanded ? history : history.slice(0, 5);
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 14px', marginBottom: 14 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '14px 14px', marginBottom: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, fontWeight: 700, letterSpacing: '0.18em', color: 'var(--text-3)', margin: 0, textTransform: 'uppercase' }}>Recent Battles</p>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', color: 'var(--text-3)', margin: 0, textTransform: 'uppercase' }}>Recent Battles</p>
         {history.length > 5 && (
-          <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', color: 'var(--gold)', fontFamily: 'Cinzel, serif', fontSize: 9, cursor: 'pointer', letterSpacing: '0.08em', padding: 0 }}>
+          <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', color: 'var(--gold)', fontFamily: 'Cinzel, serif', fontSize: 11, cursor: 'pointer', letterSpacing: '0.08em', padding: 0 }}>
             {expanded ? 'Show Less' : `Show All (${history.length})`}
           </button>
         )}
@@ -165,18 +165,18 @@ function VeilBattleHistory({ history }: { history: BattleRecord[] }) {
           const td = VT_TIER[b.tear_type] ?? VT_TIER.minor;
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: 'var(--bg)', border: `1px solid var(--border)`, borderLeft: `3px solid ${td.color}` }}>
-              <div style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 6, background: `${td.color}15`, border: `1px solid ${td.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: td.color }}>
+              <div style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 6, background: `${td.color}15`, border: `1px solid ${td.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: td.color }}>
                 {td.glyph}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.tear_name}</p>
-                <p style={{ fontSize: 7, color: `${td.color}99`, margin: 0, letterSpacing: '0.1em' }}>{td.tier} · {td.label}</p>
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.tear_name}</p>
+                <p style={{ fontSize: 11, color: `${td.color}99`, margin: 0, letterSpacing: '0.1em' }}>{td.tier} · {td.label}</p>
               </div>
               <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                <p style={{ fontSize: 8, fontWeight: 700, color: b.won ? '#34d399' : '#CC1020', margin: '0 0 2px', letterSpacing: '0.06em' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: b.won ? '#34d399' : '#CC1020', margin: '0 0 2px', letterSpacing: '0.06em' }}>
                   {b.won ? `+${b.shards}◆` : 'FLED'}
                 </p>
-                <p style={{ fontSize: 7, color: 'var(--text-3)', margin: 0 }}>{timeAgo(b.ts)}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>{timeAgo(b.ts)}</p>
               </div>
             </div>
           );
@@ -228,8 +228,8 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
     <div>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
-          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,165,0,0.55)', margin: '0 0 3px' }}>Milestones Reached</p>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>{earned.length} / {TROPHIES.length} unlocked</p>
+          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,165,0,0.55)', margin: '0 0 3px' }}>Milestones Reached</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>{earned.length} / {TROPHIES.length} unlocked</p>
         </div>
         <span style={{ fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700, color: pct >= 75 ? 'var(--gold)' : pct >= 40 ? '#A855F7' : 'var(--text-2)' }}>{pct}%</span>
       </div>
@@ -238,7 +238,7 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
       </div>
       {earned.length > 0 && (
         <>
-          <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Earned</p>
+          <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Earned</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
             {earned.map(t => <TrophyCard key={t.id} trophy={t} earned expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />)}
           </div>
@@ -246,7 +246,7 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
       )}
       {locked.length > 0 && (
         <>
-          <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Locked</p>
+          <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Locked</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {locked.map(t => <TrophyCard key={t.id} trophy={t} earned={false} expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />)}
           </div>
@@ -279,7 +279,7 @@ function TrophyCard({ trophy, earned, expanded, onToggle }: { trophy: TrophyDef;
   const rc     = RARITY_COLOR[trophy.rarity];
   const detail = TROPHY_EARN_DETAIL[trophy.id];
   return (
-    <div onClick={onToggle} style={{ background: earned ? `linear-gradient(90deg, var(--surface), ${rc}0A)` : 'var(--surface)', border: `1px solid ${earned ? (expanded ? rc + '70' : rc + '35') : 'var(--border)'}`, borderRadius: 10, padding: '10px 13px', opacity: earned ? 1 : 0.45, cursor: 'pointer', transition: 'border-color 0.15s', boxShadow: expanded && earned ? `0 0 12px ${rc}20` : 'none' }}>
+    <div onClick={onToggle} style={{ background: earned ? `linear-gradient(90deg, var(--surface), ${rc}0A)` : 'var(--surface)', border: `1px solid ${earned ? (expanded ? rc + '70' : rc + '35') : 'var(--border)'}`, borderRadius: 'var(--radius)', padding: '10px 13px', opacity: earned ? 1 : 0.45, cursor: 'pointer', transition: 'border-color 0.15s', boxShadow: expanded && earned ? `0 0 12px ${rc}20` : 'none' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 8, background: earned ? `${rc}12` : 'rgba(255,255,255,0.04)', border: `1px solid ${earned ? rc + '30' : 'rgba(255,255,255,0.07)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: earned ? 15 : 13, color: earned ? rc : 'rgba(255,255,255,0.12)', filter: earned ? `drop-shadow(0 0 6px ${rc}50)` : 'none' }}>
           {earned ? trophy.icon : '?'}
@@ -287,23 +287,23 @@ function TrophyCard({ trophy, earned, expanded, onToggle }: { trophy: TrophyDef;
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: earned ? 'var(--text-1)' : 'var(--text-3)', margin: 0 }}>{earned ? trophy.name : '???'}</p>
-            {earned && <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.1em', color: rc, background: `${rc}15`, border: `1px solid ${rc}30`, borderRadius: 3, padding: '1px 5px', textTransform: 'uppercase' }}>{trophy.rarity}</span>}
+            {earned && <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: rc, background: `${rc}15`, border: `1px solid ${rc}30`, borderRadius: 3, padding: '1px 5px', textTransform: 'uppercase' }}>{trophy.rarity}</span>}
           </div>
-          <p style={{ fontSize: 11, margin: 0, lineHeight: 1.4, color: earned ? 'var(--text-2)' : 'var(--text-3)', fontStyle: earned ? 'italic' : 'normal' }}>
+          <p style={{ fontSize: 12, margin: 0, lineHeight: 1.4, color: earned ? 'var(--text-2)' : 'var(--text-3)', fontStyle: earned ? 'italic' : 'normal' }}>
             {earned ? trophy.lore : trophy.hint}
           </p>
         </div>
-        <div style={{ flexShrink: 0, color: earned ? rc : 'rgba(255,255,255,0.15)', fontSize: 10, opacity: 0.7, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</div>
+        <div style={{ flexShrink: 0, color: earned ? rc : 'rgba(255,255,255,0.15)', fontSize: 12, opacity: 0.7, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</div>
       </div>
       {expanded && earned && detail && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${rc}25` }}>
-          <p style={{ fontSize: 9, color: rc, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 5px', fontFamily: 'Cinzel, serif' }}>How this was earned</p>
-          <p style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.6, margin: 0 }}>{detail}</p>
+          <p style={{ fontSize: 11, color: rc, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 5px', fontFamily: 'Cinzel, serif' }}>How this was earned</p>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, margin: 0 }}>{detail}</p>
         </div>
       )}
       {expanded && !earned && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{trophy.hint}</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{trophy.hint}</p>
         </div>
       )}
     </div>
@@ -343,10 +343,10 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
     <div style={{ position: 'absolute', inset: 0, bottom: 'calc(var(--tab-h) + var(--safe-bottom))', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg)' }}>
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--surface)', flexShrink: 0, paddingTop: 'env(safe-area-inset-top)' }}>
         {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: '12px 2px', background: 'none', border: 'none', borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent', color: tab === t.id ? 'var(--gold)' : 'var(--text-3)', fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: '0.04em', textTransform: 'uppercase', cursor: 'pointer', position: 'relative' }}>
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: '12px 2px', background: 'none', border: 'none', borderBottom: tab === t.id ? '2px solid var(--gold)' : '2px solid transparent', color: tab === t.id ? 'var(--gold)' : 'var(--text-3)', fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: '0.04em', textTransform: 'uppercase', cursor: 'pointer', position: 'relative' }}>
             {t.label}
             {t.badge != null && t.badge > 0 && (
-              <span style={{ position: 'absolute', top: 6, right: 'calc(50% - 18px)', background: 'var(--ember)', color: '#fff', borderRadius: 999, fontSize: 9, fontFamily: 'monospace', padding: '1px 5px', fontWeight: 700, lineHeight: 1.4 }}>{t.badge}</span>
+              <span style={{ position: 'absolute', top: 6, right: 'calc(50% - 18px)', background: 'var(--ember)', color: '#fff', borderRadius: 999, fontSize: 11, fontFamily: 'monospace', padding: '1px 5px', fontWeight: 700, lineHeight: 1.4 }}>{t.badge}</span>
             )}
           </button>
         ))}
@@ -402,26 +402,26 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
   }, [hero?.root_id]);
 
   return (
-    <div style={{ padding: 16 }}>
+    <div className="screen-enter" style={{ padding: 16 }}>
       {/* Identity card */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '20px 16px', marginBottom: 14 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '20px 16px', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 12, flexShrink: 0, background: `radial-gradient(circle, ${aColor}30 0%, transparent 70%)`, border: `1px solid ${aColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 20, color: aColor }}>
+          <div style={{ width: 52, height: 52, borderRadius: 'var(--radius)', flexShrink: 0, background: `radial-gradient(circle, ${aColor}30 0%, transparent 70%)`, border: `1px solid ${aColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 20, color: aColor }}>
             {(hero.display_name ?? hero.hero_name ?? '?')[0].toUpperCase()}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 17, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>{hero.display_name ?? hero.hero_name}</p>
-            {equippedDisplay && <p style={{ fontSize: 11, color: 'var(--gold)', margin: '0 0 4px', letterSpacing: '0.06em' }}>{equippedDisplay}</p>}
+            {equippedDisplay && <p style={{ fontSize: 12, color: 'var(--gold)', margin: '0 0 4px', letterSpacing: '0.06em' }}>{equippedDisplay}</p>}
             <p style={{ fontSize: 12, color: aColor, margin: 0, letterSpacing: '0.05em' }}>{ALIGNMENT_LABEL[alignment] ?? alignment}</p>
           </div>
           <div style={{ background: 'var(--bg)', border: `1px solid ${tier.color}`, borderRadius: 8, padding: '4px 10px', flexShrink: 0, textAlign: 'center' }}>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: tier.color, margin: '0 0 1px', letterSpacing: '0.1em' }}>{tier.name}</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: tier.color, margin: '0 0 1px', letterSpacing: '0.1em' }}>{tier.name}</p>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: tier.color, margin: 0 }}>Lv {level}</p>
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FATE XP</span>
-          <span style={{ fontSize: 10, color: tier.color, fontFamily: 'monospace' }}>{xp.toLocaleString()} XP</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FATE XP</span>
+          <span style={{ fontSize: 12, color: tier.color, fontFamily: 'monospace' }}>{xp.toLocaleString()} XP</span>
         </div>
         <div style={{ background: 'var(--bg)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${tier.color}80, ${tier.color})`, borderRadius: 4, transition: 'width 0.6s ease' }} />
@@ -431,9 +431,9 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
       {/* Stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
         {statBlocks.map(s => (
-          <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+          <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>{s.value}</p>
-            <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{s.label}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{s.label}</p>
           </div>
         ))}
       </div>
@@ -445,16 +445,16 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
       <VeilBattleHistory history={battleHistory} />
 
       {/* Trophy Room */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '16px 14px', marginBottom: 14 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '16px 14px', marginBottom: 14 }}>
         <TrophyRoom hero={hero} fateSeals={fateSeals} />
       </div>
 
       {/* Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {onReturnToHeroSelect && (
-          <button onClick={onReturnToHeroSelect} style={{ width: '100%', padding: '12px 0', background: 'var(--surface)', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer', letterSpacing: '0.05em' }}>Switch Hero</button>
+          <button onClick={onReturnToHeroSelect} style={{ width: '100%', padding: '12px 0', background: 'var(--surface)', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer', letterSpacing: '0.05em' }}>Switch Hero</button>
         )}
-        <button onClick={onSignOut} style={{ width: '100%', padding: '12px 0', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer', letterSpacing: '0.05em' }}>Sign Out</button>
+        <button onClick={onSignOut} style={{ width: '100%', padding: '12px 0', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontFamily: 'Cinzel, serif', fontSize: 13, cursor: 'pointer', letterSpacing: '0.05em' }}>Sign Out</button>
       </div>
     </div>
   );
@@ -478,13 +478,13 @@ function WristbandTab({ rootId }: { rootId: string }) {
     <div style={{ textAlign: 'center', padding: '48px 24px' }}>
       <div style={{ fontSize: 28, color: 'var(--text-3)', opacity: 0.4, marginBottom: 12 }}>◌</div>
       <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'var(--text-2)', margin: '0 0 6px' }}>Could not reach wristband service</p>
-      <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, lineHeight: 1.6 }}>The wristband endpoint is unavailable. Your linked wristbands will appear here once the service is active.</p>
+      <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, lineHeight: 1.6 }}>The wristband endpoint is unavailable. Your linked wristbands will appear here once the service is active.</p>
     </div>
   );
 
   return (
     <div style={{ padding: '16px 16px 32px' }}>
-      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>Linked Wristbands</p>
+      <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 12 }}>Linked Wristbands</p>
       {wearables.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 24px' }}>
           <div style={{ fontSize: 32, color: 'var(--text-3)', opacity: 0.4, marginBottom: 12 }}>◌</div>
@@ -494,10 +494,10 @@ function WristbandTab({ rootId }: { rootId: string }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {wearables.map((w: any) => (
-            <div key={w.token_id ?? w.token_uid} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+            <div key={w.token_id ?? w.token_uid} style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
               <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: 'var(--text-1)', margin: '0 0 4px' }}>{w.friendly_name ?? 'Wristband'}</p>
-              <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 0 2px' }}>UID: <span style={{ fontFamily: 'monospace', color: 'var(--gold)', letterSpacing: '0.05em' }}>{w.token_uid}</span></p>
-              {w.last_tap_at && <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>Last tap: {new Date(w.last_tap_at).toLocaleDateString()}</p>}
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 2px' }}>UID: <span style={{ fontFamily: 'monospace', color: 'var(--gold)', letterSpacing: '0.05em' }}>{w.token_uid}</span></p>
+              {w.last_tap_at && <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>Last tap: {new Date(w.last_tap_at).toLocaleDateString()}</p>}
             </div>
           ))}
         </div>

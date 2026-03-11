@@ -74,7 +74,11 @@ interface Recipe {
 
 // ── Constants ──────────────────────────────────────────────────
 const RARITY_COLOR: Record<Rarity, string> = {
-  common: '#8899AA', uncommon: '#34d399', rare: '#1E90FF', epic: '#A855F7', legendary: '#FFA500',
+  common:    'var(--rarity-common)',
+  uncommon:  'var(--rarity-honored)',
+  rare:      'var(--rarity-rare)',
+  epic:      'var(--rarity-epic)',
+  legendary: 'var(--rarity-legendary)',
 };
 const RARITY_GLOW: Record<Rarity, string> = {
   common: 'rgba(136,153,170,0.15)', uncommon: 'rgba(52,211,153,0.20)',
@@ -449,7 +453,7 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
   const lockedTitles     = safeTitles.filter(t => !t.is_earned);
 
   return (
-    <div style={{ padding: '0 0 32px' }}>
+    <div className="screen-enter" style={{ padding: '0 0 80px', minHeight: '100%' }}>
 
       {/* Cache opening overlay */}
       {openingCache && (
@@ -658,7 +662,7 @@ function NexusBar({ balance, loading }: { balance: number; loading: boolean }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10,
       background: 'rgba(255,165,0,0.06)', border: '1px solid rgba(255,165,0,0.2)',
-      borderRadius: 10, padding: '10px 14px', marginBottom: 20,
+      borderRadius: 'var(--radius)', padding: '10px 14px', marginBottom: 20,
     }}>
       <span style={{ fontSize: 18, lineHeight: 1 }}>◈</span>
       <div>
@@ -735,7 +739,7 @@ function RecipeCard({ recipe, nexusBalance, components, isCrafting, onCraft }: {
   return (
     <div style={{
       background: 'var(--surface)', border: `1px solid ${canCraft ? color : 'var(--border)'}`,
-      borderRadius: 12, padding: '14px 14px 12px',
+      borderRadius: 'var(--radius)', padding: '14px 14px 12px',
       boxShadow: canCraft ? `0 0 14px ${glow}` : 'none',
       opacity: canCraft || isCrafting ? 1 : 0.7,
       transition: 'all 0.2s',
@@ -842,7 +846,7 @@ function CacheCard({ cache, isOpening, onTap }: { cache: SealedCache; isOpening:
   return (
     <button onClick={onTap} disabled={isOpening} style={{
       width: '100%', textAlign: 'left', background: 'var(--surface)',
-      border: `1px solid ${color}`, borderRadius: 12, padding: '14px 16px',
+      border: `1px solid ${color}`, borderRadius: 'var(--radius)', padding: '14px 16px',
       boxShadow: `0 0 16px ${glow}`, cursor: isOpening ? 'wait' : 'pointer',
       opacity: isOpening ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 14,
     }}>
@@ -876,7 +880,7 @@ function TitleCard({ title, isEquipping, onEquip }: { title: TitleEntry; isEquip
   return (
     <div style={{
       background: 'var(--surface)', border: `1px solid ${title.is_equipped ? color : 'var(--border)'}`,
-      borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
+      borderRadius: 'var(--radius)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
       boxShadow: title.is_equipped ? `0 0 12px ${color}30` : 'none',
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -911,7 +915,7 @@ function LockedTitleCard({ title }: { title: TitleEntry }) {
   return (
     <div style={{
       background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.5,
+      borderRadius: 'var(--radius)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.5,
     }}>
       <div style={{ color: 'var(--text-3)', fontSize: 16, flexShrink: 0 }}>🔒</div>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -935,7 +939,7 @@ function GearSlotCard({ slot, item }: { slot: string; item: GearItem | null }) {
     <div style={{
       background: rarity ? `linear-gradient(160deg, ${glow}30 0%, var(--surface) 55%)` : 'var(--surface)',
       border: `${rarity ? 2 : 1}px solid ${color}`,
-      borderRadius: 10, padding: '10px 6px 8px', textAlign: 'center', minHeight: 94,
+      borderRadius: 'var(--radius)', padding: '10px 6px 8px', textAlign: 'center', minHeight: 94,
       boxShadow: rarity ? `0 0 20px ${glow}, inset 0 0 10px ${glow}33` : 'none',
       transition: 'all 0.2s ease', position: 'relative',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
@@ -992,7 +996,7 @@ function InventoryCard({ item, onEquip, onDismantle }: { item: GearItem; onEquip
     return (
       <div style={{
         background: 'var(--surface)', border: `1px solid rgba(200,94,40,0.4)`,
-        borderRadius: 10, padding: '12px 14px',
+        borderRadius: 'var(--radius)', padding: '12px 14px',
         boxShadow: '0 0 12px rgba(200,94,40,0.15)',
       }}>
         <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#F0EDE6', margin: '0 0 4px' }}>
@@ -1028,7 +1032,7 @@ function InventoryCard({ item, onEquip, onDismantle }: { item: GearItem; onEquip
   return (
     <div style={{
       background: 'var(--surface)', border: `1px solid ${color}`,
-      borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
+      borderRadius: 'var(--radius)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
       boxShadow: `0 0 10px ${RARITY_GLOW[rarity]}`,
     }}>
       <div style={{

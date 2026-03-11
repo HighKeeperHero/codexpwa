@@ -152,10 +152,10 @@ function VeilActivitySection() {
           <div key={pill.label} style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
             padding: '8px 12px', flex: (pill as any).flex ? 1 : undefined,
-            background: `${pill.color}0D`, border: `1px solid ${pill.color}30`, borderRadius: 10,
+            background: `${pill.color}0D`, border: `1px solid ${pill.color}30`, borderRadius: 'var(--radius)',
           }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: pill.color, fontFamily: 'Cinzel, serif' }}>{pill.val}</span>
-            <span style={{ fontSize: 7, color: 'var(--text-3)', letterSpacing: '0.12em' }}>{pill.label}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.12em' }}>{pill.label}</span>
           </div>
         ))}
       </div>
@@ -170,7 +170,7 @@ function VeilActivitySection() {
               background: 'var(--surface)',
               border: `1px solid var(--border)`,
               borderLeft: `3px solid ${tier.color}`,
-              borderRadius: 10, padding: '9px 12px',
+              borderRadius: 'var(--radius)', padding: '9px 12px',
             }}>
               <div style={{
                 width: 28, height: 28, flexShrink: 0, borderRadius: 8,
@@ -181,18 +181,18 @@ function VeilActivitySection() {
                 {tier.glyph}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {b.tear_name}
                 </p>
-                <p style={{ fontSize: 8, color: `${tier.color}CC`, margin: 0, letterSpacing: '0.1em' }}>
+                <p style={{ fontSize: 11, color: `${tier.color}CC`, margin: 0, letterSpacing: '0.1em' }}>
                   {tier.label}
                 </p>
               </div>
               <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: b.won ? '#34d399' : '#CC1020', margin: '0 0 2px' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: b.won ? '#34d399' : '#CC1020', margin: '0 0 2px' }}>
                   {b.won ? `+${b.shards} ◆` : 'RETREATED'}
                 </p>
-                <p style={{ fontSize: 8, color: 'var(--text-3)', margin: 0 }}>{timeAgo(b.ts)}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>{timeAgo(b.ts)}</p>
               </div>
             </div>
           );
@@ -233,35 +233,35 @@ function LiveSessionFeed({ rootId, wearable }: { rootId: string; wearable: any }
 
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ borderRadius: 14, overflow: 'hidden', border: `1px solid ${acColor}40`, background: `linear-gradient(135deg, var(--surface), ${acColor}0C)`, boxShadow: `0 0 24px ${acColor}15` }}>
+      <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden', border: `1px solid ${acColor}40`, background: `linear-gradient(135deg, var(--surface), ${acColor}0C)`, boxShadow: `0 0 24px ${acColor}15` }}>
         <div style={{ height: 2, background: `linear-gradient(90deg, ${acColor}, ${acColor}40)`, animation: pulse ? 'none' : undefined }} />
         <div style={{ padding: '13px 15px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: acColor, boxShadow: `0 0 8px ${acColor}`, animation: 'livePulse 2s ease-in-out infinite', flexShrink: 0 }} />
             <style>{`@keyframes livePulse { 0%, 100% { opacity: 1; box-shadow: 0 0 6px #34d399; } 50% { opacity: 0.5; box-shadow: 0 0 14px #34d399; } }`}</style>
-            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, fontWeight: 700, color: acColor, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Session Active</span>
-            <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 10, color: 'rgba(232,224,204,0.55)' }}>{session ? elapsed : '—'}</span>
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700, color: acColor, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Session Active</span>
+            <span style={{ marginLeft: 'auto', fontFamily: 'monospace', fontSize: 12, color: 'rgba(232,224,204,0.55)' }}>{session ? elapsed : '—'}</span>
           </div>
           <p style={{ fontFamily: 'Cinzel, serif', fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px', letterSpacing: '0.04em' }}>{venue}</p>
           {session ? (
             <>
-              <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 0 10px' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 10px' }}>
                 {session.session_id ? `Session ${session.session_id.slice(-6).toUpperCase()}` : 'Connecting to the Veil…'}
               </p>
               {session.party && session.party.length > 0 && (
                 <div>
-                  <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>Party — {session.party.length} hero{session.party.length !== 1 ? 'es' : ''}</p>
+                  <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>Party — {session.party.length} hero{session.party.length !== 1 ? 'es' : ''}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {session.party.map((m: PartyMember) => {
                       const mc = ALIGNMENT_COLOR[m.alignment] ?? '#8899AA';
                       return (
                         <div key={m.root_id} style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${mc}10`, border: `1px solid ${mc}30`, borderRadius: 8, padding: '5px 9px' }}>
-                          <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, background: `${mc}25`, border: `1px solid ${mc}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: mc, fontFamily: 'Cinzel, serif', fontWeight: 700 }}>
+                          <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, background: `${mc}25`, border: `1px solid ${mc}50`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: mc, fontFamily: 'Cinzel, serif', fontWeight: 700 }}>
                             {m.display_name[0].toUpperCase()}
                           </div>
                           <div>
-                            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 1px', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.display_name}</p>
-                            <p style={{ fontSize: 8, color: mc, margin: 0, letterSpacing: '0.05em' }}>Lv {m.fate_level}</p>
+                            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 1px', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.display_name}</p>
+                            <p style={{ fontSize: 11, color: mc, margin: 0, letterSpacing: '0.05em' }}>Lv {m.fate_level}</p>
                           </div>
                         </div>
                       );
@@ -269,15 +269,15 @@ function LiveSessionFeed({ rootId, wearable }: { rootId: string; wearable: any }
                   </div>
                 </div>
               )}
-              {session.party && session.party.length === 0 && <p style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>Running solo — no party members yet.</p>}
+              {session.party && session.party.length === 0 && <p style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>Running solo — no party members yet.</p>}
             </>
           ) : (
-            <p style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>Wristband tapped — session initializing…</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', fontStyle: 'italic' }}>Wristband tapped — session initializing…</p>
           )}
         </div>
         <div style={{ padding: '6px 15px 8px', borderTop: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em' }}>LIVE · UPDATES EVERY 30S</span>
-          <button onClick={fetchSession} style={{ background: 'none', border: 'none', color: acColor, fontSize: 10, cursor: 'pointer', fontFamily: 'Cinzel, serif', letterSpacing: '0.05em', opacity: 0.7, padding: 0 }}>↻ Sync</button>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.1em' }}>LIVE · UPDATES EVERY 30S</span>
+          <button onClick={fetchSession} style={{ background: 'none', border: 'none', color: acColor, fontSize: 12, cursor: 'pointer', fontFamily: 'Cinzel, serif', letterSpacing: '0.05em', opacity: 0.7, padding: 0 }}>↻ Sync</button>
         </div>
       </div>
     </div>
@@ -349,7 +349,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
       {isRefreshing && (
         <div className="ptr-indicator">
           <span className="live-dot" />
-          <span style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: 1 }}>Refreshing from PIK…</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)', letterSpacing: 1 }}>Refreshing from PIK…</span>
         </div>
       )}
       <div className="screen-content stagger">
@@ -362,8 +362,8 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
             <div className="orn-line" /><span className="orn-glyph">◈</span><div className="orn-line" />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 9, letterSpacing: 2.5, color: 'var(--text-3)', fontWeight: 600 }}>FATE RECORD</span>
-            {lastUpdated && !isMock && <><span className="live-dot" /><span style={{ fontSize: 9, color: 'var(--text-3)' }}>LIVE</span></>}
+            <span style={{ fontSize: 11, letterSpacing: 2.5, color: 'var(--text-3)', fontWeight: 600 }}>FATE RECORD</span>
+            {lastUpdated && !isMock && <><span className="live-dot" /><span style={{ fontSize: 11, color: 'var(--text-3)' }}>LIVE</span></>}
             {isMock && <span className="badge" style={{ color: 'var(--ember)', borderColor: 'rgba(200,94,40,0.3)' }}>DEMO</span>}
           </div>
         </div>
@@ -400,11 +400,11 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
             {/* ── Fate Level — account-wide, quiet/secondary ── */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                <span style={{ fontSize: 9, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--text-3)', textTransform: 'uppercase' }}>
                   Fate Level{' '}
-                  <span style={{ color: 'rgba(200,160,78,0.65)', fontWeight: 700, fontSize: 11 }}>{progression.fate_level}</span>
+                  <span style={{ color: 'rgba(200,160,78,0.65)', fontWeight: 700, fontSize: 12 }}>{progression.fate_level}</span>
                 </span>
-                <span style={{ fontSize: 9, color: 'var(--text-3)' }}>{progression.total_xp.toLocaleString()} xp</span>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{progression.total_xp.toLocaleString()} xp</span>
               </div>
               <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                 <div style={{
@@ -414,7 +414,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
                   transition: 'width 0.7s ease',
                 }} />
               </div>
-              <div style={{ fontSize: 8, color: 'var(--text-3)', textAlign: 'right', marginTop: 3, opacity: 0.6 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'right', marginTop: 3, opacity: 0.6 }}>
                 {progression.xp_in_current_level.toLocaleString()} / {progression.xp_to_next_level.toLocaleString()} to Lv {progression.fate_level + 1}
               </div>
             </div>
@@ -429,13 +429,13 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
               return (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, letterSpacing: '0.08em', color: 'var(--text-1)', textTransform: 'uppercase' }}>
+                    <span style={{ fontSize: 12, letterSpacing: '0.08em', color: 'var(--text-1)', textTransform: 'uppercase' }}>
                       Hero Level{' '}
                       <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--font-serif)', letterSpacing: 0 }}>{heroLv}</span>
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 600 }}>
                       {heroXp.toLocaleString()}{' '}
-                      <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 400 }}>xp</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 400 }}>xp</span>
                     </span>
                   </div>
                   <div style={{
@@ -452,7 +452,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
                       transition: 'width 0.7s ease',
                     }} />
                   </div>
-                  <div style={{ fontSize: 9, color: 'rgba(220,170,60,0.85)', textAlign: 'right', marginTop: 4 }}>
+                  <div style={{ fontSize: 11, color: 'rgba(220,170,60,0.85)', textAlign: 'right', marginTop: 4 }}>
                     {heroIn.toLocaleString()} / {heroTo.toLocaleString()} to Lv {heroLv + 1}
                   </div>
                 </div>
@@ -470,7 +470,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
             ].map((s, i) => (
               <div key={i} style={{ padding: '13px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
                 <span className="serif-bold" style={{ fontSize: 17, color: s.accent ? 'var(--gold)' : 'var(--text-1)' }}>{s.val}</span>
-                <span style={{ fontSize: 7, letterSpacing: 1.5, color: 'var(--text-3)', fontWeight: 600 }}>{s.label}</span>
+                <span style={{ fontSize: 11, letterSpacing: 1.5, color: 'var(--text-3)', fontWeight: 600 }}>{s.label}</span>
               </div>
             ))}
           </div>
@@ -486,7 +486,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
         {equippedSlots.length > 0 && (
           <>
             <div className="divider"><span className="divider-label">EQUIPPED GEAR</span></div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--border)' }}>
               {equippedSlots.map(({ slot, item }, i) => {
                 const rarity = item.rarity ?? item.rarity_tier ?? 'common';
                 const rc = RARITY_COLOR[rarity] ?? RARITY_COLOR.common;
@@ -498,10 +498,10 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
                       <p style={{ fontSize: 13, fontFamily: 'var(--font-serif)', fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {item.item_name ?? item.name ?? 'Unknown'}
                       </p>
-                      <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.1em', marginTop: 2 }}>{slot.toUpperCase()}</p>
+                      <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.1em', marginTop: 2 }}>{slot.toUpperCase()}</p>
                     </div>
                     <div style={{ flexShrink: 0, padding: '0 14px' }}>
-                      <span style={{ fontSize: 8, fontWeight: 700, letterSpacing: '0.12em', color: rc, textTransform: 'uppercase', background: `${rc}12`, border: `1px solid ${rc}30`, borderRadius: 4, padding: '2px 6px' }}>{rarity}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: rc, textTransform: 'uppercase', background: `${rc}12`, border: `1px solid ${rc}30`, borderRadius: 4, padding: '2px 6px' }}>{rarity}</span>
                     </div>
                     {(rarity === 'legendary' || rarity === 'mythic') && (
                       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: `linear-gradient(90deg, transparent 0%, ${rc}08 50%, transparent 100%)` }} />
@@ -522,18 +522,18 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
                 <div>
                   <p style={{ fontSize: 13, color: 'var(--text-1)', marginBottom: 4 }}>{bestVenue.source_name}</p>
                   <div style={{ display: 'flex', gap: 12 }}>
-                    <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{bestVenue.sessions} sessions</span>
-                    <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{bestVenue.boss_kills} boss kills</span>
-                    <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{bestVenue.xp_contributed.toLocaleString()} XP</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{bestVenue.sessions} sessions</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{bestVenue.boss_kills} boss kills</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{bestVenue.xp_contributed.toLocaleString()} XP</span>
                   </div>
                 </div>
                 {bestVenue.best_boss_pct >= 100 && (
-                  <span style={{ fontSize: 10, color: 'var(--gold)', letterSpacing: 1, border: '1px solid var(--gold-dim)', padding: '3px 8px', borderRadius: 4 }}>VEIL CLEARED</span>
+                  <span style={{ fontSize: 12, color: 'var(--gold)', letterSpacing: 1, border: '1px solid var(--gold-dim)', padding: '3px 8px', borderRadius: 4 }}>VEIL CLEARED</span>
                 )}
               </div>
               {bestVenue.best_boss_pct > 0 && (
                 <div style={{ marginTop: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 9, color: 'var(--text-3)', letterSpacing: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 11, color: 'var(--text-3)', letterSpacing: 1 }}>
                     <span>BEST RUN</span><span>{bestVenue.best_boss_pct}%</span>
                   </div>
                   <div className="xp-track" style={{ height: 3 }}>
@@ -547,7 +547,7 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
 
         {/* ── Share Fate Card */}
         <div style={{ marginTop: 28 }}>
-          <button onClick={() => setShowCard(true)} style={{ width: '100%', padding: '16px 0', background: `linear-gradient(135deg, ${ac}18, ${ac}08)`, color: ac, border: `1px solid ${ac}50`, borderRadius: 12, fontFamily: 'var(--font-serif)', fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: `0 0 20px ${ac}15` }}>
+          <button onClick={() => setShowCard(true)} style={{ width: '100%', padding: '16px 0', background: `linear-gradient(135deg, ${ac}18, ${ac}08)`, color: ac, border: `1px solid ${ac}50`, borderRadius: 'var(--radius)', fontFamily: 'var(--font-serif)', fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: `0 0 20px ${ac}15` }}>
             <span style={{ fontSize: 16 }}>◈</span> Share Fate Card
           </button>
         </div>
@@ -556,9 +556,9 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
         <div style={{ marginTop: 36, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div className="divider"><span className="divider-label">ACCOUNT</span></div>
           {onSwitchHero && (
-            <button onClick={onSwitchHero} style={{ width: '100%', padding: '13px 0', background: 'var(--surface)', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: 'var(--font-serif)', fontSize: 12, cursor: 'pointer', letterSpacing: '0.08em' }}>Switch Hero</button>
+            <button onClick={onSwitchHero} style={{ width: '100%', padding: '13px 0', background: 'var(--surface)', color: 'var(--text-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontFamily: 'var(--font-serif)', fontSize: 12, cursor: 'pointer', letterSpacing: '0.08em' }}>Switch Hero</button>
           )}
-          <button onClick={signOut} style={{ width: '100%', padding: '13px 0', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 10, fontFamily: 'var(--font-serif)', fontSize: 12, cursor: 'pointer', letterSpacing: '0.08em', opacity: 0.6 }}>Sign Out</button>
+          <button onClick={signOut} style={{ width: '100%', padding: '13px 0', background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontFamily: 'var(--font-serif)', fontSize: 12, cursor: 'pointer', letterSpacing: '0.08em', opacity: 0.6 }}>Sign Out</button>
         </div>
       </div>
       {showCard && <ShareFateCard onClose={() => setShowCard(false)} />}
@@ -579,11 +579,11 @@ function TrainingSection({ displayStreak, topStreak, pillars, activeOath, oathLo
     <>
       <div className="divider"><span className="divider-label">TRAINING</span></div>
       {displayStreak > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 12, marginBottom: 10, background: 'linear-gradient(135deg, var(--surface), rgba(255,165,0,0.06))', border: '1px solid rgba(255,165,0,0.2)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 'var(--radius)', marginBottom: 10, background: 'linear-gradient(135deg, var(--surface), rgba(255,165,0,0.06))', border: '1px solid rgba(255,165,0,0.2)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 24 }}>🔥</span>
             <div>
-              <p style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.1em', marginBottom: 2 }}>ACTIVE STREAK</p>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', letterSpacing: '0.1em', marginBottom: 2 }}>ACTIVE STREAK</p>
               <p style={{ fontSize: 22, fontWeight: 700, color: 'var(--gold)', fontFamily: 'var(--font-serif)', lineHeight: 1 }}>
                 {displayStreak} <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 400 }}>days</span>
               </p>
@@ -591,14 +591,14 @@ function TrainingSection({ displayStreak, topStreak, pillars, activeOath, oathLo
           </div>
           {topStreak && topStreak.longest_streak > 0 && (
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.08em', marginBottom: 2 }}>BEST</p>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.08em', marginBottom: 2 }}>BEST</p>
               <p style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,165,0,0.5)', fontFamily: 'var(--font-serif)' }}>{topStreak.longest_streak}</p>
             </div>
           )}
         </div>
       )}
       {pillars.length > 0 && (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 10 }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 10 }}>
           {pillars.map((p, i) => {
             const cfg = PILLAR[p.pillar] ?? PILLAR.forge;
             const total = (p.xp_in_level ?? 0) + (p.xp_to_next ?? 1);
@@ -607,9 +607,9 @@ function TrainingSection({ displayStreak, topStreak, pillars, activeOath, oathLo
               <div key={p.pillar} style={{ padding: '11px 14px', borderBottom: i < pillars.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                   <span style={{ color: cfg.color, fontSize: 12, flexShrink: 0 }}>{cfg.icon}</span>
-                  <span style={{ fontSize: 9, color: cfg.color, letterSpacing: '0.12em', fontWeight: 700, flex: 1 }}>{cfg.label} · Lv {p.level}</span>
-                  {(p.streak ?? 0) > 0 && <span style={{ fontSize: 9, color: 'var(--text-3)' }}>🔥 {p.streak}d</span>}
-                  <span style={{ fontSize: 9, color: 'var(--text-3)', fontFamily: 'monospace' }}>{p.xp_to_next.toLocaleString()} to next</span>
+                  <span style={{ fontSize: 11, color: cfg.color, letterSpacing: '0.12em', fontWeight: 700, flex: 1 }}>{cfg.label} · Lv {p.level}</span>
+                  {(p.streak ?? 0) > 0 && <span style={{ fontSize: 11, color: 'var(--text-3)' }}>🔥 {p.streak}d</span>}
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'monospace' }}>{p.xp_to_next.toLocaleString()} to next</span>
                 </div>
                 <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
                   <div style={{ height: '100%', width: `${pct}%`, background: cfg.color, borderRadius: 2, transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)' }} />
@@ -621,9 +621,9 @@ function TrainingSection({ displayStreak, topStreak, pillars, activeOath, oathLo
       )}
       {activeOath && <OathCard oath={activeOath} remaining={remaining} />}
       {!activeOath && oathLoaded && (
-        <div style={{ padding: '11px 14px', borderRadius: 10, background: 'rgba(255,165,0,0.04)', border: '1px solid rgba(255,165,0,0.1)', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <div style={{ padding: '11px 14px', borderRadius: 'var(--radius)', background: 'rgba(255,165,0,0.04)', border: '1px solid rgba(255,165,0,0.1)', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <span style={{ fontSize: 14, opacity: 0.4 }}>◈</span>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.5 }}>No active oath — declare one in <span style={{ color: 'var(--gold)' }}>Training → Oath</span>.</p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>No active oath — declare one in <span style={{ color: 'var(--gold)' }}>Training → Oath</span>.</p>
         </div>
       )}
     </>
@@ -633,20 +633,20 @@ function TrainingSection({ displayStreak, topStreak, pillars, activeOath, oathLo
 function OathCard({ oath, remaining }: { oath: Oath; remaining: number }) {
   const cfg = PILLAR[oath.pillar] ?? PILLAR.forge;
   return (
-    <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 4, border: `1px solid ${cfg.color}35`, background: `linear-gradient(135deg, var(--surface) 60%, ${cfg.color}08)` }}>
+    <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 4, border: `1px solid ${cfg.color}35`, background: `linear-gradient(135deg, var(--surface) 60%, ${cfg.color}08)` }}>
       <div style={{ height: 2, background: `linear-gradient(90deg, ${cfg.color}, transparent)` }} />
       <div style={{ padding: '13px 15px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <span style={{ color: cfg.color, fontSize: 13 }}>{cfg.icon}</span>
-            <span style={{ fontSize: 9, color: cfg.color, letterSpacing: '0.14em', fontWeight: 700 }}>ACTIVE OATH · {cfg.label}</span>
+            <span style={{ fontSize: 11, color: cfg.color, letterSpacing: '0.14em', fontWeight: 700 }}>ACTIVE OATH · {cfg.label}</span>
           </div>
-          <span style={{ fontSize: 9, color: 'var(--text-3)', fontFamily: 'monospace' }}>{formatDDHH(remaining)} left</span>
+          <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'monospace' }}>{formatDDHH(remaining)} left</span>
         </div>
         <p style={{ fontSize: 13, color: 'var(--text-1)', lineHeight: 1.6, fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}>"{oath.declaration}"</p>
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-          <span style={{ fontSize: 9, color: '#8AB06A', background: 'rgba(106,138,90,0.1)', border: '1px solid rgba(106,138,90,0.2)', borderRadius: 6, padding: '3px 8px' }}>+200 XP if kept</span>
-          <span style={{ fontSize: 9, color: 'var(--ember)', background: 'rgba(200,94,40,0.06)', border: '1px solid rgba(200,94,40,0.15)', borderRadius: 6, padding: '3px 8px' }}>−50 XP debt if broken</span>
+          <span style={{ fontSize: 11, color: '#8AB06A', background: 'rgba(106,138,90,0.1)', border: '1px solid rgba(106,138,90,0.2)', borderRadius: 6, padding: '3px 8px' }}>+200 XP if kept</span>
+          <span style={{ fontSize: 11, color: 'var(--ember)', background: 'rgba(200,94,40,0.06)', border: '1px solid rgba(200,94,40,0.15)', borderRadius: 6, padding: '3px 8px' }}>−50 XP debt if broken</span>
         </div>
       </div>
     </div>

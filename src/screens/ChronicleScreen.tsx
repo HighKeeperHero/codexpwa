@@ -61,7 +61,7 @@ export function ChronicleScreen() {
   ];
 
   return (
-    <div style={{ padding: '0 0 80px' }}>
+    <div className="screen-enter" style={{ padding: '0 0 80px' }}>
       {/* Sticky section nav */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg)', paddingTop: 'env(safe-area-inset-top)' }}>
         <div style={{ display: 'flex', gap: 6, padding: '14px 16px 12px' }}>
@@ -73,13 +73,13 @@ export function ChronicleScreen() {
                 background: active ? alignColor : 'var(--surface)',
                 color: active ? '#0B0F1A' : 'var(--text-3)',
                 border: `1px solid ${active ? alignColor : 'var(--border)'}`,
-                borderRadius: 8, fontFamily: 'Cinzel, serif', fontSize: 10,
+                borderRadius: 8, fontFamily: 'Cinzel, serif', fontSize: 12,
                 fontWeight: 700, letterSpacing: '0.04em', cursor: 'pointer',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
               }}>
                 <span>{label}</span>
                 {count != null && count > 0 && (
-                  <span style={{ fontSize: 9, background: active ? 'rgba(0,0,0,0.2)' : alignColor, color: '#0B0F1A', borderRadius: 999, padding: '1px 5px', fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: 11, background: active ? 'rgba(0,0,0,0.2)' : alignColor, color: '#0B0F1A', borderRadius: 999, padding: '1px 5px', fontFamily: 'monospace' }}>
                     {count}
                   </span>
                 )}
@@ -97,7 +97,7 @@ export function ChronicleScreen() {
             {narrative && <LoreExcerpt rootId={hero.root_id} narrative={narrative} alignColor={alignColor} />}
             {narrative && <NarrativeCard narrative={narrative} alignColor={alignColor} />}
             {prog.equipped_title && (
-              <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}60`, borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}60`, borderRadius: 'var(--radius)', padding: '12px 14px' }}>
                 <Label>Sworn Title</Label>
                 <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: alignColor, margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   {prog.equipped_title.replace(/^title_/, '').replace(/_/g, ' ')}
@@ -105,12 +105,12 @@ export function ChronicleScreen() {
               </div>
             )}
             {markers.length > 0 && (
-              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
                 <Label>Fate Markers</Label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {markers.map((m: string, i: number) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                      <span style={{ color: alignColor, fontSize: 10, flexShrink: 0, marginTop: 2 }}>◇</span>
+                      <span style={{ color: alignColor, fontSize: 12, flexShrink: 0, marginTop: 2 }}>◇</span>
                       <p style={{ fontSize: 12, color: 'rgba(240,237,230,0.7)', margin: 0, lineHeight: 1.5, fontStyle: 'italic' }}>"{m}"</p>
                     </div>
                   ))}
@@ -123,7 +123,7 @@ export function ChronicleScreen() {
         {/* ── POWER (modifiers) */}
         {section === 'modifiers' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
               <Label>Active Loadout</Label>
               {hero.gear?.equipment ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -131,8 +131,8 @@ export function ChronicleScreen() {
                     const item = (hero.gear!.equipment as any)[slot];
                     return item ? (
                       <div key={slot} style={{ background: 'rgba(240,237,230,0.05)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ fontSize: 11 }}>{item.icon ?? '⚔'}</span>
-                        <p style={{ fontSize: 10, color: 'var(--text-2)', margin: 0, fontFamily: 'Cinzel, serif', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{slot}</p>
+                        <span style={{ fontSize: 12 }}>{item.icon ?? '⚔'}</span>
+                        <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, fontFamily: 'Cinzel, serif', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{slot}</p>
                       </div>
                     ) : null;
                   })}
@@ -143,7 +143,7 @@ export function ChronicleScreen() {
             </div>
 
             {hasModifiers ? (
-              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
                 <Label>Gear Modifiers</Label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {Object.entries(modifiers!).map(([key, val]) => {
@@ -188,7 +188,7 @@ export function ChronicleScreen() {
 // ── Sub-components ────────────────────────────────────────────
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', margin: '0 0 10px' }}>
+    <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', margin: '0 0 10px' }}>
       {children}
     </p>
   );
@@ -199,14 +199,14 @@ function TierCard({ tier, hero, alignColor }: { tier: any; hero: any; alignColor
   const pct = xpProgress(prog);
   const label = ALIGNMENT_LABEL[hero.alignment] ?? hero.alignment;
   return (
-    <div style={{ background: `linear-gradient(135deg, var(--surface), ${tier.color}12)`, border: `1px solid ${tier.color}60`, borderRadius: 12, padding: '16px 14px', boxShadow: `0 0 20px ${tier.color}18` }}>
+    <div style={{ background: `linear-gradient(135deg, var(--surface), ${tier.color}12)`, border: `1px solid ${tier.color}60`, borderRadius: 'var(--radius)', padding: '16px 14px', boxShadow: `0 0 20px ${tier.color}18` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <div style={{ width: 48, height: 48, flexShrink: 0, background: `radial-gradient(circle, ${tier.color}30 0%, transparent 70%)`, border: `2px solid ${tier.color}`, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 18, fontWeight: 700, color: tier.color }}>
+        <div style={{ width: 48, height: 48, flexShrink: 0, background: `radial-gradient(circle, ${tier.color}30 0%, transparent 70%)`, border: `2px solid ${tier.color}`, borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 18, fontWeight: 700, color: tier.color }}>
           {prog.fate_level}
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ fontFamily: 'Cinzel, serif', fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>{hero.display_name}</p>
-          <p style={{ fontSize: 11, color: alignColor, margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>{label} · {tier.name}</p>
+          <p style={{ fontSize: 12, color: alignColor, margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>{label} · {tier.name}</p>
         </div>
       </div>
       <div style={{ marginBottom: 6 }}>
@@ -215,10 +215,10 @@ function TierCard({ tier, hero, alignColor }: { tier: any; hero: any; alignColor
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0, fontFamily: 'monospace' }}>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, fontFamily: 'monospace' }}>
           {prog.xp_in_current_level.toLocaleString()} / {prog.xp_to_next_level.toLocaleString()} XP
         </p>
-        <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0, fontFamily: 'monospace' }}>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, fontFamily: 'monospace' }}>
           {prog.sessions_completed} sessions
         </p>
       </div>
@@ -250,7 +250,7 @@ function LoreExcerpt({ rootId, narrative, alignColor }: { rootId: string; narrat
 
   if (loading) {
     return (
-      <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}25`, borderRadius: 12, padding: '16px 14px', overflow: 'hidden', position: 'relative' }}>
+      <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}25`, borderRadius: 'var(--radius)', padding: '16px 14px', overflow: 'hidden', position: 'relative' }}>
         <style>{`@keyframes lore-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }`}</style>
         {[100, 88, 94, 60].map((w, i) => (
           <div key={i} style={{ height: 11, width: `${w}%`, borderRadius: 4, marginBottom: i < 3 ? 10 : 0, background: `linear-gradient(90deg, rgba(240,237,230,0.04) 0%, rgba(240,237,230,0.10) 40%, rgba(240,237,230,0.04) 80%)`, backgroundSize: '800px 100%', animation: `lore-shimmer 1.6s ${i * 0.1}s infinite linear` }} />
@@ -261,12 +261,12 @@ function LoreExcerpt({ rootId, narrative, alignColor }: { rootId: string; narrat
   if (!lore) return null;
 
   return (
-    <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}40`, borderRadius: 12, padding: '16px 14px', boxShadow: `0 0 24px ${alignColor}0a`, position: 'relative', overflow: 'hidden' }}>
+    <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}40`, borderRadius: 'var(--radius)', padding: '16px 14px', boxShadow: `0 0 24px ${alignColor}0a`, position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${alignColor}60, transparent)` }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <span style={{ color: alignColor, fontSize: 11 }}>◈</span>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: `${alignColor}99`, letterSpacing: '0.18em', textTransform: 'uppercase', margin: 0 }}>Fate Chronicle — First Entry</p>
-        <span style={{ marginLeft: 'auto', fontSize: 8, letterSpacing: '0.1em', color: 'rgba(240,237,230,0.2)', fontFamily: 'Cinzel, serif', textTransform: 'uppercase' }}>AI · Unique</span>
+        <span style={{ color: alignColor, fontSize: 12 }}>◈</span>
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: `${alignColor}99`, letterSpacing: '0.18em', textTransform: 'uppercase', margin: 0 }}>Fate Chronicle — First Entry</p>
+        <span style={{ marginLeft: 'auto', fontSize: 11, letterSpacing: '0.1em', color: 'rgba(240,237,230,0.2)', fontFamily: 'Cinzel, serif', textTransform: 'uppercase' }}>AI · Unique</span>
       </div>
       <p style={{ fontFamily: 'Georgia, serif', fontSize: 13, fontStyle: 'italic', color: 'rgba(240,237,230,0.80)', lineHeight: 1.75, margin: 0, letterSpacing: '0.01em' }}>
         {lore}
@@ -286,12 +286,12 @@ function NarrativeCard({ narrative, alignColor }: { narrative: any; alignColor: 
     { label: 'Vice',   value: narrative.vice   },
   ];
   return (
-    <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}40`, borderRadius: 12, padding: '14px 14px', boxShadow: `0 0 16px ${alignColor}10` }}>
+    <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}40`, borderRadius: 'var(--radius)', padding: '14px 14px', boxShadow: `0 0 16px ${alignColor}10` }}>
       <Label>Fate Codex</Label>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {rows.map(({ label, value }) => value ? (
           <div key={label} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0, minWidth: 52, paddingTop: 1 }}>{label}</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0, minWidth: 52, paddingTop: 1 }}>{label}</p>
             <p style={{ fontSize: 12, color: 'var(--text-1)', margin: 0, lineHeight: 1.4, flex: 1 }}>{value}</p>
           </div>
         ) : null)}
@@ -311,10 +311,10 @@ function ModifierBar({ label, value, pct, isPositive }: {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <p style={{ fontSize: 11, color: 'var(--text-2)', margin: 0, fontFamily: 'Cinzel, serif', letterSpacing: '0.05em' }}>
+        <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, fontFamily: 'Cinzel, serif', letterSpacing: '0.05em' }}>
           {label}
         </p>
-        <p style={{ fontFamily: 'monospace', fontSize: 11, color: barColor, fontWeight: 700, margin: 0 }}>
+        <p style={{ fontFamily: 'monospace', fontSize: 12, color: barColor, fontWeight: 700, margin: 0 }}>
           {sign}{value}%
         </p>
       </div>
@@ -336,19 +336,19 @@ function VenueCard({ venue, alignColor }: { venue: any; alignColor: string }) {
   ].filter(s => s.value != null && s.value !== 0);
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 14px' }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
         <div style={{ width: 36, height: 36, flexShrink: 0, background: `${alignColor}20`, border: `1px solid ${alignColor}60`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: alignColor }}>◈</div>
         <div style={{ flex: 1 }}>
           <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>
             {venue.source_name ?? venue.source_id}
           </p>
-          {lastDate && <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0 }}>Last visit {lastDate}</p>}
+          {lastDate && <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>Last visit {lastDate}</p>}
         </div>
         {venue.best_boss_pct > 0 && (
           <div style={{ flexShrink: 0, textAlign: 'right' }}>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700, color: 'var(--gold)', margin: '0 0 1px' }}>{venue.best_boss_pct}%</p>
-            <p style={{ fontSize: 9, color: 'var(--text-3)', margin: 0 }}>best boss</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: 'var(--gold)', margin: '0 0 1px' }}>{venue.best_boss_pct}%</p>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>best boss</p>
           </div>
         )}
       </div>
@@ -357,7 +357,7 @@ function VenueCard({ venue, alignColor }: { venue: any; alignColor: string }) {
           {stats.map(({ label, value }) => (
             <div key={label} style={{ flex: 1, background: 'rgba(240,237,230,0.04)', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
               <p style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: alignColor, margin: '0 0 2px' }}>{value}</p>
-              <p style={{ fontSize: 9, color: 'var(--text-3)', margin: 0, fontFamily: 'Cinzel, serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, fontFamily: 'Cinzel, serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
             </div>
           ))}
         </div>
@@ -375,14 +375,14 @@ function EventCard({ event, alignColor }: { event: any; alignColor: string }) {
   if (event.changes?.reward_name) detail.push(String(event.changes.reward_name));
   if (event.changes?.reward_rarity) detail.push(String(event.changes.reward_rarity));
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
       <div style={{ width: 28, height: 28, flexShrink: 0, background: `${alignColor}18`, border: `1px solid ${alignColor}40`, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: alignColor }}>
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 12, color: 'var(--text-1)', margin: '0 0 2px', textTransform: 'capitalize' }}>{label}</p>
-        {detail.length > 0 && <p style={{ fontSize: 11, color: 'var(--gold)', margin: '0 0 2px', fontWeight: 700 }}>{detail.join(' · ')}</p>}
-        {timeStr && <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0 }}>{timeStr}</p>}
+        {detail.length > 0 && <p style={{ fontSize: 12, color: 'var(--gold)', margin: '0 0 2px', fontWeight: 700 }}>{detail.join(' · ')}</p>}
+        {timeStr && <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>{timeStr}</p>}
       </div>
     </div>
   );
