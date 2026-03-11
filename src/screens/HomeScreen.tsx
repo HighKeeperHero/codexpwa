@@ -370,11 +370,11 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
 
         {/* ── Identity */}
         <div style={{ marginBottom: 28 }}>
-          <h1 className="serif-bold" style={{ fontSize: 34, color: 'var(--text-1)', letterSpacing: 0.5, lineHeight: 1.1, marginBottom: topTitle ? 6 : 16, textAlign: 'center' }}>
+          <h1 className="serif-bold" style={{ fontSize: 42, color: 'var(--text-1)', letterSpacing: 0.5, lineHeight: 1.1, marginBottom: topTitle ? 6 : 16, textAlign: 'center' }}>
             {hero.display_name}
           </h1>
           {topTitle && (
-            <p className="serif" style={{ fontSize: 13, color: 'var(--gold-dim)', fontStyle: 'italic', marginBottom: 14, textAlign: 'center' }}>{topTitle.title_name}</p>
+            <p className="serif" style={{ fontSize: 15, color: 'var(--gold-dim)', fontStyle: 'italic', marginBottom: 14, textAlign: 'center' }}>{topTitle.title_name}</p>
           )}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 22, justifyContent: 'center' }}>
             <span className="badge" style={{ color: ac, borderColor: `${ac}45`, background: `${ac}10` }}>
@@ -472,6 +472,13 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
           </div>
         </div>
 
+        {/* ── Share Fate Card */}
+        <div style={{ marginBottom: 4 }}>
+          <button onClick={() => setShowCard(true)} style={{ width: '100%', padding: '10px 0', background: `linear-gradient(135deg, ${ac}18, ${ac}08)`, color: ac, border: `1px solid ${ac}50`, borderRadius: 'var(--radius)', fontFamily: 'var(--font-serif)', fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: `0 0 20px ${ac}15` }}>
+            <span style={{ fontSize: 14 }}>◈</span> Share Fate Card
+          </button>
+        </div>
+
         {/* ── Veil Activity (appears once there's history) */}
         <VeilActivitySection />
 
@@ -540,13 +547,6 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
             </div>
           </>
         )}
-
-        {/* ── Share Fate Card */}
-        <div style={{ marginTop: 28 }}>
-          <button onClick={() => setShowCard(true)} style={{ width: '100%', padding: '16px 0', background: `linear-gradient(135deg, ${ac}18, ${ac}08)`, color: ac, border: `1px solid ${ac}50`, borderRadius: 'var(--radius)', fontFamily: 'var(--font-serif)', fontSize: 12, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: `0 0 20px ${ac}15` }}>
-            <span style={{ fontSize: 16 }}>◈</span> Share Fate Card
-          </button>
-        </div>
 
         {/* ── Account */}
         <div style={{ marginTop: 36, display: 'flex', flexDirection: 'column', gap: 8 }}>
