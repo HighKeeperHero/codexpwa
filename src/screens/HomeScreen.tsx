@@ -337,6 +337,7 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
   const bestVenue = source_progression.filter((s: any) => (s.source_type ?? 'venue') === 'venue').length > 0
     ? source_progression.filter((s: any) => (s.source_type ?? 'venue') === 'venue').reduce((a: any, b: any) => a.xp_contributed > b.xp_contributed ? a : b)
     : null;
+  const platformSource = source_progression.find((s: any) => s.source_type === 'platform') ?? null;
   const activeOath   = oath?.status === 'pending' ? oath : null;
   const weekEndMs    = getWeekEndUTC();
   const equipment    = hero.gear?.equipment ?? {};
@@ -619,6 +620,35 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
                   </div>
                 </div>
               )}
+            </div>
+          </>
+        )}
+
+        {/* ── 19.3 Codex Platform Activity */}
+        {platformSource && (
+          <>
+            <div className="divider"><span className="divider-label">CODEX ACTIVITY</span></div>
+            <div className="card" style={{ padding: '14px 16px', marginBottom: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16, color: 'var(--sapphire, #1E90FF)' }}>◈</span>
+                  <p style={{ fontSize: 13, color: 'var(--text-1)', fontFamily: 'var(--font-serif)' }}>Heroes' Veritas · Codex</p>
+                </div>
+                <span style={{ fontSize: 10, color: 'var(--sapphire, #1E90FF)', letterSpacing: '0.1em', fontWeight: 700, border: '1px solid rgba(30,144,255,0.3)', padding: '2px 7px', borderRadius: 4 }}>PLATFORM</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[
+                  { label: 'PLATFORM XP',  val: (platformSource.xp_contributed ?? 0).toLocaleString(), accent: true },
+                  { label: 'SESSIONS',      val: platformSource.sessions ?? 0 },
+                  { label: 'BOSS KILLS',    val: platformSource.boss_kills ?? 0 },
+                  { label: 'BEST RUN',      val: platformSource.best_boss_pct > 0 ? `${platformSource.best_boss_pct}%` : '—' },
+                ].map(s => (
+                  <div key={s.label} style={{ background: 'rgba(30,144,255,0.05)', border: '1px solid rgba(30,144,255,0.12)', borderRadius: 8, padding: '10px 12px' }}>
+                    <p style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-serif)', color: s.accent ? 'var(--sapphire, #1E90FF)' : 'var(--text-1)', marginBottom: 2 }}>{s.val}</p>
+                    <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.12em', fontWeight: 600 }}>{s.label}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </>
         )}
