@@ -327,7 +327,9 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
   const ac        = ALIGNMENT_COLOR[hero.alignment] ?? 'var(--bronze)';
   const prog      = xpProgress(progression);
   const topTitle  = progression.titles.find((t: any) => t.title_id === progression.equipped_title) ?? (progression.titles.length > 0 ? progression.titles[0] : null);
-  const bestVenue = source_progression.length > 0 ? source_progression.reduce((a: any, b: any) => a.xp_contributed > b.xp_contributed ? a : b) : null;
+  const bestVenue = source_progression.filter((s: any) => (s.source_type ?? 'venue') === 'venue').length > 0
+    ? source_progression.filter((s: any) => (s.source_type ?? 'venue') === 'venue').reduce((a: any, b: any) => a.xp_contributed > b.xp_contributed ? a : b)
+    : null;
   const activeOath   = oath?.status === 'pending' ? oath : null;
   const weekEndMs    = getWeekEndUTC();
   const equipment    = hero.gear?.equipment ?? {};

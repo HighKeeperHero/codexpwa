@@ -42,7 +42,7 @@ export interface SourceLink {
 }
 
 export interface SourceProgression {
-  source_id: string; source_name: string; sessions: number;
+  source_id: string; source_name: string; source_type: string; sessions: number;
   xp_contributed: number; boss_kills: number; best_boss_pct: number;
   caches_granted: number; gear_acquired: number;
   first_activity: string; last_activity: string;
@@ -487,7 +487,7 @@ export const MOCK_HEROES: Hero[] = [{
   },
   gear: null, fate_caches: [],
   sources: [{ source_id: 'hv-001', source_name: "Heroes' Veritas — Venue 01", linked_at: '2025-01-01T00:00:00Z', is_active: true, scope: 'xp fate_markers titles' }],
-  source_progression: [{ source_id: 'hv-001', source_name: "Heroes' Veritas — Venue 01", sessions: 14, xp_contributed: 3200, boss_kills: 8, best_boss_pct: 80, caches_granted: 12, gear_acquired: 5, first_activity: '2025-01-01T00:00:00Z', last_activity: '2025-03-01T00:00:00Z' }],
+  source_progression: [{ source_id: 'hv-001', source_name: "Heroes' Veritas — Venue 01", source_type: 'venue', sessions: 14, xp_contributed: 3200, boss_kills: 8, best_boss_pct: 80, caches_granted: 12, gear_acquired: 5, first_activity: '2025-01-01T00:00:00Z', last_activity: '2025-03-01T00:00:00Z' }],
   wearable: null,
   recent_events: [
     { event_id: 'e1', event_type: 'progression.xp_granted', payload: { xp: 150 }, changes: null, ts: '2025-03-05T10:00:00Z', source_id: 'hv-001' },
