@@ -370,20 +370,17 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
 
         {/* ── Identity */}
         <div style={{ marginBottom: 28 }}>
-          <h1 className="serif-bold" style={{ fontSize: 34, color: 'var(--text-1)', letterSpacing: 0.5, lineHeight: 1.1, marginBottom: topTitle ? 6 : 16 }}>
+          <h1 className="serif-bold" style={{ fontSize: 34, color: 'var(--text-1)', letterSpacing: 0.5, lineHeight: 1.1, marginBottom: topTitle ? 6 : 16, textAlign: 'center' }}>
             {hero.display_name}
           </h1>
           {topTitle && (
-            <p className="serif" style={{ fontSize: 13, color: 'var(--gold-dim)', fontStyle: 'italic', marginBottom: 14 }}>{topTitle.title_name}</p>
+            <p className="serif" style={{ fontSize: 13, color: 'var(--gold-dim)', fontStyle: 'italic', marginBottom: 14, textAlign: 'center' }}>{topTitle.title_name}</p>
           )}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 22 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 22, justifyContent: 'center' }}>
             <span className="badge" style={{ color: ac, borderColor: `${ac}45`, background: `${ac}10` }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: ac, display: 'inline-block' }} />
               {ALIGNMENT_LABEL[hero.alignment] ?? hero.alignment}
             </span>
-            {sources.length > 0 && (
-              <span className="badge">{sources.filter((s: any) => s.is_active).length} VENUE{sources.filter((s: any) => s.is_active).length !== 1 ? 'S' : ''}</span>
-            )}
             {isInSession && (
               <span className="badge" style={{ color: '#34d399', borderColor: 'rgba(52,211,153,0.4)', background: 'rgba(52,211,153,0.08)', animation: 'none' }}>
                 <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d399', display: 'inline-block', boxShadow: '0 0 5px #34d399' }} /> IN SESSION
@@ -392,7 +389,6 @@ export function HomeScreen({ onSwitchHero }: { onSwitchHero?: () => void }) {
             {!isInSession && wearable?.status && (
               <span className="badge" style={{ color: 'var(--gold)', borderColor: 'var(--gold-dim)', background: 'var(--gold-glow)' }}>⌚ WRISTBAND</span>
             )}
-            {hero.gear && <span className="badge" style={{ color: 'var(--bronze-hi)', borderColor: 'rgba(154,114,72,0.3)' }}>⚔ GEARED</span>}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 4 }}>
