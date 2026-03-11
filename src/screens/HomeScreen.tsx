@@ -593,6 +593,13 @@ function TrainingSection({ displayStreak, topStreak, pillars, activeOath, oathLo
           )}
         </div>
       )}
+      {activeOath && <OathCard oath={activeOath} remaining={remaining} />}
+      {!activeOath && oathLoaded && (
+        <div style={{ padding: '11px 14px', borderRadius: 'var(--radius)', background: 'rgba(255,165,0,0.04)', border: '1px solid rgba(255,165,0,0.1)', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <span style={{ fontSize: 14, opacity: 0.4 }}>◈</span>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>No active oath — declare one in <span style={{ color: 'var(--gold)' }}>Training → Oath</span>.</p>
+        </div>
+      )}
       {pillars.length > 0 && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginBottom: 10 }}>
           {pillars.map((p, i) => {
@@ -613,13 +620,6 @@ function TrainingSection({ displayStreak, topStreak, pillars, activeOath, oathLo
               </div>
             );
           })}
-        </div>
-      )}
-      {activeOath && <OathCard oath={activeOath} remaining={remaining} />}
-      {!activeOath && oathLoaded && (
-        <div style={{ padding: '11px 14px', borderRadius: 'var(--radius)', background: 'rgba(255,165,0,0.04)', border: '1px solid rgba(255,165,0,0.1)', display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <span style={{ fontSize: 14, opacity: 0.4 }}>◈</span>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>No active oath — declare one in <span style={{ color: 'var(--gold)' }}>Training → Oath</span>.</p>
         </div>
       )}
     </>
