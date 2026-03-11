@@ -120,7 +120,9 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
 
             {/* Existing heroes */}
             {heroes.map((h, i) => {
-              const tier = TIER_FOR_LEVEL(h.fate_level);
+              const heroLevel = h.hero_level ?? h.fate_level ?? 1;
+              const fateLevel = h.fate_level ?? heroLevel;
+              const tier = TIER_FOR_LEVEL(fateLevel);
               const ac   = ALIGNMENT_COLOR[h.fate_alignment] ?? 'var(--gold)';
               const al   = ALIGNMENT_LABEL[h.fate_alignment] ?? null;
               const alignIcon = h.fate_alignment === 'ORDER' ? '⚖' : h.fate_alignment === 'CHAOS' ? '🜲' : h.fate_alignment === 'LIGHT' ? '☀' : h.fate_alignment === 'DARK' ? '☽' : '◈';
@@ -154,7 +156,9 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
                     <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
                       <span style={{ fontSize:10, color:tier.color, fontWeight:700 }}>{tier.name}</span>
                       <span style={{ fontSize:9, color:'var(--text-3)' }}>·</span>
-                      <span style={{ fontSize:10, color:'var(--text-3)' }}>Level {h.fate_level}</span>
+                      <span style={{ fontSize:10, color:'var(--text-3)' }}>Hero Lv <span style={{ color:'var(--text-1)', fontWeight:700 }}>{heroLevel}</span></span>
+                      <span style={{ fontSize:9, color:'var(--text-3)' }}>·</span>
+                      <span style={{ fontSize:10, color:'var(--text-3)' }}>Fate Lv <span style={{ color:tier.color, fontWeight:700 }}>{fateLevel}</span></span>
                       {al && al !== 'NONE' && (
                         <>
                           <span style={{ fontSize:9, color:'var(--text-3)' }}>·</span>
