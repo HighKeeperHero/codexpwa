@@ -20,6 +20,8 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
   const [loading,    setLoading]    = useState(false);
   const [selecting,  setSelecting]  = useState<string | null>(null);
   const [entered,    setEntered]    = useState(false);
+  // hero_level is not in the list endpoint — fetch detail per hero to get accurate levels
+  const [heroDetails, setHeroDetails] = useState<Record<string, { hero_level: number; fate_level: number }>>({});
 
   const BASE = 'https://pik-prd-production.up.railway.app';
 
@@ -28,6 +30,30 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
     const t = setTimeout(() => setEntered(true), 80);
     return () => clearTimeout(t);
   }, []);
+
+  // Fetch full detail for each hero once the list loads
+  useEffect(() => {
+    if (!heroes.length) return;
+    heroes.forEach(h => {
+      fetch(`${BASE}/api/users/${h.root_id}`)
+        .then(r => r.json())
+        .then(json => {
+          const d = json?.data?.data ?? json?.data ?? json;
+          const heroLevel = d?.progression?.hero_level ?? d?.hero_level ?? null;
+          const fateLevel = d?.progression?.fate_level ?? d?.fate_level ?? null;
+          if (heroLevel !== null || fateLevel !== null) {
+            setHeroDetails(prev => ({
+              ...prev,
+              [h.root_id]: {
+                hero_level: heroLevel ?? h.fate_level,
+                fate_level: fateLevel ?? h.fate_level,
+              },
+            }));
+          }
+        })
+        .catch(() => {});
+    });
+  }, [heroes.length]);
 
   // Name availability check (debounced)
   useEffect(() => {
@@ -120,8 +146,9 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
 
             {/* Existing heroes */}
             {heroes.map((h, i) => {
-              const heroLevel = h.hero_level ?? h.fate_level ?? 1;
-              const fateLevel = h.fate_level ?? heroLevel;
+              const detail    = heroDetails[h.root_id];
+              const heroLevel = detail?.hero_level ?? h.fate_level;
+              const fateLevel = detail?.fate_level ?? h.fate_level;
               const tier = TIER_FOR_LEVEL(fateLevel);
               const ac   = ALIGNMENT_COLOR[h.fate_alignment] ?? 'var(--gold)';
               const al   = ALIGNMENT_LABEL[h.fate_alignment] ?? null;
