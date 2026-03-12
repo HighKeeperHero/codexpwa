@@ -9,6 +9,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../AuthContext';
+import { TIER_FOR_LEVEL } from '../api/pik';
+import { TierLadder } from './TierLadder';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
 
@@ -18,14 +20,7 @@ function unwrap(json: any): any {
   return json;
 }
 
-// ── Adventure Tier ────────────────────────────────────────────────────────────
-function getAdventureTier(level: number): { tier: number; label: string; color: string } {
-  if (level >= 21) return { tier: 5, label: 'Champion',   color: '#A855F7' };
-  if (level >= 16) return { tier: 4, label: 'Veteran',    color: '#EF4444' };
-  if (level >= 11) return { tier: 3, label: 'Journeyman', color: '#FFA500' };
-  if (level >= 6)  return { tier: 2, label: 'Apprentice', color: '#1E90FF' };
-  return             { tier: 1, label: 'Novice',     color: '#22C55E' };
-}
+// ── Adventure Tier — uses TIER_FOR_LEVEL from pik.ts ───────────────────────────
 
 // ── Alignment materials ───────────────────────────────────────────────────────
 const ALIGNMENT_MATERIAL: Record<string, string> = {
@@ -129,7 +124,7 @@ export function VenturesScreen() {
   const rootId    = (hero as any)?.root_id ?? null;
   const alignment = (hero as any)?.fate_alignment ?? (hero as any)?.alignment ?? 'NONE';
   const heroLevel = (hero as any)?.hero_level ?? (hero as any)?.progression?.hero_level ?? 1;
-  const tier      = getAdventureTier(heroLevel);
+  const tier      = TIER_FOR_LEVEL(heroLevel);
 
   // ── Hunt acceptance — server-authoritative, localStorage as offline cache ─
   const [acceptedHunts, setAcceptedHuntsRaw] = useState<Record<string, AcceptedHunt>>(
@@ -227,7 +222,7 @@ export function VenturesScreen() {
           <span style={{ fontSize: 9, color: tier.color, letterSpacing: '0.12em', fontFamily: 'Cinzel, serif',
             fontWeight: 700, background: `${tier.color}12`, border: `1px solid ${tier.color}30`,
             borderRadius: 4, padding: '2px 7px' }}>
-            T{tier.tier} {tier.label.toUpperCase()}
+            {tier.name.toUpperCase()}
           </span>
         </div>
         <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: 2 }}>Quests · Recon · Hunts</p>
@@ -253,6 +248,7 @@ export function VenturesScreen() {
           <ReconView rootId={rootId} sessionToken={sessionToken} tier={tier} />
         </div>
         <div style={{ display: subTab === 'hunts' ? 'block' : 'none' }}>
+          <TierLadder heroLevel={heroLevel} />
           <HuntsView
             rootId={rootId} sessionToken={sessionToken}
             alignment={alignment} heroLevel={heroLevel}
@@ -260,7 +256,6 @@ export function VenturesScreen() {
             onAccept={handleHuntAccept}
             onAbandon={handleHuntAbandon}
             onTabFocus={syncActiveHunts}
-	  <TierLadder heroLevel={heroLevel} />
           />
         </div>
       </div>
@@ -272,7 +267,7 @@ export function VenturesScreen() {
 function QuestsView({ rootId, sessionToken, tier }: {
   rootId: string | null;
   sessionToken: string | null;
-  tier: ReturnType<typeof getAdventureTier>;
+  tier: ReturnType<typeof TIER_FOR_LEVEL>;
 }) {
   const [quests,  setQuests]  = useState<DailyQuest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -357,7 +352,7 @@ function QuestsView({ rootId, sessionToken, tier }: {
 
 function QuestCard({ quest, tier, onProgress, onComplete, onAbandon }: {
   quest: DailyQuest;
-  tier: ReturnType<typeof getAdventureTier>;
+  tier: ReturnType<typeof TIER_FOR_LEVEL>;
   onProgress: (q: DailyQuest) => void;
   onComplete: (q: DailyQuest) => void;
   onAbandon:  (q: DailyQuest) => void;
@@ -455,7 +450,7 @@ function QuestCard({ quest, tier, onProgress, onComplete, onAbandon }: {
 function ReconView({ rootId, sessionToken, tier }: {
   rootId: string | null;
   sessionToken: string | null;
-  tier: ReturnType<typeof getAdventureTier>;
+  tier: ReturnType<typeof TIER_FOR_LEVEL>;
 }) {
   const [missions,    setMissions]    = useState<ScoutingMission[]>([]);
   const [intel,       setIntel]       = useState<IntelCard[]>([]);
@@ -513,7 +508,7 @@ function ReconView({ rootId, sessionToken, tier }: {
 
 function ScoutingCard({ mission, tier }: {
   mission: ScoutingMission;
-  tier: ReturnType<typeof getAdventureTier>;
+  tier: ReturnType<typeof TIER_FOR_LEVEL>;
 }) {
   const [rewardOpen, setRewardOpen] = useState(false);
   const km = mission.distance_m >= 1000
