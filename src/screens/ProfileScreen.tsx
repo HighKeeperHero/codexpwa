@@ -6,6 +6,7 @@ import { VaultScreen }       from './VaultScreen';
 import { LeaderboardScreen } from './LeaderboardScreen';
 import { ChronicleScreen }   from './ChronicleScreen';
 import { TIER_FOR_LEVEL, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '../api/pik';
+import { TierBadge } from './TierBadge';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
 type Tab = 'profile' | 'rankings' | 'vault' | 'chronicle';
