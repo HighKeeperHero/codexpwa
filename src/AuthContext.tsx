@@ -254,7 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setShowAlignmentModal(false);
     if (!hero || !sessionToken) return;
     try {
-      await fetch(`${BASE}/api/account/heroes/${hero.root_id}/alignment`, {
+      await fetch(`${BASE}/api/users/${hero.root_id}/alignment`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ alignment: a }),
