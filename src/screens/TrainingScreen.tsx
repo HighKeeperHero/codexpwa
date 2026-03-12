@@ -610,6 +610,13 @@ function OathView({ oath, rootId, weekEndMs, onUpdate, showToast }: {
 
   return null;
 }
+function Skeleton() {
+  return (
+    <div style={{ minHeight:'100dvh', background:'var(--bg)', padding:'48px 20px', paddingBottom:100 }}>
+      {[1,0.7,0.5].map((op,i) => <div key={i} style={{ height:96, borderRadius:12, background:'var(--surface)', border:'1px solid var(--border)', marginBottom:12, opacity:op }} />)}
+    </div>
+  );
+}
 function ErrorState({ message }: { message: string }) {
   return (
     <div style={{ minHeight:'100dvh', background:'var(--bg)', display:'flex', alignItems:'center', justifyContent:'center', padding:40 }}>
