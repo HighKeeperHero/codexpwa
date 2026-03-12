@@ -97,11 +97,11 @@ export function ChronicleScreen() {
             <TierCard tier={tier} hero={hero} alignColor={alignColor} />
             {narrative && <LoreExcerpt rootId={hero.root_id} narrative={narrative} alignColor={alignColor} />}
             {narrative && <NarrativeCard narrative={narrative} alignColor={alignColor} />}
-            {prog.equipped_title && (
+            {(hero.equipped_title ?? prog.equipped_title) && (
               <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}60`, borderRadius: 'var(--radius)', padding: '12px 14px' }}>
                 <Label>Sworn Title</Label>
                 <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: alignColor, margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  {prog.equipped_title.replace(/^title_/, '').replace(/_/g, ' ')}
+                  {(hero.equipped_title ?? prog.equipped_title).replace(/^title_/, '').replace(/_/g, ' ')}
                 </p>
               </div>
             )}
