@@ -23,11 +23,6 @@ const ALIGNMENT_GLYPH: Record<string, string> = {
 const ALIGNMENT_LABEL: Record<string, string> = {
   ORDER: 'Order', CHAOS: 'Chaos', LIGHT: 'Light', DARK: 'Dark', NONE: 'Unaligned',
 };
-const PILLAR_CFG: Record<string, { color: string; icon: string; label: string }> = {
-  forge: { color: '#C85E28', icon: '🔥', label: 'Forge' },
-  lore:  { color: '#4A7EC8', icon: '📖', label: 'Lore'  },
-  veil:  { color: '#A855F7', icon: '⚡', label: 'Veil'  },
-};
 const DIFFICULTY_COLOR: Record<string, string> = {
   Easy: '#22C55E', Medium: '#FFA500', Hard: '#EF4444', Epic: '#A855F7',
 };
@@ -37,7 +32,7 @@ interface DailyQuest {
   quest_id: string;
   title: string;
   objective: string;
-  pillar: string;
+  category: string;
   max_progress: number;
   xp_reward: number;
   lore: string;
@@ -89,7 +84,7 @@ export function VenturesScreen() {
   ];
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 100 }}>
+    <div style={{ height: '100dvh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <style>{`
         .ven-subtab { background: none; border: none; cursor: pointer; padding: 10px 0; flex: 1;
           font-size: 9px; letter-spacing: 0.14em; font-weight: 700;
@@ -104,16 +99,17 @@ export function VenturesScreen() {
           font-weight: 700; letter-spacing: 0.06em; cursor: pointer; padding: 6px 12px;
           transition: opacity 0.15s; }
         .ven-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .ven-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px 20px 100px; }
       `}</style>
 
       {/* Header */}
-      <div style={{ padding: '48px 20px 0' }}>
+      <div style={{ padding: '48px 20px 0', flexShrink: 0 }}>
         <h2 className="serif-bold" style={{ fontSize: 26, color: 'var(--gold)', letterSpacing: '0.18em', margin: 0 }}>VENTURES</h2>
         <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.08em', marginTop: 2 }}>Quests · Recon · Hunts</p>
       </div>
 
       {/* Sub-nav */}
-      <div style={{ display: 'flex', margin: '16px 20px 0', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', margin: '16px 20px 0', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
         {subTabs.map(t => (
           <button
             key={t.id}
@@ -127,8 +123,8 @@ export function VenturesScreen() {
         ))}
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '20px 20px 0' }}>
+      {/* Scrollable content */}
+      <div className="ven-scroll">
         {subTab === 'quests' && (
           <QuestsView rootId={rootId} sessionToken={sessionToken} alignment={alignment} />
         )}
@@ -221,10 +217,9 @@ function QuestCard({ quest, onProgress, onAbandon }: {
   onAbandon:  (q: DailyQuest) => void;
 }) {
   const [rewardOpen, setRewardOpen] = useState(false);
-  const pillar  = PILLAR_CFG[quest.pillar] ?? PILLAR_CFG.forge;
   const pct     = Math.min(100, Math.round((quest.progress / quest.max_progress) * 100));
   const done    = quest.status === 'completed';
-  const baseClr = done ? '#6A8A5A' : pillar.color;
+  const accentClr = done ? '#6A8A5A' : '#FFA500';
 
   return (
     <div className="ven-card" style={{
@@ -234,27 +229,28 @@ function QuestCard({ quest, onProgress, onAbandon }: {
     }}>
       {/* Title row */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 6 }}>
-        <span style={{ fontSize: 18, flexShrink: 0 }}>{pillar.icon}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
               color: done ? '#6A8A5A' : 'var(--text-1)', margin: 0 }}>{quest.title}</p>
+            <span style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.12em',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+              borderRadius: 3, padding: '1px 6px', fontWeight: 700 }}>
+              {quest.category?.toUpperCase() ?? 'QUEST'}
+            </span>
             {done && <span style={{ fontSize: 9, color: '#6A8A5A', letterSpacing: '0.12em',
               background: 'rgba(106,138,90,0.12)', border: '1px solid rgba(106,138,90,0.3)',
               borderRadius: 3, padding: '1px 6px' }}>DONE</span>}
           </div>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '2px 0 0', lineHeight: 1.4 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '4px 0 0', lineHeight: 1.4 }}>
             {quest.objective}
           </p>
         </div>
-        <span style={{ fontSize: 9, color: pillar.color, letterSpacing: '0.1em', background: `${pillar.color}12`,
-          border: `1px solid ${pillar.color}30`, borderRadius: 3, padding: '2px 6px', flexShrink: 0,
-          fontWeight: 700 }}>{pillar.label.toUpperCase()}</span>
       </div>
 
       {/* Progress bar */}
       <div className="ven-progress-track">
-        <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${baseClr}80, ${baseClr})`,
+        <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg, ${accentClr}60, ${accentClr})`,
           borderRadius: 3, transition: 'width 0.5s ease' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -268,7 +264,7 @@ function QuestCard({ quest, onProgress, onAbandon }: {
           <button
             className="ven-btn"
             onClick={() => onProgress(quest)}
-            style={{ flex: 1, background: pillar.color, color: '#0B0A08', border: 'none' }}
+            style={{ flex: 1, background: 'var(--gold)', color: '#0B0A08', border: 'none' }}
           >
             + Progress
           </button>
