@@ -120,8 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Alignment modal trigger ─────────────────────────────────────────────────
   useEffect(() => {
     if (!hero) return;
+    const heroLevel = hero.progression.hero_level ?? hero.progression.fate_level;
     const needsAlignment =
-      hero.progression.fate_level >= 20 &&
+      heroLevel >= 20 &&
       (!hero.alignment || hero.alignment === 'NONE');
     setShowAlignmentModal(needsAlignment);
   }, [hero]);
