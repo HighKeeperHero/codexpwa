@@ -351,16 +351,35 @@ export default function VeilTearsScreen() {
     // Apply filter via Leaflet's own pane reference + tile load event.
     // getPanes().tilePane is the authoritative handle; re-apply on every
     // tileload so late-loading tiles don't reset it.
-    const applyTileFilter = () => {
-      const tp = map.getPanes().tilePane as HTMLElement | undefined;
-      if (tp) tp.style.filter = 'invert(1) hue-rotate(180deg) saturate(0.4) brightness(0.78) contrast(1.15)';
-    };
-    const tl = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    // Two-layer approach: base tiles filtered dark, label tiles filtered gold.
+    // CartoDB split layers let us control each independently.
+    map.createPane('labelsPane');
+    const labelsPane = map.getPane('labelsPane') as HTMLElement;
+    labelsPane.style.zIndex = '450'; // above tiles, below markers
+    labelsPane.style.pointerEvents = 'none';
+
+    // Base: no labels — apply dark moody filter
+    const baseTl = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter_no_labels/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap contributors © CARTO',
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
-    tl.on('tileload', applyTileFilter);
+
+    // Labels only — filter to gold/amber to match HV brand
+    const labelTl = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_matter_only_labels/{z}/{x}/{y}{r}.png', {
+      attribution: '',
+      subdomains: 'abcd',
+      maxZoom: 19,
+      pane: 'labelsPane',
+    }).addTo(map);
+
+    const applyTileFilter = () => {
+      const tp = map.getPanes().tilePane as HTMLElement | undefined;
+      if (tp) tp.style.filter = 'brightness(0.85) saturate(1.2)';
+      labelsPane.style.filter = 'sepia(1) saturate(4) hue-rotate(5deg) brightness(1.6)';
+    };
+    baseTl.on('tileload', applyTileFilter);
+    labelTl.on('tileload', applyTileFilter);
     map.on('load', applyTileFilter);
     applyTileFilter(); // also apply immediately in case pane already exists
 
