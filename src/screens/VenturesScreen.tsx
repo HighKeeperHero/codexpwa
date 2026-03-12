@@ -1,11 +1,11 @@
-// VenturesScreen.tsx — Sprint 20.3 (rev 4)
+// VenturesScreen.tsx — Sprint 20.3 (rev 5)
 // Quests · Recon · Hunts
-// - Hunt acceptance persisted via localStorage (backend persistence deferred)
-// - Sub-tabs use display:none so quest progress survives tab-switching within session
+// - Hunt progress is SERVER-DRIVEN — no client-initiated progress increments
+// - Accept/Abandon POST to backend; server state polled on mount + tab focus
+// - localStorage used as offline fallback cache only
 // - Quest complete button appears when parameters met (progress >= max_progress)
 // - Reward structure: Quests/Recon → XP + Nexus + Loot Cache | Hunts → XP + Nexus + Alignment Material
-// - Adventure Tier derived from hero_level for difficulty display
-// - No PVP objectives anywhere in this file
+// - No PVP objectives
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../AuthContext';
@@ -131,7 +131,7 @@ export function VenturesScreen() {
   const heroLevel = (hero as any)?.hero_level ?? (hero as any)?.progression?.hero_level ?? 1;
   const tier      = getAdventureTier(heroLevel);
 
-  // ── Lifted hunt acceptance — persisted via localStorage ───────────────────
+  // ── Hunt acceptance — server-authoritative, localStorage as offline cache ─
   const [acceptedHunts, setAcceptedHuntsRaw] = useState<Record<string, AcceptedHunt>>(
     () => loadAccepted(rootId)
   );
@@ -151,10 +151,47 @@ export function VenturesScreen() {
     });
   }
 
-  const handleHuntAccept  = (huntId: string) =>
+  // Poll /active on mount + whenever the Hunts tab comes into focus
+  // Merges server progress into local state — server wins on any conflict
+  const syncActiveHunts = useCallback(async () => {
+    if (!rootId) return;
+    try {
+      const res  = await fetch(`${BASE}/api/ventures/hunts/${rootId}/active`, {
+        headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {},
+      });
+      const json = await res.json();
+      const data: Record<string, AcceptedHunt> = unwrap(json) ?? {};
+      if (Object.keys(data).length > 0) {
+        setAcceptedHunts(() => data);
+      }
+    } catch { /* offline — keep localStorage cache */ }
+  }, [rootId, sessionToken]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { syncActiveHunts(); }, [syncActiveHunts]);
+
+  const handleHuntAccept = async (huntId: string) => {
+    // Optimistic local update
     setAcceptedHunts(a => ({ ...a, [huntId]: { progress: 0, status: 'active' } }));
-  const handleHuntAbandon = (huntId: string) =>
+    try {
+      await fetch(`${BASE}/api/ventures/hunts/${rootId}/${huntId}/accept`, {
+        method: 'POST',
+        headers: { ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}) },
+      });
+      // Sync to confirm server acknowledged
+      await syncActiveHunts();
+    } catch { /* keep optimistic state */ }
+  };
+
+  const handleHuntAbandon = async (huntId: string) => {
+    // Optimistic local update
     setAcceptedHunts(a => { const n = { ...a }; delete n[huntId]; return n; });
+    try {
+      await fetch(`${BASE}/api/ventures/hunts/${rootId}/${huntId}/abandon`, {
+        method: 'POST',
+        headers: { ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}) },
+      });
+    } catch { /* keep optimistic state */ }
+  };
 
   const subTabs: { id: SubTab; label: string; icon: string }[] = [
     { id: 'quests', label: 'Quests', icon: '◈' },
@@ -222,6 +259,7 @@ export function VenturesScreen() {
             accepted={acceptedHunts}
             onAccept={handleHuntAccept}
             onAbandon={handleHuntAbandon}
+            onTabFocus={syncActiveHunts}
           />
         </div>
       </div>
@@ -558,17 +596,21 @@ function IntelCardView({ card }: { card: IntelCard }) {
 }
 
 // ── HUNTS VIEW ────────────────────────────────────────────────────────────────
-function HuntsView({ rootId, sessionToken, alignment, heroLevel, accepted, onAccept, onAbandon }: {
+function HuntsView({ rootId, sessionToken, alignment, heroLevel, accepted, onAccept, onAbandon, onTabFocus }: {
   rootId: string | null;
   sessionToken: string | null;
   alignment: string;
   heroLevel: number;
   accepted: Record<string, AcceptedHunt>;
-  onAccept:  (id: string) => void;
-  onAbandon: (id: string) => void;
+  onAccept:    (id: string) => void;
+  onAbandon:   (id: string) => void;
+  onTabFocus:  () => void;
 }) {
   const [hunts,   setHunts]   = useState<Hunt[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Re-sync server progress whenever this view mounts (tab switched to Hunts)
+  useEffect(() => { onTabFocus(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isLocked    = !alignment || alignment === 'NONE';
   const levelLocked = heroLevel < 20;
