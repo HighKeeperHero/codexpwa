@@ -151,16 +151,10 @@ export function VenturesScreen() {
     });
   }
 
-  const handleHuntAccept   = (huntId: string) =>
+  const handleHuntAccept  = (huntId: string) =>
     setAcceptedHunts(a => ({ ...a, [huntId]: { progress: 0, status: 'active' } }));
-  const handleHuntAbandon  = (huntId: string) =>
+  const handleHuntAbandon = (huntId: string) =>
     setAcceptedHunts(a => { const n = { ...a }; delete n[huntId]; return n; });
-  const handleHuntProgress = (hunt: Hunt) => {
-    const cur  = acceptedHunts[hunt.hunt_id]?.progress ?? 0;
-    const next = Math.min(cur + 1, hunt.max_progress);
-    const status = next >= hunt.max_progress ? 'completed' : 'active';
-    setAcceptedHunts(a => ({ ...a, [hunt.hunt_id]: { progress: next, status } }));
-  };
 
   const subTabs: { id: SubTab; label: string; icon: string }[] = [
     { id: 'quests', label: 'Quests', icon: '◈' },
@@ -228,7 +222,6 @@ export function VenturesScreen() {
             accepted={acceptedHunts}
             onAccept={handleHuntAccept}
             onAbandon={handleHuntAbandon}
-            onProgress={handleHuntProgress}
           />
         </div>
       </div>
@@ -565,15 +558,14 @@ function IntelCardView({ card }: { card: IntelCard }) {
 }
 
 // ── HUNTS VIEW ────────────────────────────────────────────────────────────────
-function HuntsView({ rootId, sessionToken, alignment, heroLevel, accepted, onAccept, onAbandon, onProgress }: {
+function HuntsView({ rootId, sessionToken, alignment, heroLevel, accepted, onAccept, onAbandon }: {
   rootId: string | null;
   sessionToken: string | null;
   alignment: string;
   heroLevel: number;
   accepted: Record<string, AcceptedHunt>;
-  onAccept:   (id: string) => void;
-  onAbandon:  (id: string) => void;
-  onProgress: (hunt: Hunt) => void;
+  onAccept:  (id: string) => void;
+  onAbandon: (id: string) => void;
 }) {
   const [hunts,   setHunts]   = useState<Hunt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -668,7 +660,7 @@ function HuntsView({ rootId, sessionToken, alignment, heroLevel, accepted, onAcc
           {activeHunts.map(h => (
             <HuntCard key={h.hunt_id} hunt={h} alignment={alignment}
               acceptedState={accepted[h.hunt_id]}
-              onAccept={onAccept} onAbandon={onAbandon} onProgress={onProgress} />
+              onAccept={onAccept} onAbandon={onAbandon} />
           ))}
           {availableHunts.length > 0 && (
             <p className="ven-section-label" style={{ marginTop: 18 }}>AVAILABLE</p>
@@ -682,20 +674,19 @@ function HuntsView({ rootId, sessionToken, alignment, heroLevel, accepted, onAcc
         availableHunts.map(h => (
           <HuntCard key={h.hunt_id} hunt={h} alignment={alignment}
             acceptedState={undefined}
-            onAccept={onAccept} onAbandon={onAbandon} onProgress={onProgress} />
+            onAccept={onAccept} onAbandon={onAbandon} />
         ))
       )}
     </div>
   );
 }
 
-function HuntCard({ hunt, alignment, acceptedState, onAccept, onAbandon, onProgress }: {
+function HuntCard({ hunt, alignment, acceptedState, onAccept, onAbandon }: {
   hunt: Hunt;
   alignment: string;
   acceptedState: AcceptedHunt | undefined;
-  onAccept:   (id: string) => void;
-  onAbandon:  (id: string) => void;
-  onProgress: (hunt: Hunt) => void;
+  onAccept:  (id: string) => void;
+  onAbandon: (id: string) => void;
 }) {
   const [rewardOpen, setRewardOpen] = useState(false);
   const aColor     = ALIGNMENT_COLOR[alignment] ?? 'var(--text-3)';
@@ -704,7 +695,9 @@ function HuntCard({ hunt, alignment, acceptedState, onAccept, onAbandon, onProgr
   const isAccepted = acceptedState !== undefined;
   const progress   = acceptedState?.progress ?? 0;
   const done       = acceptedState?.status === 'completed';
-  const pct        = hunt.max_progress > 1 ? Math.min(100, Math.round((progress / hunt.max_progress) * 100)) : 0;
+  const pct        = hunt.max_progress > 0
+    ? Math.min(100, Math.round((progress / hunt.max_progress) * 100))
+    : 0;
 
   return (
     <div className="ven-card" style={{
@@ -712,6 +705,7 @@ function HuntCard({ hunt, alignment, acceptedState, onAccept, onAbandon, onProgr
       background:  done ? 'rgba(106,138,90,0.06)' : isAccepted ? `${aColor}06` : 'var(--surface)',
       marginBottom: 10,
     }}>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
         <div style={{ width: 40, height: 40, borderRadius: 10,
           background: `${typeCfg.color}12`, border: `1px solid ${typeCfg.color}30`,
@@ -739,20 +733,28 @@ function HuntCard({ hunt, alignment, acceptedState, onAccept, onAbandon, onProgr
         </div>
       </div>
 
-      {isAccepted && hunt.max_progress > 1 && (
+      {/* Progress — read-only, auto-tracked by backend events */}
+      {isAccepted && (
         <>
           <div className="ven-progress-track">
             <div style={{ height: '100%', width: `${pct}%`,
               background: `linear-gradient(90deg, ${(done ? '#6A8A5A' : aColor)}60, ${done ? '#6A8A5A' : aColor})`,
               borderRadius: 3, transition: 'width 0.4s ease' }} />
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{progress} / {hunt.max_progress}</span>
-            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{pct}%</span>
+            {!done && (
+              <span style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.1em',
+                fontStyle: 'italic' }}>
+                ◈ Progress tracked automatically
+              </span>
+            )}
+            {done && <span style={{ fontSize: 10, color: '#6A8A5A' }}>{pct}%</span>}
           </div>
         </>
       )}
 
+      {/* Lore */}
       <p style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic',
         lineHeight: 1.5, margin: '0 0 10px', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
         "{hunt.lore}"
@@ -777,7 +779,7 @@ function HuntCard({ hunt, alignment, acceptedState, onAccept, onAbandon, onProgr
         </div>
       )}
 
-      {/* Actions */}
+      {/* Actions — Accept or Abandon only. No manual progress. */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
         {!isAccepted && (
           <button className="ven-btn" onClick={() => onAccept(hunt.hunt_id)}
@@ -786,18 +788,10 @@ function HuntCard({ hunt, alignment, acceptedState, onAccept, onAbandon, onProgr
           </button>
         )}
         {isAccepted && !done && (
-          <>
-            {hunt.max_progress > 1 && (
-              <button className="ven-btn" onClick={() => onProgress(hunt)}
-                style={{ background: aColor, color: '#0B0A08', border: 'none' }}>
-                + Progress
-              </button>
-            )}
-            <button className="ven-btn" onClick={() => onAbandon(hunt.hunt_id)}
-              style={{ background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
-              Abandon
-            </button>
-          </>
+          <button className="ven-btn" onClick={() => onAbandon(hunt.hunt_id)}
+            style={{ background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+            Abandon
+          </button>
         )}
         {done && (
           <span style={{ fontSize: 11, color: '#6A8A5A', fontFamily: 'Cinzel, serif',
