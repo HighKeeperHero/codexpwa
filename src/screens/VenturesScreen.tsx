@@ -61,7 +61,9 @@ interface Hunt {
   hunt_id: string;
   title: string;
   objective: string;
+  type: 'veil_tear' | 'component' | 'enemy';
   difficulty: string;
+  max_progress: number;
   xp_reward: number;
   lore: string;
   icon: string;
@@ -452,8 +454,10 @@ function IntelCardView({ card }: { card: IntelCard }) {
 
 // ── HUNTS VIEW ────────────────────────────────────────────────────────────────
 function HuntsView({ rootId, sessionToken, alignment }: { rootId: string | null; sessionToken: string | null; alignment: string }) {
-  const [hunts,   setHunts]   = useState<Hunt[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [hunts,    setHunts]    = useState<Hunt[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  // accepted: Record<hunt_id, progress>
+  const [accepted, setAccepted] = useState<Record<string, number>>({});
 
   const isLocked = !alignment || alignment === 'NONE';
   const aColor   = ALIGNMENT_COLOR[alignment] ?? 'var(--text-3)';
@@ -467,12 +471,19 @@ function HuntsView({ rootId, sessionToken, alignment }: { rootId: string | null;
       .then(r => r.json())
       .then(json => {
         const d = unwrap(json);
-        // d is Record<alignment, Hunt[]> — pick current alignment
         setHunts(Array.isArray(d?.[alignment]) ? d[alignment] : []);
       })
       .catch(() => setHunts([]))
       .finally(() => setLoading(false));
   }, [rootId, alignment, isLocked]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleAccept  = (huntId: string) => setAccepted(a => ({ ...a, [huntId]: 0 }));
+  const handleAbandon = (huntId: string) => setAccepted(a => { const n = { ...a }; delete n[huntId]; return n; });
+  const handleProgress = (hunt: Hunt) => {
+    const cur  = accepted[hunt.hunt_id] ?? 0;
+    const next = Math.min(cur + 1, hunt.max_progress);
+    setAccepted(a => ({ ...a, [hunt.hunt_id]: next }));
+  };
 
   // ── Lock screen ────────────────────────────────────────────────────────────
   if (isLocked) {
@@ -520,6 +531,11 @@ function HuntsView({ rootId, sessionToken, alignment }: { rootId: string | null;
 
   if (loading) return <QuestSkeleton />;
 
+  const activeHunts  = hunts.filter(h => hunt_id(h) in accepted);
+  const availableHunts = hunts.filter(h => !(hunt_id(h) in accepted));
+
+  function hunt_id(h: Hunt) { return h.hunt_id; }
+
   return (
     <div className="venture-enter">
       {/* Alignment banner */}
@@ -533,57 +549,166 @@ function HuntsView({ rootId, sessionToken, alignment }: { rootId: string | null;
             {alignment} HUNTS
           </p>
           <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>
-            Exclusive to the {ALIGNMENT_LABEL[alignment]} faction
+            Seal rifts · Collect components · Defeat enemies
           </p>
         </div>
       </div>
 
-      {hunts.length === 0 ? (
+      {/* Active hunts section */}
+      {activeHunts.length > 0 && (
+        <>
+          <p style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.14em',
+            fontWeight: 700, margin: '0 0 10px' }}>ACTIVE HUNTS</p>
+          {activeHunts.map(h => (
+            <HuntCard
+              key={h.hunt_id}
+              hunt={h}
+              alignment={alignment}
+              progress={accepted[h.hunt_id] ?? 0}
+              isAccepted={true}
+              onAccept={handleAccept}
+              onAbandon={handleAbandon}
+              onProgress={handleProgress}
+            />
+          ))}
+          {availableHunts.length > 0 && (
+            <p style={{ fontSize: 10, color: 'var(--text-3)', letterSpacing: '0.14em',
+              fontWeight: 700, margin: '20px 0 10px' }}>AVAILABLE</p>
+          )}
+        </>
+      )}
+
+      {availableHunts.length === 0 && activeHunts.length === 0 ? (
         <EmptyState icon={aGlyph} title="No Hunts Available" body="Alignment hunts are being generated. Check back soon." />
       ) : (
-        hunts.map(h => <HuntCard key={h.hunt_id} hunt={h} alignment={alignment} />)
+        availableHunts.map(h => (
+          <HuntCard
+            key={h.hunt_id}
+            hunt={h}
+            alignment={alignment}
+            progress={0}
+            isAccepted={false}
+            onAccept={handleAccept}
+            onAbandon={handleAbandon}
+            onProgress={handleProgress}
+          />
+        ))
       )}
     </div>
   );
 }
 
-function HuntCard({ hunt, alignment }: { hunt: Hunt; alignment: string }) {
-  const aColor = ALIGNMENT_COLOR[alignment] ?? 'var(--text-3)';
-  const dColor = DIFFICULTY_COLOR[hunt.difficulty] ?? 'var(--text-3)';
+const HUNT_TYPE_CFG: Record<string, { label: string; icon: string; color: string }> = {
+  veil_tear:  { label: 'Veil Tear',  icon: '⚡', color: '#A855F7' },
+  component:  { label: 'Component',  icon: '⬡',  color: '#1E90FF' },
+  enemy:      { label: 'Enemy',      icon: '☠',  color: '#EF4444' },
+};
+
+function HuntCard({ hunt, alignment, progress, isAccepted, onAccept, onAbandon, onProgress }: {
+  hunt: Hunt;
+  alignment: string;
+  progress: number;
+  isAccepted: boolean;
+  onAccept:   (id: string) => void;
+  onAbandon:  (id: string) => void;
+  onProgress: (hunt: Hunt) => void;
+}) {
+  const aColor  = ALIGNMENT_COLOR[alignment] ?? 'var(--text-3)';
+  const dColor  = DIFFICULTY_COLOR[hunt.difficulty] ?? 'var(--text-3)';
+  const typeCfg = HUNT_TYPE_CFG[hunt.type] ?? HUNT_TYPE_CFG.enemy;
+  const pct     = hunt.max_progress > 1 ? Math.min(100, Math.round((progress / hunt.max_progress) * 100)) : 0;
+  const done    = isAccepted && progress >= hunt.max_progress;
 
   return (
-    <div className="ven-card" style={{ borderColor: `${aColor}30`, marginBottom: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: `${aColor}12`,
-          border: `1px solid ${aColor}30`, display: 'flex', alignItems: 'center',
-          justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-          {hunt.icon}
+    <div className="ven-card" style={{
+      borderColor: done ? 'rgba(106,138,90,0.4)' : isAccepted ? aColor + '50' : 'var(--border)',
+      background: done ? 'rgba(106,138,90,0.06)' : isAccepted ? `${aColor}06` : 'var(--surface)',
+      marginBottom: 10,
+    }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10,
+          background: `${typeCfg.color}12`, border: `1px solid ${typeCfg.color}30`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18, flexShrink: 0 }}>
+          {typeCfg.icon}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 3 }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
-              color: 'var(--text-1)', margin: 0 }}>{hunt.title}</p>
+              color: done ? '#6A8A5A' : 'var(--text-1)', margin: 0 }}>{hunt.title}</p>
+            <span style={{ fontSize: 9, color: typeCfg.color, background: `${typeCfg.color}12`,
+              border: `1px solid ${typeCfg.color}30`, borderRadius: 3, padding: '1px 5px',
+              letterSpacing: '0.08em', fontWeight: 700, flexShrink: 0 }}>
+              {typeCfg.label.toUpperCase()}
+            </span>
             <span style={{ fontSize: 9, color: dColor, background: `${dColor}12`,
               border: `1px solid ${dColor}30`, borderRadius: 3, padding: '1px 5px',
               letterSpacing: '0.08em', fontWeight: 700, flexShrink: 0 }}>
               {hunt.difficulty.toUpperCase()}
             </span>
+            {done && <span style={{ fontSize: 9, color: '#6A8A5A', letterSpacing: '0.12em',
+              background: 'rgba(106,138,90,0.12)', border: '1px solid rgba(106,138,90,0.3)',
+              borderRadius: 3, padding: '1px 6px' }}>COMPLETE</span>}
           </div>
           <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, lineHeight: 1.4 }}>
             {hunt.objective}
           </p>
         </div>
       </div>
+
+      {/* Progress bar — only shown once accepted and multi-step */}
+      {isAccepted && hunt.max_progress > 1 && (
+        <>
+          <div className="ven-progress-track">
+            <div style={{ height: '100%', width: `${pct}%`,
+              background: `linear-gradient(90deg, ${done ? '#6A8A5A' : aColor}60, ${done ? '#6A8A5A' : aColor})`,
+              borderRadius: 3, transition: 'width 0.4s ease' }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{progress} / {hunt.max_progress}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{pct}%</span>
+          </div>
+        </>
+      )}
+
+      {/* Lore */}
       <p style={{ fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic',
         lineHeight: 1.5, margin: '0 0 10px', paddingTop: 8,
         borderTop: '1px solid var(--border)' }}>
         "{hunt.lore}"
       </p>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 12, color: aColor, fontWeight: 700 }}>+{hunt.xp_reward} XP</span>
-        <button className="ven-btn" style={{ background: aColor, color: '#0B0A08', border: 'none' }}>
-          Begin Hunt
-        </button>
+
+      {/* Footer — reward + actions */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <span style={{ fontSize: 12, color: aColor, fontWeight: 700, flexShrink: 0 }}>+{hunt.xp_reward} XP</span>
+        {!isAccepted && (
+          <button className="ven-btn"
+            onClick={() => onAccept(hunt.hunt_id)}
+            style={{ background: aColor, color: '#0B0A08', border: 'none' }}>
+            Accept Hunt
+          </button>
+        )}
+        {isAccepted && !done && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            {hunt.max_progress > 1 && (
+              <button className="ven-btn"
+                onClick={() => onProgress(hunt)}
+                style={{ background: aColor, color: '#0B0A08', border: 'none' }}>
+                + Progress
+              </button>
+            )}
+            <button className="ven-btn"
+              onClick={() => onAbandon(hunt.hunt_id)}
+              style={{ background: 'transparent', color: 'var(--text-3)', border: '1px solid var(--border)' }}>
+              Abandon
+            </button>
+          </div>
+        )}
+        {done && (
+          <span style={{ fontSize: 11, color: '#6A8A5A', fontFamily: 'Cinzel, serif',
+            letterSpacing: '0.1em', fontWeight: 700 }}>HUNT COMPLETE</span>
+        )}
       </div>
     </div>
   );
