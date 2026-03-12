@@ -35,7 +35,7 @@ const TABS: { id: DashTab; label: string; icon: string }[] = [
   { id: 'home',     label: 'Home',     icon: '◈'  },
   { id: 'training', label: 'Training', icon: '✦'  },
   { id: 'hunts',    label: 'Hunts',    icon: '◉'  },
-  { id: 'archive',  label: 'Archive',  icon: '★'  },
+  { id: 'archive',  label: 'Hero',     icon: '★'  },
   { id: 'veil',     label: 'Veil',     icon: '⚡' },
 ];
 
@@ -100,10 +100,93 @@ function TabBar({ active, onChange }: { active: DashTab; onChange: (t: DashTab) 
   );
 }
 
+// ── Alignment Announcement (pre-modal) ───────────────────────────────────────
+function AlignmentAnnounce({ heroName, onProceed }: { heroName: string; onProceed: () => void }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '24px',
+    }}>
+      <style>{`
+        @keyframes announceIn {
+          from { opacity: 0; transform: translateY(32px) scale(0.96); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes glyphPulse {
+          0%,100% { opacity: 0.4; transform: scale(1); }
+          50%     { opacity: 1;   transform: scale(1.12); }
+        }
+      `}</style>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(16px)' }} />
+      <div style={{
+        position: 'relative', width: '100%', maxWidth: 400,
+        background: 'linear-gradient(180deg, #16120A 0%, #0B0A08 100%)',
+        border: '1px solid rgba(200,160,78,0.3)',
+        borderRadius: 20,
+        boxShadow: '0 32px 80px rgba(0,0,0,0.9), 0 0 80px rgba(200,160,78,0.08)',
+        padding: '36px 28px 28px',
+        animation: 'announceIn 0.55s cubic-bezier(0.16,1,0.3,1) forwards',
+        textAlign: 'center',
+      }}>
+        {/* Glyph */}
+        <div style={{ marginBottom: 24 }}>
+          <span style={{
+            fontSize: 52, display: 'block', lineHeight: 1,
+            animation: 'glyphPulse 2.4s ease infinite',
+            filter: 'drop-shadow(0 0 16px rgba(200,160,78,0.6))',
+          }}>◈</span>
+        </div>
+
+        {/* Heading */}
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: 'var(--gold)', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 12 }}>
+          A Threshold Crossed
+        </p>
+        <h2 style={{ fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700, color: 'var(--text-1)', marginBottom: 16, letterSpacing: '0.04em' }}>
+          Level 20 Achieved
+        </h2>
+
+        {/* Body */}
+        <p style={{ fontSize: 13, color: 'rgba(240,237,230,0.7)', lineHeight: 1.75, marginBottom: 10 }}>
+          <strong style={{ color: 'var(--gold)' }}>{heroName}</strong>, you have proven your worth across the Veil.
+        </p>
+        <p style={{ fontSize: 13, color: 'rgba(240,237,230,0.65)', lineHeight: 1.75, marginBottom: 28 }}>
+          The great Realms have taken notice. You may now align yourself with one — each grants its allies
+          unique hunts, titles, and paths that others cannot walk.
+        </p>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+          <div style={{ flex: 1, height: 1, background: 'rgba(200,160,78,0.2)' }} />
+          <span style={{ fontSize: 10, color: 'rgba(200,160,78,0.5)', letterSpacing: '0.2em' }}>YOUR FATE AWAITS</span>
+          <div style={{ flex: 1, height: 1, background: 'rgba(200,160,78,0.2)' }} />
+        </div>
+
+        <button onClick={onProceed} style={{
+          width: '100%', padding: '15px',
+          background: 'linear-gradient(135deg, rgba(200,160,78,0.9), rgba(200,160,78,0.6))',
+          color: '#0B0A08', border: 'none', borderRadius: 12,
+          fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700,
+          letterSpacing: '0.1em', cursor: 'pointer',
+          boxShadow: '0 4px 24px rgba(200,160,78,0.3)',
+        }}>
+          Choose Your Alignment
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Dashboard shell ───────────────────────────────────────────────────────────
 function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void }) {
   const { isOnline, hero, showAlignmentModal, alignment, setAlignment, dismissAlignmentModal } = useAuth();
   const [tab, setTab] = useState<DashTab>('home');
+  const [showAnnounce, setShowAnnounce] = useState(false);
+
+  // Show announcement first, then hand off to the full alignment modal
+  useEffect(() => {
+    if (showAlignmentModal) setShowAnnounce(true);
+  }, [showAlignmentModal]);
 
   if (!hero) return null;
 
@@ -119,12 +202,18 @@ function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void 
       </div>
       <TabBar active={tab} onChange={setTab} />
       <AlignmentModal
-        show={showAlignmentModal}
+        show={showAlignmentModal && !showAnnounce}
         heroName={hero.display_name}
         fateLevel={hero.progression.fate_level}
         onConfirm={setAlignment}
         onDismiss={dismissAlignmentModal}
       />
+      {showAnnounce && (
+        <AlignmentAnnounce
+          heroName={hero.display_name}
+          onProceed={() => setShowAnnounce(false)}
+        />
+      )}
     </>
   );
 }

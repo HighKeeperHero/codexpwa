@@ -32,15 +32,6 @@ interface Oath {
   week_of:     string;
   status:      'pending' | 'kept' | 'broken';
 }
-interface ChronicleEntry {
-  entry_id:      string;
-  pillar:        string;
-  activity_type: string;
-  duration_min:  number | null;
-  lore_text:     string;
-  xp_granted:    number;
-  created_at:    string;
-}
 
 // ── Pillar config ─────────────────────────────────────────────────────────────
 const PILLAR: Record<string, { label: string; icon: string; color: string; sub: string; desc: string }> = {
@@ -127,7 +118,7 @@ function CountdownBadge({ label, ms, format }: { label: string; ms: number; form
   );
 }
 
-type View = 'daily' | 'pillars' | 'oath' | 'chronicle';
+type View = 'daily' | 'pillars' | 'oath';
 type PillarFilter = 'all' | 'forge' | 'lore' | 'veil';
 
 // ── Main Component ─────────────────────────────────────────────────────────────
@@ -138,8 +129,6 @@ export function TrainingScreen() {
   const [streak,         setStreak]         = useState(0);
   const [pillars,        setPillars]        = useState<PillarData[]>([]);
   const [oath,           setOath]           = useState<Oath | null | undefined>(undefined);
-  const [chronicle,      setChronicle]      = useState<ChronicleEntry[]>([]);
-  const [chronicleLoaded,setChronicleLoaded]= useState(false);
   const [loading,        setLoading]        = useState(true);
   const [completing,     setCompleting]     = useState<string | null>(null);
   const [toast,          setToast]          = useState<{ msg: string; xp?: number } | null>(null);
@@ -186,18 +175,6 @@ export function TrainingScreen() {
     } catch { setOath(null); }
   }, [rootId]);
 
-  const fetchChronicle = useCallback(async () => {
-    if (!rootId) return;
-    try {
-      const res  = await fetch(`${BASE}/api/training/chronicle/${rootId}`);
-      if (!res.ok) { setChronicleLoaded(true); return; }
-      const data    = await res.json();
-      const payload = data?.data ?? data;
-      setChronicle(Array.isArray(payload) ? payload : []);
-    } catch {}
-    finally { setChronicleLoaded(true); }
-  }, [rootId]);
-
   useEffect(() => {
     if (!rootId) { setLoading(false); return; }
     const init = async () => {
@@ -208,8 +185,6 @@ export function TrainingScreen() {
     };
     init();
   }, [rootId]);
-
-  useEffect(() => { if (view === 'chronicle') fetchChronicle(); }, [view]);
 
   const completeRite = async (rite: Rite) => {
     if (!rootId || rite.status === 'completed') return;
@@ -283,10 +258,10 @@ export function TrainingScreen() {
 
       {/* Sub-nav */}
       <div style={{ display:'flex', margin:'16px 20px 0', borderBottom:'1px solid var(--border)' }}>
-        {(['daily','pillars','oath','chronicle'] as View[]).map(v => (
+        {(['daily','pillars','oath'] as View[]).map(v => (
           <button key={v} className="tr-tab" onClick={() => setView(v)}
             style={{ color: view===v ? 'var(--gold)' : 'var(--text-3)', position:'relative' }}>
-            {v==='daily' ? 'DAILY RITES' : v==='pillars' ? 'PILLARS' : v==='oath' ? 'OATH' : 'CHRONICLE'}
+            {v==='daily' ? 'DAILY RITES' : v==='pillars' ? 'PILLARS' : 'OATH'}
             {view===v && <div style={{ position:'absolute', bottom:-1, left:'15%', right:'15%', height:2, background:'var(--gold)', borderRadius:1 }} />}
           </button>
         ))}
@@ -296,7 +271,6 @@ export function TrainingScreen() {
         {view === 'daily'     && <DailyView    rites={rites} completing={completing} onComplete={completeRite} midnightMs={midnightMs} />}
         {view === 'pillars'   && <PillarsView  pillars={pillars} alignment={alignment} midnightMs={midnightMs} />}
         {view === 'oath'      && <OathView     oath={oath} rootId={rootId} weekEndMs={weekEndMs} onUpdate={fetchOath} showToast={showToast} />}
-        {view === 'chronicle' && <ChronicleView entries={chronicle} loaded={chronicleLoaded} />}
       </div>
     </div>
   );
@@ -635,93 +609,6 @@ function OathView({ oath, rootId, weekEndMs, onUpdate, showToast }: {
   }
 
   return null;
-}
-
-// ── Chronicle View ────────────────────────────────────────────────────────────
-function ChronicleView({ entries, loaded }: { entries: ChronicleEntry[]; loaded: boolean }) {
-  const [filter, setFilter] = useState<PillarFilter>('all');
-
-  if (!loaded) return <p style={{ padding:'48px 0', textAlign:'center', fontSize:12, color:'var(--text-3)' }}>Loading Chronicle…</p>;
-
-  if (!Array.isArray(entries) || entries.length === 0) {
-    return (
-      <div style={{ textAlign:'center', padding:'48px 20px' }}>
-        <p style={{ fontSize:30, marginBottom:14, opacity:0.3 }}>◈</p>
-        <p style={{ fontSize:14, color:'var(--text-2)', fontFamily:'var(--font-serif)', marginBottom:8 }}>The Chronicle Awaits</p>
-        <p style={{ fontSize:12, color:'var(--text-3)', lineHeight:1.8 }}>
-          Your record is empty.<br />
-          Complete a daily rite to write your first entry.<br />
-          <span style={{ fontSize:11, opacity:0.7 }}>Every act sealed here is permanent.</span>
-        </p>
-      </div>
-    );
-  }
-
-  const filtered = filter === 'all' ? entries : entries.filter(e => e?.pillar === filter);
-
-  return (
-    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-      {/* Category filter */}
-      <div style={{ display:'flex', gap:6, marginBottom:4, flexWrap:'wrap' }}>
-        {(['all','forge','lore','veil'] as PillarFilter[]).map(f => {
-          const cfg   = f === 'all' ? null : PILLAR[f];
-          const color = cfg?.color ?? 'var(--gold)';
-          const active = filter === f;
-          return (
-            <button key={f} onClick={() => setFilter(f)} style={{
-              padding:'5px 12px', borderRadius:20, cursor:'pointer', fontSize:9,
-              letterSpacing:'0.1em', fontWeight:700,
-              background: active ? `${color}18` : 'var(--surface)',
-              border:`1px solid ${active ? `${color}50` : 'var(--border)'}`,
-              color: active ? color : 'var(--text-3)',
-              transition:'all 0.15s',
-            }}>
-              {f === 'all' ? 'ALL' : PILLAR[f]?.label}
-            </button>
-          );
-        })}
-        <span style={{ fontSize:10, color:'var(--text-3)', alignSelf:'center', marginLeft:4 }}>
-          {filtered.length} entr{filtered.length === 1 ? 'y' : 'ies'}
-        </span>
-      </div>
-
-      {filtered.length === 0 && (
-        <p style={{ textAlign:'center', fontSize:12, color:'var(--text-3)', padding:'24px 0' }}>
-          No {PILLAR[filter]?.label ?? ''} entries yet.
-        </p>
-      )}
-
-      {filtered.map((e, idx) => {
-        const cfg     = PILLAR[e?.pillar ?? ''] ?? PILLAR.forge;
-        const dateStr = e?.created_at ? new Date(e.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric' }) : '';
-        return (
-          <div key={e?.entry_id ?? idx} style={{ padding:'14px 16px', borderRadius:12, background:'var(--surface)', border:'1px solid var(--border)', display:'flex', gap:12, alignItems:'flex-start' }}>
-            <div style={{ width:8, height:8, borderRadius:'50%', marginTop:6, flexShrink:0, background:cfg.color, boxShadow:`0 0 6px ${cfg.color}50` }} />
-            <div style={{ flex:1, minWidth:0 }}>
-              {/* Category pill */}
-              <span style={{ display:'inline-block', fontSize:8, color:cfg.color, letterSpacing:'0.12em', fontWeight:700, background:`${cfg.color}15`, border:`1px solid ${cfg.color}30`, borderRadius:10, padding:'2px 8px', marginBottom:6 }}>
-                {cfg.label}
-              </span>
-              <p style={{ fontSize:12, color:'var(--text-1)', lineHeight:1.5, fontStyle:'italic' }}>{e?.lore_text ?? ''}</p>
-              <div style={{ display:'flex', gap:8, marginTop:6, alignItems:'center', flexWrap:'wrap' }}>
-                {dateStr && <span style={{ fontSize:9, color:'var(--text-3)' }}>{dateStr}</span>}
-                {(e?.xp_granted ?? 0) > 0 && <><span style={{ fontSize:9, color:'var(--text-3)' }}>·</span><span style={{ fontSize:9, color:'var(--gold)', fontWeight:700 }}>+{e.xp_granted} XP</span></>}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function Skeleton() {
-  return (
-    <div style={{ minHeight:'100dvh', background:'var(--bg)', padding:'48px 20px', paddingBottom:100 }}>
-      {[1,0.7,0.5].map((op,i) => <div key={i} style={{ height:96, borderRadius:12, background:'var(--surface)', border:'1px solid var(--border)', marginBottom:12, opacity:op }} />)}
-    </div>
-  );
 }
 function ErrorState({ message }: { message: string }) {
   return (
