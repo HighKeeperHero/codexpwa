@@ -260,6 +260,7 @@ export function VenturesScreen() {
             onAccept={handleHuntAccept}
             onAbandon={handleHuntAbandon}
             onTabFocus={syncActiveHunts}
+	  <TierLadder heroLevel={heroLevel} />
           />
         </div>
       </div>

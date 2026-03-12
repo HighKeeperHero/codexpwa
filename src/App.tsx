@@ -10,6 +10,8 @@ import { VenturesScreen } from '@/screens/VenturesScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { AlignmentModal } from '@/screens/AlignmentModal';
 import VeilTearsScreen from '@/screens/VeilTearsScreen';
+import { TierAscensionModal, checkTierAscension } from '@/screens/TierAscensionModal';
+import type { Tier } from '@/api/pik';
 
 type AppRoute = 'landing' | 'hero-select' | 'dashboard';
 type DashTab = 'home' | 'training' | 'hunts' | 'archive' | 'veil';
@@ -103,7 +105,15 @@ function TabBar({ active, onChange }: { active: DashTab; onChange: (t: DashTab) 
 // ── Dashboard shell ───────────────────────────────────────────────────────────
 function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void }) {
   const { isOnline, hero, showAlignmentModal, alignment, setAlignment, dismissAlignmentModal } = useAuth();
-  const [tab, setTab] = useState<DashTab>('home');
+  const [tab, setTab]                     = useState<DashTab>('home');
+  const [ascensionTier, setAscensionTier] = useState<Tier | null>(null);
+
+  // Fire tier ascension modal once per tier per hero
+  useEffect(() => {
+    if (!hero) return;
+    const pending = checkTierAscension(hero.root_id, hero.progression.hero_level);
+    if (pending) setAscensionTier(pending);
+  }, [hero?.root_id, hero?.progression.hero_level]);
 
   if (!hero) return null;
 
@@ -125,6 +135,13 @@ function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void 
         onConfirm={setAlignment}
         onDismiss={dismissAlignmentModal}
       />
+      {ascensionTier && (
+        <TierAscensionModal
+          tier={ascensionTier}
+          rootId={hero.root_id}
+          onDismiss={() => setAscensionTier(null)}
+        />
+      )}
     </>
   );
 }

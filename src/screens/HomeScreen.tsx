@@ -452,6 +452,7 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
                       {heroXp.toLocaleString()}{' '}
                       <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 400 }}>xp</span>
                     </span>
+<TierBadge heroLevel={hero.progression.hero_level} />
                   </div>
                   <div style={{
                     height: 7, borderRadius: 4,

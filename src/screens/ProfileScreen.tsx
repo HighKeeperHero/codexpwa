@@ -503,7 +503,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
           </div>
           <div style={{ background: 'var(--bg)', border: `1px solid ${tier.color}`, borderRadius: 8, padding: '4px 10px', flexShrink: 0, textAlign: 'center' }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: tier.color, margin: '0 0 1px', letterSpacing: '0.1em' }}>{tier.name}</p>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: tier.color, margin: 0 }}>{tier.isJob ? '✦ Job' : `Lv ${heroLevel}`}</p>
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, color: tier.color, margin: 0 }}>{tier.isJob ? '✦ Job' : `Lv ${heroLevel}`}<TierBadge heroLevel={hero.progression.hero_level} /></p>
           </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
