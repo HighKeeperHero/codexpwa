@@ -150,7 +150,7 @@ function QuestsView({ rootId, sessionToken, alignment }: { rootId: string | null
   const [error,   setError]   = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!rootId) return;
+    if (!rootId) { setLoading(false); return; }
     setLoading(true); setError(null);
     try {
       const res  = await fetch(`${BASE}/api/ventures/quests/${rootId}/daily`);
@@ -327,7 +327,7 @@ function ReconView({ rootId, sessionToken }: { rootId: string | null; sessionTok
   const [intelFilter, setIntelFilter] = useState<'all' | 'zone' | 'boss'>('all');
 
   useEffect(() => {
-    if (!rootId) return;
+    if (!rootId) { setLoading(false); return; }
     fetch(`${BASE}/api/ventures/recon/${rootId}`)
       .then(r => r.json())
       .then(json => {

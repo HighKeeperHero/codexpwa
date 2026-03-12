@@ -35,7 +35,7 @@ const TABS: { id: DashTab; label: string; icon: string }[] = [
   { id: 'home',     label: 'Home',     icon: '◈'  },
   { id: 'training', label: 'Training', icon: '✦'  },
   { id: 'hunts',    label: 'Ventures', icon: '◉'  },
-  { id: 'archive',  label: 'Archive',  icon: '★'  },
+  { id: 'archive',  label: 'Hero',     icon: '★'  },
   { id: 'veil',     label: 'Veil',     icon: '⚡' },
 ];
 
