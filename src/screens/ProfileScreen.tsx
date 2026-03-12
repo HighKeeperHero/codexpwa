@@ -221,36 +221,67 @@ function TrophyRoom({ hero, fateSeals }: { hero: any; fateSeals: number }) {
   const earned = TROPHIES.filter(t => t.check(hero, extras));
   const locked = TROPHIES.filter(t => !t.check(hero, extras));
   const pct    = Math.round((earned.length / TROPHIES.length) * 100);
+  const [open,       setOpen]       = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showAll,    setShowAll]    = useState(false);
   const toggle = (id: string) => setExpandedId(prev => prev === id ? null : id);
+  const recentEarned = earned.slice(-5).reverse(); // last 5, newest first
+  const displayEarned = showAll ? [...earned].reverse() : recentEarned;
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div>
-          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,165,0,0.55)', margin: '0 0 3px' }}>Milestones Reached</p>
-          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>{earned.length} / {TROPHIES.length} unlocked</p>
+    <div style={{ marginBottom: 14 }}>
+      {/* Header row — always visible, acts as toggle */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: open ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
+      >
+        <span>
+          ⬡ Milestones
+          {earned.length > 0 && (
+            <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--gold)', fontFamily: 'monospace' }}>{earned.length}/{TROPHIES.length}</span>
+          )}
+        </span>
+        <span style={{ color: 'var(--text-3)', fontSize: 12, display: 'inline-block', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'none' }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 var(--radius) var(--radius)', padding: '14px 14px 12px' }}>
+          {/* Progress bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, var(--sapphire), var(--gold))', borderRadius: 2, transition: 'width 0.9s cubic-bezier(0.16,1,0.3,1)' }} />
+            </div>
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: pct >= 75 ? 'var(--gold)' : pct >= 40 ? '#A855F7' : 'var(--text-2)', flexShrink: 0 }}>{pct}%</span>
+          </div>
+
+          {earned.length > 0 && (
+            <>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8, marginTop: 4 }}>
+                {showAll ? 'All Earned' : 'Recently Earned'}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: displayEarned.length > 0 ? 8 : 0 }}>
+                {displayEarned.map(t => <TrophyCard key={t.id} trophy={t} earned expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />)}
+              </div>
+              {earned.length > 5 && (
+                <button
+                  onClick={() => setShowAll(s => !s)}
+                  style={{ width: '100%', padding: '7px 0', marginBottom: 12, background: 'none', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-3)', fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: '0.1em', cursor: 'pointer' }}
+                >
+                  {showAll ? `Show Recent (5)` : `Show All ${earned.length}`}
+                </button>
+              )}
+            </>
+          )}
+
+          {locked.length > 0 && (
+            <>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Locked</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                {locked.map(t => <TrophyCard key={t.id} trophy={t} earned={false} expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />)}
+              </div>
+            </>
+          )}
         </div>
-        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 22, fontWeight: 700, color: pct >= 75 ? 'var(--gold)' : pct >= 40 ? '#A855F7' : 'var(--text-2)' }}>{pct}%</span>
-      </div>
-      <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, marginBottom: 20, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, var(--sapphire), var(--gold))', borderRadius: 2, transition: 'width 0.9s cubic-bezier(0.16,1,0.3,1)' }} />
-      </div>
-      {earned.length > 0 && (
-        <>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Earned</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: 16 }}>
-            {earned.map(t => <TrophyCard key={t.id} trophy={t} earned expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />)}
-          </div>
-        </>
-      )}
-      {locked.length > 0 && (
-        <>
-          <p style={{ fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 8 }}>Locked</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {locked.map(t => <TrophyCard key={t.id} trophy={t} earned={false} expanded={expandedId === t.id} onToggle={() => toggle(t.id)} />)}
-          </div>
-        </>
       )}
     </div>
   );
@@ -360,7 +391,7 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
   );
 }
 
-// ── Title types / helpers (local to Profile) ────────────────────────────────────
+// ── Title helpers (local) ───────────────────────────────────────────────────────
 interface TitleEntry {
   title_id: string; display_name: string; category: string;
   description: string | null; is_earned: boolean; is_equipped: boolean; granted_at: string | null;
@@ -377,14 +408,14 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
   const { sessionToken, refreshHero } = useAuth();
   const prog      = hero.progression;
   const heroLevel = prog?.hero_level ?? prog?.fate_level ?? 1;
+  const level     = prog?.fate_level ?? 1;       // fate level — shown on XP bar
   const xp        = prog?.total_xp ?? prog?.fate_xp ?? 0;
   const xpToNext  = prog?.xp_to_next_level ?? 500;
   const xpIn      = prog?.xp_in_current_level ?? (xp % xpToNext);
   const pct       = Math.min(100, Math.round((xpIn / xpToNext) * 100));
-  const tier      = TIER_FOR_LEVEL(heroLevel);
+  const tier      = TIER_FOR_LEVEL(heroLevel);   // adventurer tier uses hero level
   const alignment = hero.alignment ?? 'NONE';
   const aColor    = ALIGNMENT_COLOR[alignment] ?? '#9ca3af';
-  const rootId    = hero.root_id as string;
 
   const equippedTitleId = prog?.equipped_title as string | null;
   const titlesArr       = (prog?.titles ?? []) as any[];
@@ -395,9 +426,9 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
     return equippedTitleId.replace(/^title_/, '').replace(/_/g, ' ').toUpperCase();
   })();
 
-  const fateSeals = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.caches_granted ?? 0), 0);
-  const bossKills = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.boss_kills    ?? 0), 0);
-  const gearFound = (hero.gear?.inventory ?? []).length;
+  const fateSeals  = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.caches_granted ?? 0), 0);
+  const bossKills  = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.boss_kills    ?? 0), 0);
+  const gearFound  = (hero.gear?.inventory ?? []).length;
 
   const statBlocks = [
     { label: 'Sessions',   value: prog?.sessions_completed ?? 0 },
@@ -406,14 +437,13 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
     { label: 'Gear Found', value: gearFound },
   ];
 
-  const [battleHistory,  setBattleHistory]  = useState<BattleRecord[]>([]);
-  const [wristbandOpen,  setWristbandOpen]  = useState(false);
-
-  // ── Titles state ─────────────────────────────────────────────────────────────
-  const [titles,         setTitles]         = useState<TitleEntry[]>([]);
-  const [titlesLoading,  setTitlesLoading]  = useState(true);
-  const [titlesOpen,     setTitlesOpen]     = useState(false);
+  const [battleHistory, setBattleHistory] = useState<BattleRecord[]>([]);
+  const [wristbandOpen, setWristbandOpen] = useState(false);
+  const [titles,         setTitles]        = useState<TitleEntry[]>([]);
+  const [titlesLoading,  setTitlesLoading] = useState(true);
+  const [titlesOpen,     setTitlesOpen]    = useState(false);
   const [equippingTitle, setEquippingTitle] = useState<string | null>(null);
+  const rootId = hero.root_id as string;
 
   useEffect(() => {
     if (!hero?.root_id) return;
@@ -425,14 +455,11 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
     setTitlesLoading(true);
     fetch(`${BASE}/api/users/${rootId}/titles`, { headers: { Authorization: `Bearer ${sessionToken}` } })
       .then(r => r.json())
-      .then(json => {
-        const d = json?.data?.data ?? json?.data ?? json;
-        setTitles(Array.isArray(d) ? d : []);
-      })
+      .then(json => { const d = json?.data?.data ?? json?.data ?? json; setTitles(Array.isArray(d) ? d : []); })
       .catch(() => {
         if (prog?.titles) {
           const eq = prog.equipped_title;
-          setTitles((prog.titles as any[]).map(t => ({
+          setTitles((prog.titles as any[]).map((t: any) => ({
             title_id: t.title_id ?? t, display_name: t.title_name ?? t.display_name ?? String(t),
             category: t.category ?? 'general', description: t.description ?? null,
             is_earned: true, is_equipped: (t.title_id ?? t) === eq, granted_at: t.granted_at ?? null,
@@ -447,13 +474,12 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
     setEquippingTitle(titleId);
     try {
       const target = isEquipped ? 'none' : titleId;
-      const res = await fetch(`${BASE}/api/users/${rootId}/titles/${target}/equip`, {
+      await fetch(`${BASE}/api/users/${rootId}/titles/${target}/equip`, {
         method: 'POST', headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
       });
-      if (!res.ok) throw new Error('equip failed');
-      const r2  = await fetch(`${BASE}/api/users/${rootId}/titles`, { headers: { Authorization: `Bearer ${sessionToken}` } });
-      const j2  = await r2.json();
-      const d2  = j2?.data?.data ?? j2?.data ?? j2;
+      const r2 = await fetch(`${BASE}/api/users/${rootId}/titles`, { headers: { Authorization: `Bearer ${sessionToken}` } });
+      const j2 = await r2.json();
+      const d2 = j2?.data?.data ?? j2?.data ?? j2;
       setTitles(Array.isArray(d2) ? d2 : []);
       await refreshHero();
     } catch { /* silent */ } finally { setEquippingTitle(null); }
@@ -465,7 +491,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
   return (
     <div className="screen-enter" style={{ padding: 16 }}>
       {/* Identity card */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)', borderRadius: 'var(--radius)', padding: '20px 16px', marginBottom: 14 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '20px 16px', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
           <div style={{ width: 52, height: 52, borderRadius: 'var(--radius)', flexShrink: 0, background: `radial-gradient(circle, ${aColor}30 0%, transparent 70%)`, border: `1px solid ${aColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 20, color: aColor }}>
             {(hero.display_name ?? hero.hero_name ?? '?')[0].toUpperCase()}
@@ -492,35 +518,22 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
       {/* Stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
         {statBlocks.map(s => (
-          <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+          <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>{s.value}</p>
             <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* ── Veil Battle Stats */}
       <VeilBattleStats history={battleHistory} />
-
-      {/* ── Veil Battle History */}
       <VeilBattleHistory history={battleHistory} />
-
-      {/* Trophy Room */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)', borderRadius: 'var(--radius)', padding: '16px 14px', marginBottom: 14 }}>
-        <TrophyRoom hero={hero} fateSeals={fateSeals} />
-      </div>
 
       {/* ── Titles — collapsible ─────────────────────────────────────────────── */}
       <div style={{ marginBottom: 14 }}>
-        <button
-          onClick={() => setTitlesOpen(o => !o)}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: titlesOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
-        >
+        <button onClick={() => setTitlesOpen(o => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: titlesOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           <span>
             ◆ Titles
-            {earnedTitles.length > 0 && (
-              <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--gold)', fontFamily: 'monospace' }}>{earnedTitles.length}</span>
-            )}
+            {earnedTitles.length > 0 && <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--gold)', fontFamily: 'monospace' }}>{earnedTitles.length}</span>}
           </span>
           <span style={{ color: 'var(--text-3)', fontSize: 12, display: 'inline-block', transition: 'transform 0.2s', transform: titlesOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
         </button>
@@ -541,15 +554,9 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
                         <div key={t.title_id} style={{ background: 'var(--bg)', border: `1px solid ${t.is_equipped ? color : 'var(--border)'}`, borderRadius: 'var(--radius)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: t.is_equipped ? `0 0 10px ${color}25` : 'none' }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>{t.display_name}</p>
-                            <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0 }}>
-                              {TITLE_CATEGORY_LABEL[t.category] ?? t.category}{t.description ? ` · ${t.description}` : ''}
-                            </p>
+                            <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0 }}>{TITLE_CATEGORY_LABEL[t.category] ?? t.category}{t.description ? ` · ${t.description}` : ''}</p>
                           </div>
-                          <button
-                            onClick={() => handleEquipTitle(t.title_id, t.is_equipped)}
-                            disabled={equippingTitle === t.title_id}
-                            style={{ padding: '5px 10px', flexShrink: 0, background: t.is_equipped ? 'transparent' : color, color: t.is_equipped ? color : '#0B0A08', border: `1px solid ${color}`, borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 700, cursor: equippingTitle === t.title_id ? 'wait' : 'pointer', opacity: equippingTitle === t.title_id ? 0.6 : 1, letterSpacing: '0.05em' }}
-                          >
+                          <button onClick={() => handleEquipTitle(t.title_id, t.is_equipped)} disabled={equippingTitle === t.title_id} style={{ padding: '5px 10px', flexShrink: 0, background: t.is_equipped ? 'transparent' : color, color: t.is_equipped ? color : '#0B0A08', border: `1px solid ${color}`, borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 700, cursor: equippingTitle === t.title_id ? 'wait' : 'pointer', opacity: equippingTitle === t.title_id ? 0.6 : 1, letterSpacing: '0.05em' }}>
                             {equippingTitle === t.title_id ? '…' : t.is_equipped ? 'Remove' : 'Equip'}
                           </button>
                         </div>
@@ -577,12 +584,12 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
         )}
       </div>
 
-      {/* Wristband — collapsible section */}
+      {/* ── Milestones — collapsible (last 5 earned by default) ──────────────── */}
+      <TrophyRoom hero={hero} fateSeals={fateSeals} />
+
+      {/* Wristband — collapsible */}
       <div style={{ marginBottom: 14 }}>
-        <button
-          onClick={() => setWristbandOpen(o => !o)}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: wristbandOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
-        >
+        <button onClick={() => setWristbandOpen(o => !o)} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: wristbandOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
           <span>⌚ Wristband</span>
           <span style={{ color: 'var(--text-3)', fontSize: 12, display: 'inline-block', transition: 'transform 0.2s', transform: wristbandOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
         </button>

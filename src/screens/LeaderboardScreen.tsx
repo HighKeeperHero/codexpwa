@@ -277,8 +277,10 @@ export function LeaderboardScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  const alignments = ['ALL', ...Array.from(new Set(entries.map(e => e.alignment).filter(Boolean)))];
-  const visible    = filterAlign === 'ALL' ? entries : entries.filter(e => e.alignment === filterAlign);
+  const alignments = ['ALL', 'NONE', ...FACTION_ORDER] as string[];
+  const visible    = filterAlign === 'ALL' ? entries
+    : filterAlign === 'NONE' ? entries.filter(e => !e.alignment || e.alignment === 'NONE')
+    : entries.filter(e => e.alignment === filterAlign);
   const myRank     = hero ? entries.find(e => e.root_id === hero.root_id) : null;
 
   return (
