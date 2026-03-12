@@ -1,7 +1,7 @@
 // src/screens/VaultScreen.tsx
 // ============================================================
 // Sprint 9+ — Vault (Archive tab)
-// Sections: Fate Caches | Titles | Gear | Forge
+// Sections: Fate Caches | Gear | Forge
 //
 // New features:
 //   - Nexus balance (in-app currency) displayed in Gear + Forge
@@ -42,10 +42,6 @@ type CacheReward = CacheRewardPayload;
 interface SealedCache {
   cache_id: string; cache_type: string; rarity: Rarity;
   label: string; status: 'sealed' | 'opened'; trigger: string; granted_at: string;
-}
-interface TitleEntry {
-  title_id: string; display_name: string; category: string;
-  description: string | null; is_earned: boolean; is_equipped: boolean; granted_at: string | null;
 }
 interface GearItem {
   inventory_id: string; item_id: string; item_name: string; slot: string;
@@ -98,9 +94,6 @@ const GEAR_SLOT_ICON: Record<string, string> = {
 };
 const GEAR_SLOT_LABEL: Record<string, string> = {
   weapon: 'Weapon', helm: 'Helm', chest: 'Chest', arms: 'Arms', legs: 'Legs', rune: 'Rune',
-};
-const CATEGORY_LABEL: Record<string, string> = {
-  fate: 'Fate', boss: 'Combat', session: 'Session', meta: 'Realm', training: 'Training', general: 'General',
 };
 
 // Dismantle yield by rarity
@@ -159,7 +152,7 @@ const DEFAULT_RECIPES: Recipe[] = [
 ];
 
 // ── Main Component ─────────────────────────────────────────────
-export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount: number) => void } = {}) {
+export function VaultScreen() {
   const { hero, sessionToken, refreshHero } = useAuth();
 
   // Cache state
@@ -170,9 +163,6 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
   const [cacheLoading, setCacheLoading] = useState(true);
 
   // Title state
-  const [titles, setTitles] = useState<TitleEntry[]>([]);
-  const [titlesLoading, setTitlesLoading] = useState(true);
-  const [equippingTitle, setEquippingTitle] = useState<string | null>(null);
 
   // Nexus + component economy
   const [nexusBalance, setNexusBalance] = useState<number>(0);
@@ -189,45 +179,10 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
   const [craftingId, setCraftingId] = useState<string | null>(null);
   const [craftMsg, setCraftMsg] = useState<string | null>(null);
 
-  type Section = 'caches' | 'titles' | 'gear' | 'forge';
+  type Section = 'caches' | 'gear' | 'forge';
   const [section, setSection] = useState<Section>('caches');
 
-  // Title badge — persisted in localStorage per hero so it survives tab switches & remounts.
-  // Stores the last-seen earned title count. Badge = max(0, current − stored).
-  // Resets (badge hides) when Titles section is opened. Returns when new titles are earned.
-  const rootIdRef = hero?.root_id ?? '';
-  const [lastSeenTitleCount, setLastSeenTitleCount] = useState<number>(0);
-
-  // Load last-seen title count from localStorage when hero loads
-  useEffect(() => {
-    if (!rootIdRef) return;
-    try {
-      const stored = parseInt(localStorage.getItem(`pik:titles_seen:${rootIdRef}`) ?? '0', 10) || 0;
-      setLastSeenTitleCount(stored);
-    } catch {}
-  }, [rootIdRef]);
-
-  const handleSectionChange = (s: Section) => {
-    setSection(s);
-    if (s === 'titles') {
-      // Mark all currently-loaded earned titles as seen
-      const count = Array.isArray(titles) ? titles.filter(t => t.is_earned).length : 0;
-      if (count > 0) {
-        setLastSeenTitleCount(count);
-        try { localStorage.setItem(`pik:titles_seen:${rootIdRef}`, String(count)); } catch {}
-      }
-    }
-  };
-
-  // Also mark seen when titles finish loading while already on Titles tab
-  useEffect(() => {
-    if (section !== 'titles') return;
-    const count = Array.isArray(titles) ? titles.filter(t => t.is_earned).length : 0;
-    if (count <= lastSeenTitleCount) return;
-    setLastSeenTitleCount(count);
-    try { localStorage.setItem(`pik:titles_seen:${rootIdRef}`, String(count)); } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [titles, section]);
+  const handleSectionChange = (s: Section) => { setSection(s); };
 
   const rootId = hero?.root_id;
 
@@ -242,30 +197,6 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
       setCaches((Array.isArray(raw) ? raw as SealedCache[] : []).filter(c => c.status === 'sealed'));
     } catch {} finally { setCacheLoading(false); }
   }, [rootId]);
-
-  const fetchTitles = useCallback(async () => {
-    if (!rootId || !sessionToken) return;
-    setTitlesLoading(true);
-    try {
-      const res  = await fetch(`${BASE}/api/users/${rootId}/titles`, { headers: { Authorization: `Bearer ${sessionToken}` } });
-      const json = await res.json();
-      const td   = unwrap(json);
-      setTitles(Array.isArray(td) ? td : []);
-    } catch {
-      if (hero?.progression?.titles) {
-        const equipped = hero.progression.equipped_title;
-        setTitles(hero.progression.titles.map((t: any) => ({
-          title_id: t.title_id ?? t,
-          display_name: t.title_name ?? (typeof t === 'string' ? t.replace(/^title_/,'').replace(/_/g,' ').toUpperCase() : t),
-          category: t.category ?? 'general',
-          description: t.description ?? null,
-          is_earned: true,
-          is_equipped: (t.title_id ?? t) === equipped,
-          granted_at: t.granted_at ?? null,
-        })));
-      }
-    } finally { setTitlesLoading(false); }
-  }, [rootId, sessionToken, hero]);
 
   const fetchEconomy = useCallback(async () => {
     if (!rootId || !sessionToken) return;
@@ -300,7 +231,6 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
   }, [rootId, sessionToken]);
 
   useEffect(() => { fetchCaches(); },  [fetchCaches]);
-  useEffect(() => { fetchTitles(); },  [fetchTitles]);
   useEffect(() => { fetchEconomy(); }, [fetchEconomy]);
 
   // ── Cache open ────────────────────────────────────────────
@@ -316,25 +246,9 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
       const r: CacheReward = json?.data ?? json;
       setCacheReward(r);
       await fetchCaches(); await refreshHero();
-      if (r.reward_type === 'title') await fetchTitles();
       if (r.reward_type === 'nexus') await fetchEconomy();
     } catch (e: any) { setOpeningCache(null); setCacheReward(null); alert(e?.message ?? 'Failed'); }
     finally { setOpeningId(null); }
-  };
-
-  // ── Title equip ───────────────────────────────────────────
-  const handleEquipTitle = async (titleId: string, isEquipped: boolean) => {
-    if (!rootId || !sessionToken) return;
-    setEquippingTitle(titleId);
-    try {
-      const target = isEquipped ? 'none' : titleId;
-      const res    = await fetch(`${BASE}/api/users/${rootId}/titles/${target}/equip`, {
-        method: 'POST', headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.message ?? 'Failed');
-      await fetchTitles(); await refreshHero();
-    } catch {} finally { setEquippingTitle(null); }
   };
 
   // ── Gear equip ────────────────────────────────────────────
@@ -449,9 +363,6 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
   const inventory: GearItem[] = Array.isArray(inventoryRaw) ? inventoryRaw as GearItem[] : [];
   const equipment        = (hero?.gear?.equipment ?? {}) as Record<string, GearItem | null>;
   const unequippedItems  = inventory.filter(i => !i.is_equipped && !dismantledIds.has(i.inventory_id));
-  const safeTitles       = Array.isArray(titles) ? titles : [];
-  const earnedTitles     = safeTitles.filter(t => t.is_earned);
-  const lockedTitles     = safeTitles.filter(t => !t.is_earned);
 
   return (
     <div className="screen-enter" style={{ padding: '0 0 80px', minHeight: '100%' }}>
@@ -478,11 +389,10 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
         position: 'sticky', top: 0, zIndex: 10,
         paddingTop: 'env(safe-area-inset-top)', background: 'var(--bg)',
       }}>
-        {(['caches','titles','gear','forge'] as Section[]).map(s => {
-          const labels: Record<Section, string> = { caches: 'Caches', titles: 'Titles', gear: 'Gear', forge: 'Forge' };
-          const titleBadge = Math.max(0, earnedTitles.length - lastSeenTitleCount);
+        {(['caches','gear','forge'] as Section[]).map(s => {
+          const labels: Record<Section, string> = { caches: 'Caches', gear: 'Gear', forge: 'Forge' };
           const rawCounts: Record<Section, number> = {
-            caches: caches.length, titles: titleBadge,
+            caches: caches.length,
             gear: unequippedItems.length, forge: recipes.length,
           };
           const badgeCount = rawCounts[s];
@@ -535,38 +445,6 @@ export function VaultScreen({ onTitlesViewed }: { onTitlesViewed?: (earnedCount:
       )}
 
       {/* ── TITLES ──────────────────────────────────────────── */}
-      {section === 'titles' && (
-        <div style={{ padding: '20px 16px 0' }}>
-          {titlesLoading ? (
-            <p style={{ color: 'var(--text-3)', textAlign: 'center', fontSize: 13, marginTop: 32 }}>Loading titles…</p>
-          ) : earnedTitles.length === 0 && lockedTitles.length === 0 ? (
-            <EmptyState icon="◈" title="No Titles Yet" body="Titles are earned through sessions, pillar mastery, and combat milestones." />
-          ) : (
-            <>
-              {earnedTitles.length > 0 && (
-                <>
-                  <SectionLabel>Earned</SectionLabel>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-                    {earnedTitles.map(t => (
-                      <TitleCard key={t.title_id} title={t} isEquipping={equippingTitle === t.title_id}
-                        onEquip={() => handleEquipTitle(t.title_id, t.is_equipped)} />
-                    ))}
-                  </div>
-                </>
-              )}
-              {lockedTitles.length > 0 && (
-                <>
-                  <SectionLabel>Locked</SectionLabel>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {lockedTitles.map(t => <LockedTitleCard key={t.title_id} title={t} />)}
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
       {/* ── GEAR ────────────────────────────────────────────── */}
       {section === 'gear' && (
         <div style={{ padding: '20px 16px 0' }}>
@@ -868,66 +746,6 @@ function CacheCard({ cache, isOpening, onTap }: { cache: SealedCache; isOpening:
       </div>
       <div style={{ color, fontSize: 18, flexShrink: 0 }}>›</div>
     </button>
-  );
-}
-
-// ── Title Card ─────────────────────────────────────────────────
-function TitleCard({ title, isEquipping, onEquip }: { title: TitleEntry; isEquipping: boolean; onEquip: () => void }) {
-  const catColor: Record<string, string> = {
-    fate: 'var(--gold)', boss: 'var(--ember)', session: '#1E90FF',
-    meta: '#A855F7', training: '#34d399', general: 'var(--text-3)',
-  };
-  const color = catColor[title.category] ?? 'var(--text-3)';
-  return (
-    <div style={{
-      background: 'var(--surface)', border: `1px solid ${title.is_equipped ? color : 'var(--border)'}`,
-      borderRadius: 'var(--radius)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12,
-      boxShadow: title.is_equipped ? `0 0 12px ${color}30` : 'none',
-    }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>
-          {title.display_name}
-        </p>
-        <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>
-          {CATEGORY_LABEL[title.category] ?? title.category}{title.description ? ` · ${title.description}` : ''}
-        </p>
-      </div>
-      <button onClick={onEquip} disabled={isEquipping} style={{
-        padding: '6px 12px', flexShrink: 0,
-        background: title.is_equipped ? 'transparent' : color,
-        color: title.is_equipped ? color : '#0B0A08',
-        border: `1px solid ${color}`, borderRadius: 6,
-        fontFamily: 'Cinzel, serif', fontSize: 11, fontWeight: 700,
-        cursor: isEquipping ? 'wait' : 'pointer', opacity: isEquipping ? 0.6 : 1, letterSpacing: '0.05em',
-      }}>
-        {isEquipping ? '…' : title.is_equipped ? 'Remove' : 'Equip'}
-      </button>
-    </div>
-  );
-}
-
-// ── Locked Title Card ──────────────────────────────────────────
-function LockedTitleCard({ title }: { title: TitleEntry }) {
-  const categoryUnlockHint: Record<string, string> = {
-    fate: 'Reach a Fate Level milestone', boss: 'Deal significant damage to a boss',
-    session: 'Complete sessions at Heroes Veritas', meta: 'Connect with multiple venues',
-    training: 'Reach a Training Pillar mastery level', general: 'Complete specific challenges',
-  };
-  return (
-    <div style={{
-      background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 'var(--radius)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, opacity: 0.5,
-    }}>
-      <div style={{ color: 'var(--text-3)', fontSize: 16, flexShrink: 0 }}>🔒</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: 'var(--text-3)', margin: '0 0 2px' }}>
-          {title.display_name}
-        </p>
-        <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>
-          {categoryUnlockHint[title.category] ?? 'Complete specific challenges'}
-        </p>
-      </div>
-    </div>
   );
 }
 

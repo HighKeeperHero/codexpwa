@@ -327,8 +327,8 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
 
   const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: 'profile',   label: 'Profile' },
-    { id: 'rankings',  label: 'Leaderboard' },
     { id: 'vault',     label: 'Vault', badge: sealedCount },
+    { id: 'rankings',  label: 'Leaderboard' },
     { id: 'chronicle', label: 'Chronicle' },
   ];
 
@@ -360,18 +360,31 @@ export function ProfileScreen({ onReturnToHeroSelect }: { onReturnToHeroSelect?:
   );
 }
 
+// ── Title types / helpers (local to Profile) ────────────────────────────────────
+interface TitleEntry {
+  title_id: string; display_name: string; category: string;
+  description: string | null; is_earned: boolean; is_equipped: boolean; granted_at: string | null;
+}
+const TITLE_CATEGORY_LABEL: Record<string, string> = {
+  fate: 'Fate', boss: 'Combat', session: 'Session', meta: 'Realm', training: 'Training', general: 'General',
+};
+const TITLE_CAT_COLOR: Record<string, string> = {
+  fate: 'var(--gold)', boss: 'var(--ember)', session: '#1E90FF', meta: '#A855F7', training: '#34d399', general: 'var(--text-3)',
+};
+
 // ── Profile Tab ────────────────────────────────────────────────────────────────
 function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSignOut: () => void; onReturnToHeroSelect?: () => void }) {
+  const { sessionToken, refreshHero } = useAuth();
   const prog      = hero.progression;
   const heroLevel = prog?.hero_level ?? prog?.fate_level ?? 1;
-  const level     = prog?.fate_level ?? 1;       // fate level — shown on XP bar
   const xp        = prog?.total_xp ?? prog?.fate_xp ?? 0;
   const xpToNext  = prog?.xp_to_next_level ?? 500;
   const xpIn      = prog?.xp_in_current_level ?? (xp % xpToNext);
   const pct       = Math.min(100, Math.round((xpIn / xpToNext) * 100));
-  const tier      = TIER_FOR_LEVEL(heroLevel);   // adventurer tier uses hero level
+  const tier      = TIER_FOR_LEVEL(heroLevel);
   const alignment = hero.alignment ?? 'NONE';
   const aColor    = ALIGNMENT_COLOR[alignment] ?? '#9ca3af';
+  const rootId    = hero.root_id as string;
 
   const equippedTitleId = prog?.equipped_title as string | null;
   const titlesArr       = (prog?.titles ?? []) as any[];
@@ -382,9 +395,9 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
     return equippedTitleId.replace(/^title_/, '').replace(/_/g, ' ').toUpperCase();
   })();
 
-  const fateSeals  = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.caches_granted ?? 0), 0);
-  const bossKills  = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.boss_kills    ?? 0), 0);
-  const gearFound  = (hero.gear?.inventory ?? []).length;
+  const fateSeals = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.caches_granted ?? 0), 0);
+  const bossKills = (hero.source_progression ?? []).reduce((sum: number, v: any) => sum + (v.boss_kills    ?? 0), 0);
+  const gearFound = (hero.gear?.inventory ?? []).length;
 
   const statBlocks = [
     { label: 'Sessions',   value: prog?.sessions_completed ?? 0 },
@@ -393,18 +406,66 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
     { label: 'Gear Found', value: gearFound },
   ];
 
-  const [battleHistory, setBattleHistory] = useState<BattleRecord[]>([]);
-  const [wristbandOpen, setWristbandOpen] = useState(false);
+  const [battleHistory,  setBattleHistory]  = useState<BattleRecord[]>([]);
+  const [wristbandOpen,  setWristbandOpen]  = useState(false);
+
+  // ── Titles state ─────────────────────────────────────────────────────────────
+  const [titles,         setTitles]         = useState<TitleEntry[]>([]);
+  const [titlesLoading,  setTitlesLoading]  = useState(true);
+  const [titlesOpen,     setTitlesOpen]     = useState(false);
+  const [equippingTitle, setEquippingTitle] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hero?.root_id) return;
     fetchVTHistory(hero.root_id).then(setBattleHistory);
   }, [hero?.root_id]);
 
+  useEffect(() => {
+    if (!rootId || !sessionToken) return;
+    setTitlesLoading(true);
+    fetch(`${BASE}/api/users/${rootId}/titles`, { headers: { Authorization: `Bearer ${sessionToken}` } })
+      .then(r => r.json())
+      .then(json => {
+        const d = json?.data?.data ?? json?.data ?? json;
+        setTitles(Array.isArray(d) ? d : []);
+      })
+      .catch(() => {
+        if (prog?.titles) {
+          const eq = prog.equipped_title;
+          setTitles((prog.titles as any[]).map(t => ({
+            title_id: t.title_id ?? t, display_name: t.title_name ?? t.display_name ?? String(t),
+            category: t.category ?? 'general', description: t.description ?? null,
+            is_earned: true, is_equipped: (t.title_id ?? t) === eq, granted_at: t.granted_at ?? null,
+          })));
+        }
+      })
+      .finally(() => setTitlesLoading(false));
+  }, [rootId, sessionToken]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleEquipTitle = async (titleId: string, isEquipped: boolean) => {
+    if (!rootId || !sessionToken) return;
+    setEquippingTitle(titleId);
+    try {
+      const target = isEquipped ? 'none' : titleId;
+      const res = await fetch(`${BASE}/api/users/${rootId}/titles/${target}/equip`, {
+        method: 'POST', headers: { Authorization: `Bearer ${sessionToken}`, 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error('equip failed');
+      const r2  = await fetch(`${BASE}/api/users/${rootId}/titles`, { headers: { Authorization: `Bearer ${sessionToken}` } });
+      const j2  = await r2.json();
+      const d2  = j2?.data?.data ?? j2?.data ?? j2;
+      setTitles(Array.isArray(d2) ? d2 : []);
+      await refreshHero();
+    } catch { /* silent */ } finally { setEquippingTitle(null); }
+  };
+
+  const earnedTitles = titles.filter(t => t.is_earned);
+  const lockedTitles = titles.filter(t => !t.is_earned);
+
   return (
     <div className="screen-enter" style={{ padding: 16 }}>
       {/* Identity card */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '20px 16px', marginBottom: 14 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)', borderRadius: 'var(--radius)', padding: '20px 16px', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 16 }}>
           <div style={{ width: 52, height: 52, borderRadius: 'var(--radius)', flexShrink: 0, background: `radial-gradient(circle, ${aColor}30 0%, transparent 70%)`, border: `1px solid ${aColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 20, color: aColor }}>
             {(hero.display_name ?? hero.hero_name ?? '?')[0].toUpperCase()}
@@ -431,7 +492,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
       {/* Stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
         {statBlocks.map(s => (
-          <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+          <div key={s.label} style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
             <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>{s.value}</p>
             <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{s.label}</p>
           </div>
@@ -445,8 +506,75 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
       <VeilBattleHistory history={battleHistory} />
 
       {/* Trophy Room */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '16px 14px', marginBottom: 14 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.04)', borderRadius: 'var(--radius)', padding: '16px 14px', marginBottom: 14 }}>
         <TrophyRoom hero={hero} fateSeals={fateSeals} />
+      </div>
+
+      {/* ── Titles — collapsible ─────────────────────────────────────────────── */}
+      <div style={{ marginBottom: 14 }}>
+        <button
+          onClick={() => setTitlesOpen(o => !o)}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: titlesOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
+        >
+          <span>
+            ◆ Titles
+            {earnedTitles.length > 0 && (
+              <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--gold)', fontFamily: 'monospace' }}>{earnedTitles.length}</span>
+            )}
+          </span>
+          <span style={{ color: 'var(--text-3)', fontSize: 12, display: 'inline-block', transition: 'transform 0.2s', transform: titlesOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
+        </button>
+        {titlesOpen && (
+          <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 var(--radius) var(--radius)', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {titlesLoading ? (
+              <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0', margin: 0 }}>Loading titles…</p>
+            ) : earnedTitles.length === 0 && lockedTitles.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--text-3)', textAlign: 'center', padding: '12px 0', margin: 0 }}>No titles yet — complete sessions and milestones to earn them.</p>
+            ) : (
+              <>
+                {earnedTitles.length > 0 && (
+                  <>
+                    <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.15em', fontWeight: 700, margin: '0 0 4px' }}>EARNED</p>
+                    {earnedTitles.map(t => {
+                      const color = TITLE_CAT_COLOR[t.category] ?? 'var(--text-3)';
+                      return (
+                        <div key={t.title_id} style={{ background: 'var(--bg)', border: `1px solid ${t.is_equipped ? color : 'var(--border)'}`, borderRadius: 'var(--radius)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: t.is_equipped ? `0 0 10px ${color}25` : 'none' }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>{t.display_name}</p>
+                            <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0 }}>
+                              {TITLE_CATEGORY_LABEL[t.category] ?? t.category}{t.description ? ` · ${t.description}` : ''}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleEquipTitle(t.title_id, t.is_equipped)}
+                            disabled={equippingTitle === t.title_id}
+                            style={{ padding: '5px 10px', flexShrink: 0, background: t.is_equipped ? 'transparent' : color, color: t.is_equipped ? color : '#0B0A08', border: `1px solid ${color}`, borderRadius: 6, fontFamily: 'Cinzel, serif', fontSize: 10, fontWeight: 700, cursor: equippingTitle === t.title_id ? 'wait' : 'pointer', opacity: equippingTitle === t.title_id ? 0.6 : 1, letterSpacing: '0.05em' }}
+                          >
+                            {equippingTitle === t.title_id ? '…' : t.is_equipped ? 'Remove' : 'Equip'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+                {lockedTitles.length > 0 && (
+                  <>
+                    <p style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.15em', fontWeight: 700, margin: '8px 0 4px' }}>LOCKED</p>
+                    {lockedTitles.map(t => (
+                      <div key={t.title_id} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, opacity: 0.5 }}>
+                        <span style={{ fontSize: 14, flexShrink: 0 }}>🔒</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: 'var(--text-3)', margin: '0 0 2px' }}>{t.display_name}</p>
+                          <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0 }}>{TITLE_CATEGORY_LABEL[t.category] ?? t.category}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Wristband — collapsible section */}
@@ -456,7 +584,7 @@ function ProfileTab({ hero, onSignOut, onReturnToHeroSelect }: { hero: any; onSi
           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: wristbandOpen ? 'var(--radius) var(--radius) 0 0' : 'var(--radius)', cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 12, color: 'var(--text-2)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
         >
           <span>⌚ Wristband</span>
-          <span style={{ color: 'var(--text-3)', fontSize: 12, transition: 'transform 0.2s', transform: wristbandOpen ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>▾</span>
+          <span style={{ color: 'var(--text-3)', fontSize: 12, display: 'inline-block', transition: 'transform 0.2s', transform: wristbandOpen ? 'rotate(180deg)' : 'none' }}>▾</span>
         </button>
         {wristbandOpen && (
           <div style={{ border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 var(--radius) var(--radius)', overflow: 'hidden' }}>
