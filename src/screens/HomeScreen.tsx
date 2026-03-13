@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/AuthContext';
 import { xpProgress, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '@/api/pik';
 import { ShareFateCard } from '@/screens/ShareFateCard';
-import { TierBadge } from '@/screens/TierBadge';
 import { CeremonyOverlay } from '@/screens/CeremonyOverlay';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
@@ -420,7 +419,9 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
                   Fate Level{' '}
                   <span style={{ color: 'rgba(200,160,78,0.65)', fontWeight: 700, fontSize: 12 }}>{progression.fate_level}</span>
                 </span>
-                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{progression.total_xp.toLocaleString()} xp</span>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                  {(progression.xp_to_next_level - progression.xp_in_current_level).toLocaleString()} xp to next
+                </span>
               </div>
               <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                 <div style={{
@@ -429,9 +430,6 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
                   background: 'rgba(200,160,78,0.35)',
                   transition: 'width 0.7s ease',
                 }} />
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'right', marginTop: 3, opacity: 0.6 }}>
-                {progression.xp_in_current_level.toLocaleString()} / {progression.xp_to_next_level.toLocaleString()} · {Math.round(prog * 100)}%
               </div>
             </div>
 
@@ -444,16 +442,17 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
               const heroFill = heroTo > 0 ? Math.min(1, Math.max(0, heroIn / heroTo)) : prog;
               return (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, letterSpacing: '0.08em', color: 'var(--text-1)', textTransform: 'uppercase' }}>
-                      Hero Level{' '}
-                      <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--font-serif)', letterSpacing: 0 }}>{heroLv}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span style={{ fontSize: 12, letterSpacing: '0.08em', color: 'var(--text-1)', textTransform: 'uppercase' }}>
+                        Hero Level{' '}
+                        <span style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 16, fontFamily: 'var(--font-serif)', letterSpacing: 0 }}>{heroLv}</span>
+                      </span>
+                      <TierBadge heroLevel={hero.progression.hero_level} />
+                    </div>
+                    <span style={{ fontSize: 11, color: 'rgba(220,170,60,0.75)' }}>
+                      {(heroTo - heroIn).toLocaleString()} xp to next
                     </span>
-                    <span style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 600 }}>
-                      {heroXp.toLocaleString()}{' '}
-                      <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 400 }}>xp</span>
-                    </span>
-<TierBadge heroLevel={hero.progression.hero_level} />
                   </div>
                   <div style={{
                     height: 7, borderRadius: 4,
@@ -469,9 +468,7 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
                       transition: 'width 0.7s ease',
                     }} />
                   </div>
-                  <div style={{ fontSize: 11, color: 'rgba(220,170,60,0.85)', textAlign: 'right', marginTop: 4 }}>
-                    {heroIn.toLocaleString()} / {heroTo.toLocaleString()} · {Math.round(heroFill * 100)}%
-                  </div>
+
                 </div>
               );
             })()}
@@ -483,7 +480,7 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
               { val: progression.sessions_completed,        label: 'SESSIONS' },
               { val: progression.titles.length,             label: 'TITLES'   },
               { val: (hero.gear?.inventory ?? []).length,   label: 'GEAR'     },
-              { val: progression.total_xp.toLocaleString(), label: 'FATE XP', accent: true },
+              { val: (hero.gear?.inventory ?? []).filter((g: any) => g.rarity === 'rare' || g.rarity === 'epic' || g.rarity === 'legendary').length, label: 'RARE+', accent: true },
             ].map((s, i) => (
               <div key={i} style={{ padding: '13px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
                 <span className="serif-bold" style={{ fontSize: 17, color: s.accent ? 'var(--gold)' : 'var(--text-1)' }}>{s.val}</span>
