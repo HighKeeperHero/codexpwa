@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/AuthContext';
 import { xpProgress, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '@/api/pik';
 import { ShareFateCard } from '@/screens/ShareFateCard';
+import { TierBadge } from '@/screens/TierBadge';
 import { CeremonyOverlay } from '@/screens/CeremonyOverlay';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
