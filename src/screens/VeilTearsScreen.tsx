@@ -1,6 +1,6 @@
 // src/screens/VeilTearsScreen.tsx
-// Requires: npm install leaflet @types/leaflet
-// Add to index.css (or import at top): @import 'leaflet/dist/leaflet.css';
+// Requires: npm install mapbox-gl
+// Add to index.css: @import 'mapbox-gl/dist/mapbox-gl.css';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
@@ -263,7 +263,8 @@ export default function VeilTearsScreen() {
 
   // Map refs
   const mapRef      = useRef<HTMLDivElement>(null);
-  const leafletRef  = useRef<L.Map | null>(null);
+  const mapboxRef   = useRef<any>(null);  // mapbox-gl Map instance
+  const markersRef  = useRef<any[]>([]);   // track markers for cleanup
   const tearsRef    = useRef<Tear[]>([]);
 
   // Location / init
@@ -307,21 +308,28 @@ export default function VeilTearsScreen() {
       : 3,
   };
 
+  // ── Cleanup map on unmount ─────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (mapboxRef.current) {
+        mapboxRef.current.remove();
+        mapboxRef.current = null;
+      }
+      markersRef.current = [];
+    };
+  }, []);
+
   // ── Countdown ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const t = setInterval(() => setCountdown(midnight()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  // ── Leaflet init ──────────────────────────────────────────────────────────
+  // ── Mapbox GL init ────────────────────────────────────────────────────────
   const initMap = useCallback(async (lat: number, lon: number) => {
-    if (!mapRef.current || leafletRef.current) return;
+    if (!mapRef.current || mapboxRef.current) return;
 
-    // Dynamically import Leaflet to keep bundle lean
-    const L = (await import('leaflet')).default;
-    await import('leaflet/dist/leaflet.css');
-
-    // Inject keyframe animation for tear rings
+    // Inject keyframe animations
     if (!document.getElementById('vt-keyframes')) {
       const style = document.createElement('style');
       style.id = 'vt-keyframes';
@@ -341,47 +349,50 @@ export default function VeilTearsScreen() {
       document.head.appendChild(style);
     }
 
-    const map = L.map(mapRef.current, {
-      center: [lat, lon],
-      zoom: 15,
-      zoomControl: false,
-      attributionControl: true,
+    // Dynamically import Mapbox GL to keep bundle lean
+    const mapboxgl = (await import('mapbox-gl')).default;
+    await import('mapbox-gl/dist/mapbox-gl.css');
+
+    (mapboxgl as any).accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
+
+    const map = new mapboxgl.Map({
+      container:   mapRef.current!,
+      style:       'mapbox://styles/mapbox/dark-v11',
+      center:      [lon, lat],   // mapbox uses [lng, lat]
+      zoom:        15,
+      interactive: true,
     });
 
-    // Apply filter via Leaflet's own pane reference + tile load event.
-    // getPanes().tilePane is the authoritative handle; re-apply on every
-    // tileload so late-loading tiles don't reset it.
-    const tl = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '© OpenStreetMap contributors © CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19,
-    }).addTo(map); // also apply immediately in case pane already exists
+    // Disable default controls — we use custom UI
+    map.addControl(new mapboxgl.AttributionControl({ compact: true }));
 
-    // Player marker
-    const playerIcon = L.divIcon({
-      className: '',
-      html: `<div style="width:18px;height:18px;border-radius:50%;background:radial-gradient(circle,rgba(200,160,78,0.9),rgba(200,160,78,0.3));border:2px solid rgba(200,160,78,0.9);box-shadow:0 0 16px rgba(200,160,78,0.7)"></div>`,
-      iconSize: [18, 18],
-      iconAnchor: [9, 9],
-    });
-    L.marker([lat, lon], { icon: playerIcon, zIndexOffset: 1000 }).addTo(map);
+    map.on('load', () => {
+      // Player marker
+      const playerEl = document.createElement('div');
+      playerEl.style.cssText = 'width:18px;height:18px;border-radius:50%;background:radial-gradient(circle,rgba(200,160,78,0.9),rgba(200,160,78,0.3));border:2px solid rgba(200,160,78,0.9);box-shadow:0 0 16px rgba(200,160,78,0.7)';
+      const playerMarker = new mapboxgl.Marker({ element: playerEl, anchor: 'center' })
+        .setLngLat([lon, lat])
+        .addTo(map);
+      markersRef.current.push(playerMarker);
 
-    // Spawn tears
-    const tears = spawnTears(lat, lon) as Tear[];
-    tears.forEach(t => {
-      const icon = L.divIcon({
-        className: '',
-        html: tearMarkerHTML(t.type),
-        iconSize: [44, 44],
-        iconAnchor: [22, 22],
+      // Spawn tears
+      const tears = spawnTears(lat, lon) as Tear[];
+      tears.forEach(t => {
+        const el = document.createElement('div');
+        el.innerHTML = tearMarkerHTML(t.type);
+        el.style.cssText = 'width:44px;height:44px;cursor:pointer;';
+        el.addEventListener('click', () => setActiveTear({ ...t, marker: null }));
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([t.lon, t.lat])
+          .addTo(map);
+        markersRef.current.push(marker);
+        t.marker = marker;
       });
-      const marker = L.marker([t.lat, t.lon], { icon }).addTo(map);
-      marker.on('click', () => setActiveTear({ ...t, marker }));
-      t.marker = marker;
+
+      tearsRef.current = tears;
     });
 
-    tearsRef.current = tears;
-    leafletRef.current = map;
+    mapboxRef.current = map;
   }, []);
 
   // ── Location permission ────────────────────────────────────────────────────
@@ -408,7 +419,7 @@ export default function VeilTearsScreen() {
 
   // ── Re-center ──────────────────────────────────────────────────────────────
   const recenter = useCallback(() => {
-    leafletRef.current?.panTo(coords, { animate: true, duration: 0.8 });
+    mapboxRef.current?.flyTo({ center: [coords[1], coords[0]], speed: 1.2 });
   }, [coords]);
 
   // ── Battle ─────────────────────────────────────────────────────────────────
@@ -456,7 +467,7 @@ export default function VeilTearsScreen() {
       if (nextHp <= 0) {
         // Victory — schedule state updates outside updater
         setTimeout(() => {
-          if (tear.marker && leafletRef.current) leafletRef.current.removeLayer(tear.marker);
+          if (tear.marker) (tear.marker as any).remove();
           tearsRef.current = tearsRef.current.map(t =>
             t.id === tear.id ? { ...t, sealed: true } : t
           );
