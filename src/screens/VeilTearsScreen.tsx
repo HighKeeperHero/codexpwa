@@ -358,16 +358,40 @@ export default function VeilTearsScreen() {
 
     const map = new mapboxgl.Map({
       container:   mapRef.current!,
+      // ── VEIL CUSTOM STYLE ─────────────────────────────────────
+      // Replace with your Mapbox Studio style URL once published:
+      //   style: 'mapbox://styles/heroesveri tas/YOUR_STYLE_ID',
+      // Until then using dark-v11 as base:
       style:       'mapbox://styles/mapbox/dark-v11',
-      center:      [lon, lat],   // mapbox uses [lng, lat]
+      center:      [lon, lat],
       zoom:        15,
       interactive: true,
+      antialias:   true,
     });
 
-    // Disable default controls — we use custom UI
     map.addControl(new mapboxgl.AttributionControl({ compact: true }));
 
     map.on('load', () => {
+      // ── Veil fog / atmosphere ─────────────────────────────────
+      // Creates a deep dark haze — distant areas fade into void
+      map.setFog({
+        color:            'rgb(6, 9, 18)',          // near fog — near-black navy
+        'high-color':     'rgb(10, 8, 24)',         // upper atmosphere — deep purple-black
+        'horizon-blend':  0.08,                     // sharp horizon
+        'space-color':    'rgb(4, 4, 12)',          // void beyond horizon
+        'star-intensity': 0.0,                      // no stars — we have our own veil aesthetic
+        range:            [0.5, 12],                // fog starts close, full at medium distance
+      });
+
+      // ── Mute road and label colors to match Veil palette ─────
+      // These layer tweaks work on top of any base style
+      const labelLayers = ['road-label', 'road-number-shield', 'poi-label', 'airport-label', 'place-label'];
+      labelLayers.forEach(layer => {
+        if (map.getLayer(layer)) {
+          map.setPaintProperty(layer, 'text-color', '#1E2E48');
+          map.setPaintProperty(layer, 'text-halo-color', 'rgba(0,0,0,0)');
+        }
+      });
       // Player marker
       const playerEl = document.createElement('div');
       playerEl.style.cssText = 'width:18px;height:18px;border-radius:50%;background:radial-gradient(circle,rgba(200,160,78,0.9),rgba(200,160,78,0.3));border:2px solid rgba(200,160,78,0.9);box-shadow:0 0 16px rgba(200,160,78,0.7)';
@@ -895,10 +919,12 @@ const css: Record<string, React.CSSProperties> = {
   map: {
     position: 'absolute', inset: 0,
     zIndex: 0,
+    // CSS color grade — deep purple-teal Veil tint
+    filter: 'saturate(0.7) hue-rotate(200deg) brightness(0.85) contrast(1.1)',
   },
   vignette: {
     position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
-    background: 'radial-gradient(ellipse 70% 60% at 50% 50%, transparent 0%, rgba(8,12,20,0.55) 60%, rgba(8,12,20,0.93) 100%)',
+    background: 'radial-gradient(ellipse 65% 55% at 50% 50%, transparent 0%, rgba(6,8,20,0.65) 55%, rgba(4,6,16,0.97) 100%)',
   },
   scanlines: {
     position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
