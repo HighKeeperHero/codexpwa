@@ -362,11 +362,7 @@ export default function VeilTearsScreen() {
 
     const map = new mapboxgl.Map({
       container:   mapRef.current!,
-      // ── VEIL CUSTOM STYLE ─────────────────────────────────────
-      // Replace with your Mapbox Studio style URL once published:
-      //   style: 'mapbox://styles/heroesveri tas/YOUR_STYLE_ID',
-      // Until then using dark-v11 as base:
-      style:       'mapbox://styles/mapbox/dark-v11',
+      style:       'mapbox://styles/heroesveritas/cmmpzeee5009j01su9nfy60xe',
       center:      [lon, lat],
       zoom:        15,
       interactive: true,
