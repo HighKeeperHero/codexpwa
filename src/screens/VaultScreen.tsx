@@ -286,12 +286,17 @@ export function VaultScreen() {
           setComponents(prev => ({ ...prev, ...mData.materials }));
         }
       }
-      // Recipes (optional)
+      // Recipes — merge API standard recipes with hardcoded alignment recipes
+      // Alignment recipes are always sourced from DEFAULT_RECIPES (never from API)
+      const alignmentRecipes = DEFAULT_RECIPES.filter(r => r.alignment);
       const rRes  = await fetch(`${BASE}/api/workshop/recipes`);
       if (rRes.ok) {
         const rJson = await rRes.json();
         const arr   = unwrap(rJson);
-        if (Array.isArray(arr) && arr.length > 0) setRecipes(arr);
+        if (Array.isArray(arr) && arr.length > 0) {
+          // Use API standard recipes + always keep hardcoded alignment recipes
+          setRecipes([...arr, ...alignmentRecipes]);
+        }
       }
     } catch {} finally { setEconomyLoading(false); }
   }, [rootId, sessionToken]);
