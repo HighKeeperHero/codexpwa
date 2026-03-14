@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../AuthContext';
+import { TierLadder } from './TierLadder';
 
 const BASE = 'https://pik-prd-production.up.railway.app';
 
