@@ -337,6 +337,10 @@ export default function VeilTearsScreen() {
       const style = document.createElement('style');
       style.id = 'vt-keyframes';
       style.textContent = `
+        /* Apply color grade ONLY to map tiles — not markers */
+        .mapboxgl-canvas {
+          filter: saturate(0.7) hue-rotate(200deg) brightness(0.85) contrast(1.1);
+        }
         @keyframes tearRing {
           0%   { transform:scale(0.8);opacity:0.8; }
           100% { transform:scale(1.7);opacity:0; }
@@ -919,8 +923,8 @@ const css: Record<string, React.CSSProperties> = {
   map: {
     position: 'absolute', inset: 0,
     zIndex: 0,
-    // CSS color grade — deep purple-teal Veil tint
-    filter: 'saturate(0.7) hue-rotate(200deg) brightness(0.85) contrast(1.1)',
+    // Filter is applied to .mapboxgl-canvas only (see keyframe injection below)
+    // so markers are NOT colour-shifted
   },
   vignette: {
     position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
