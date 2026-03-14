@@ -60,6 +60,7 @@ interface RecipeCost {
 }
 interface Recipe {
   recipe_id:    string;
+  alignment?:   string;   // ORDER | CHAOS | LIGHT | DARK — if set, only shown to matching heroes
   name:         string;
   slot:         string;
   rarity:       Rarity;
@@ -149,6 +150,62 @@ const DEFAULT_RECIPES: Recipe[] = [
     nexus_cost: 200,
     components: [{ component_id: 'arcane_essence', quantity: 2 }, { component_id: 'void_fragment', quantity: 1 }],
   },
+
+  // ── ORDER alignment recipes ──────────────────────────────────
+  {
+    recipe_id: 'craft_order_mandate_plate', alignment: 'ORDER',
+    name: 'Mandate Plate', slot: 'chest', rarity: 'epic', icon: '⚖️', nexus_cost: 150,
+    description: "Forged from ORDER's iron will. Unyielding against chaos.",
+    components: [{ component_id: 'iron_mandate', quantity: 3 }, { component_id: 'arcane_essence', quantity: 1 }],
+  },
+  {
+    recipe_id: 'craft_order_verdict_blade', alignment: 'ORDER',
+    name: 'Verdict Blade', slot: 'weapon', rarity: 'epic', icon: '⚔️', nexus_cost: 200,
+    description: "ORDER's judgment made manifest. Bonus damage to rift-born enemies.",
+    components: [{ component_id: 'iron_mandate', quantity: 5 }, { component_id: 'void_fragment', quantity: 1 }],
+  },
+
+  // ── CHAOS alignment recipes ──────────────────────────────────
+  {
+    recipe_id: 'craft_chaos_fracture_wraps', alignment: 'CHAOS',
+    name: 'Fracture Wraps', slot: 'arms', rarity: 'epic', icon: '🌀', nexus_cost: 150,
+    description: 'Held together by sheer force of will and broken rift energy.',
+    components: [{ component_id: 'fracture_shard', quantity: 3 }, { component_id: 'arcane_essence', quantity: 1 }],
+  },
+  {
+    recipe_id: 'craft_chaos_shard_edge', alignment: 'CHAOS',
+    name: 'Shard Edge', slot: 'weapon', rarity: 'epic', icon: '⚡', nexus_cost: 200,
+    description: 'Hums with unstable rift energy. Volatile but devastating.',
+    components: [{ component_id: 'fracture_shard', quantity: 5 }, { component_id: 'void_fragment', quantity: 1 }],
+  },
+
+  // ── LIGHT alignment recipes ──────────────────────────────────
+  {
+    recipe_id: 'craft_light_radiant_mantle', alignment: 'LIGHT',
+    name: 'Radiant Mantle', slot: 'chest', rarity: 'epic', icon: '✦', nexus_cost: 150,
+    description: 'Woven from condensed light energy. Reduces damage from dark-aligned enemies.',
+    components: [{ component_id: 'radiant_core', quantity: 3 }, { component_id: 'arcane_essence', quantity: 1 }],
+  },
+  {
+    recipe_id: 'craft_light_dawnbringer', alignment: 'LIGHT',
+    name: 'Dawnbringer', slot: 'weapon', rarity: 'epic', icon: '🌟', nexus_cost: 200,
+    description: 'Forged at the threshold of the Veil. Illuminates what dark things hide.',
+    components: [{ component_id: 'radiant_core', quantity: 5 }, { component_id: 'void_fragment', quantity: 1 }],
+  },
+
+  // ── DARK alignment recipes ──────────────────────────────────
+  {
+    recipe_id: 'craft_dark_shadow_wraps', alignment: 'DARK',
+    name: 'Shadow Wraps', slot: 'arms', rarity: 'epic', icon: '🌑', nexus_cost: 150,
+    description: 'Saturated with residual darkness. Makes the wearer harder to detect.',
+    components: [{ component_id: 'shadow_residue', quantity: 3 }, { component_id: 'arcane_essence', quantity: 1 }],
+  },
+  {
+    recipe_id: 'craft_dark_void_reaper', alignment: 'DARK',
+    name: 'Void Reaper', slot: 'weapon', rarity: 'epic', icon: '💀', nexus_cost: 200,
+    description: 'Drawn from the deepest residue of sealed rifts. Feeds on fallen enemies.',
+    components: [{ component_id: 'shadow_residue', quantity: 5 }, { component_id: 'void_fragment', quantity: 1 }],
+  },
 ];
 
 // ── Main Component ─────────────────────────────────────────────
@@ -218,6 +275,15 @@ export function VaultScreen() {
           const map: Record<string, number> = {};
           arr.forEach(c => { map[c.id] = c.quantity; });
           setComponents(map);
+        }
+      }
+      // Alignment materials — merge into components map
+      const mRes = await fetch(`${BASE}/api/ventures/hunts/${rootId}/materials`);
+      if (mRes.ok) {
+        const mJson = await mRes.json();
+        const mData = unwrap(mJson);
+        if (mData?.materials) {
+          setComponents(prev => ({ ...prev, ...mData.materials }));
         }
       }
       // Recipes (optional)
@@ -518,9 +584,10 @@ export function VaultScreen() {
             </div>
           )}
 
+          {/* Standard recipes */}
           <SectionLabel>Recipes</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {recipes.map(r => (
+            {recipes.filter(r => !r.alignment).map(r => (
               <RecipeCard
                 key={r.recipe_id} recipe={r}
                 nexusBalance={nexusBalance} components={components}
@@ -529,6 +596,54 @@ export function VaultScreen() {
               />
             ))}
           </div>
+
+          {/* Alignment recipes — only show player's own faction */}
+          {(() => {
+            const heroAlignment = hero?.alignment ?? 'NONE';
+            const alignmentRecipes = recipes.filter(r => r.alignment === heroAlignment);
+            if (heroAlignment === 'NONE' || alignmentRecipes.length === 0) return null;
+
+            const ALIGNMENT_COLOR: Record<string, string> = {
+              ORDER: '#C8A04E', CHAOS: '#C85E28', LIGHT: '#C8A04E', DARK: '#7A5888',
+            };
+            const ALIGNMENT_MATERIAL_NAME: Record<string, string> = {
+              ORDER: 'Iron Mandate', CHAOS: 'Fracture Shard',
+              LIGHT: 'Radiant Core', DARK: 'Shadow Residue',
+            };
+            const aColor = ALIGNMENT_COLOR[heroAlignment] ?? 'var(--gold)';
+
+            return (
+              <div style={{ marginTop: 24 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  marginBottom: 12,
+                }}>
+                  <div style={{ flex: 1, height: 1, background: `${aColor}33` }} />
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: '2px',
+                    color: aColor, fontFamily: 'Cinzel, serif',
+                    textTransform: 'uppercase',
+                  }}>
+                    {heroAlignment} · Faction Forge
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: `${aColor}33` }} />
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 14, fontStyle: 'italic' }}>
+                  Requires {ALIGNMENT_MATERIAL_NAME[heroAlignment]} — earned by completing {heroAlignment} Hunts.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {alignmentRecipes.map(r => (
+                    <RecipeCard
+                      key={r.recipe_id} recipe={r}
+                      nexusBalance={nexusBalance} components={components}
+                      isCrafting={craftingId === r.recipe_id}
+                      onCraft={() => handleCraft(r)}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
@@ -565,6 +680,11 @@ const COMPONENT_META: Record<string, { name: string; icon: string; color: string
   refined_core:   { name: 'Refined Core',   icon: '⚙️', color: '#34d399' },
   arcane_essence: { name: 'Arcane Essence', icon: '🔮', color: '#1E90FF' },
   void_fragment:  { name: 'Void Fragment',  icon: '💠', color: '#A855F7' },
+  // Alignment materials
+  iron_mandate:   { name: 'Iron Mandate',   icon: '⚖️', color: '#C8A04E' },
+  fracture_shard: { name: 'Fracture Shard', icon: '🌀', color: '#C85E28' },
+  radiant_core:   { name: 'Radiant Core',   icon: '✦',  color: '#C8A04E' },
+  shadow_residue: { name: 'Shadow Residue', icon: '🌑', color: '#7A5888' },
 };
 
 function ComponentsStash({ components }: { components: Record<string, number> }) {
