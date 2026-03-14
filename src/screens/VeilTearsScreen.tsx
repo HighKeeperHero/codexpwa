@@ -329,6 +329,9 @@ export default function VeilTearsScreen() {
   const initMap = useCallback(async (lat: number, lon: number) => {
     if (!mapRef.current || mapboxRef.current) return;
 
+    // Ensure container is empty before Mapbox init
+    mapRef.current.innerHTML = '';
+
     // Inject keyframe animations
     if (!document.getElementById('vt-keyframes')) {
       const style = document.createElement('style');
@@ -351,8 +354,6 @@ export default function VeilTearsScreen() {
 
     // Dynamically import Mapbox GL to keep bundle lean
     const mapboxgl = (await import('mapbox-gl')).default;
-    await import('mapbox-gl/dist/mapbox-gl.css');
-
     (mapboxgl as any).accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
     const map = new mapboxgl.Map({
