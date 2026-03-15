@@ -344,7 +344,6 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
             <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:24 }}>
               {([
                 { label:'ORIGIN',  value: narrative.region  },
-                { label:'CLASS',   value: narrative.class   },
                 { label:'HISTORY', value: narrative.origin  },
                 { label:'WOUND',   value: narrative.wound   },
                 { label:'CALLING', value: narrative.calling },

@@ -290,7 +290,6 @@ function StepHeroRecognition({ hero, onComplete }: { hero: Hero; onComplete: () 
   const narrative = generateNarrative(hero.root_id);
   const fields = [
     { key: 'region',  label: NARRATIVE_LABELS.region,  value: narrative.region  },
-    { key: 'class',   label: NARRATIVE_LABELS.class,   value: narrative.class   },
     { key: 'origin',  label: NARRATIVE_LABELS.origin,  value: narrative.origin  },
     { key: 'wound',   label: NARRATIVE_LABELS.wound,   value: narrative.wound   },
     { key: 'calling', label: NARRATIVE_LABELS.calling, value: narrative.calling },
