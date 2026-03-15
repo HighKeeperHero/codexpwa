@@ -206,13 +206,17 @@ function spawnTears(lat: number, lon: number): Omit<Tear, 'marker'>[] {
   const gridLat = Math.round(lat * 1000);
   const gridLon = Math.round(lon * 1000);
   const rand    = seededRand((gridLat * 73856093) ^ (gridLon * 19349663) ^ day);
-  const spread  = 0.012;
+  // spread calibrated for Mapbox GL zoom 15 — visible radius ~0.005 degrees
+  const spread  = 0.004;
 
   const defs: TearType[] = ['minor', 'minor', 'minor', 'wander', 'wander', 'dormant', 'double'];
 
   return defs.map((type, i) => {
-    const angle = rand() * Math.PI * 2;
-    const dist  = (0.3 + rand() * 0.7) * spread;
+    // Distribute evenly around player using fixed angle slots + small random offset
+    // This prevents clustering and ensures all tears stay in viewport
+    const baseAngle = (i / defs.length) * Math.PI * 2;
+    const angle = baseAngle + (rand() - 0.5) * 0.8;
+    const dist  = (0.4 + rand() * 0.5) * spread;
     const tLat  = lat + Math.sin(angle) * dist;
     const tLon  = lon + Math.cos(angle) * dist / Math.cos((lat * Math.PI) / 180);
     const td    = TEAR_TYPES[type];
