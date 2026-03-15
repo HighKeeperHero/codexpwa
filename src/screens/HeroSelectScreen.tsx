@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/AuthContext';
-import { TIER_FOR_LEVEL, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '@/api/pik';
+import { TIER_FOR_LEVEL, ALIGNMENT_COLOR, ALIGNMENT_LABEL, generateNarrative } from '@/api/pik';
 
 const HERO_LIMIT = 2;
 
@@ -9,7 +9,7 @@ interface Props {
   onSignOut:      () => void;
 }
 
-type View = 'select' | 'create';
+type View = 'select' | 'create' | 'backstory';
 
 export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
   const { account, heroes, selectHero, createHero, refreshHeroes } = useAuth();
@@ -20,6 +20,8 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
   const [loading,    setLoading]    = useState(false);
   const [selecting,  setSelecting]  = useState<string | null>(null);
   const [entered,    setEntered]    = useState(false);
+  const [rerolls,    setRerolls]    = useState(0);
+  const [narrative,  setNarrative]  = useState<ReturnType<typeof generateNarrative> | null>(null);
   // hero_level is not in the list endpoint — fetch detail per hero to get accurate levels
   const [heroDetails, setHeroDetails] = useState<Record<string, { hero_level: number; fate_level: number }>>({});
 
@@ -85,6 +87,24 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
     } finally {
       setSelecting(null);
     }
+  };
+
+  // Generate narrative seeded from hero name + reroll count
+  const generateFromName = (name: string, roll: number) =>
+    generateNarrative(name.trim().toLowerCase().replace(/\s+/g, '') + (roll > 0 ? `__roll${roll}` : ''));
+
+  const handleShowBackstory = () => {
+    if (nameState !== 'available') return;
+    setNarrative(generateFromName(heroName, 0));
+    setRerolls(0);
+    setView('backstory');
+  };
+
+  const handleReroll = () => {
+    if (rerolls >= 3) return;
+    const next = rerolls + 1;
+    setRerolls(next);
+    setNarrative(generateFromName(heroName, next));
   };
 
   const handleCreate = async () => {
@@ -290,7 +310,7 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
             )}
 
             <button
-              onClick={handleCreate}
+              onClick={handleShowBackstory}
               disabled={loading || nameState !== 'available'}
               style={{
                 width:'100%', padding:'15px', borderRadius:10, marginTop:4,
@@ -301,7 +321,7 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
                 transition:'all 0.2s',
               }}
             >
-              {loading ? 'Creating…' : 'BEGIN YOUR JOURNEY'}
+              {'BEGIN YOUR JOURNEY'}
             </button>
 
             <p style={{ fontSize:11, color:'var(--text-3)', textAlign:'center', lineHeight:1.6, opacity:0.7 }}>
@@ -309,6 +329,60 @@ export function HeroSelectScreen({ onHeroSelected, onSignOut }: Props) {
             </p>
           </div>
         )}
+
+        {/* ── View: backstory ── */}
+        {view === 'backstory' && narrative && (
+          <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+
+            <div style={{ textAlign:'center', padding:'20px 8px 24px', borderBottom:'1px solid var(--border)', marginBottom:20 }}>
+              <p style={{ fontSize:13, color:'var(--text-2)', fontFamily:'var(--font-serif)', fontStyle:'italic', lineHeight:1.7, marginBottom:8 }}>
+                "Whispers of your story flood from the Veil..."
+              </p>
+              <p style={{ fontSize:11, color:'var(--text-3)', letterSpacing:'0.06em' }}>{heroName}</p>
+            </div>
+
+            <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:24 }}>
+              {([
+                { label:'ORIGIN',  value: narrative.region  },
+                { label:'CLASS',   value: narrative.class   },
+                { label:'HISTORY', value: narrative.origin  },
+                { label:'WOUND',   value: narrative.wound   },
+                { label:'CALLING', value: narrative.calling },
+              ] as { label: string; value: string }[]).map((f) => (
+                <div key={f.label} style={{ borderLeft:'2px solid rgba(200,144,10,0.35)', paddingLeft:12 }}>
+                  <p style={{ fontSize:8, fontWeight:700, letterSpacing:'2px', color:'var(--text-3)', margin:'0 0 2px', fontFamily:'var(--font-serif)' }}>{f.label}</p>
+                  <p style={{ fontSize:13, color:'var(--text-1)', margin:0, fontFamily:'var(--font-serif)', lineHeight:1.5 }}>{f.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20 }}>
+              <p style={{ fontSize:11, color:'var(--text-3)', margin:0 }}>
+                {rerolls < 3 ? `${3 - rerolls} reroll${3 - rerolls !== 1 ? 's' : ''} remaining` : 'No rerolls remaining'}
+              </p>
+              <button onClick={handleReroll} disabled={rerolls >= 3} style={{ background:'none', border:'1px solid var(--border)', borderRadius:6, padding:'6px 14px', fontSize:11, letterSpacing:'0.08em', color: rerolls < 3 ? 'var(--text-2)' : 'var(--text-3)', cursor: rerolls < 3 ? 'pointer' : 'not-allowed', fontFamily:'var(--font-serif)' }}>
+                ↻ Reroll
+              </button>
+            </div>
+
+            {error && (
+              <p style={{ fontSize:12, color:'var(--ember)', padding:'8px 12px', background:'rgba(200,94,40,0.08)', borderRadius:8, border:'1px solid rgba(200,94,40,0.2)', marginBottom:12 }}>{error}</p>
+            )}
+
+            <button onClick={handleCreate} disabled={loading} style={{ width:'100%', padding:'15px', borderRadius:10, cursor: loading ? 'not-allowed' : 'pointer', background:'var(--gold)', border:'none', color:'var(--bg)', fontSize:13, fontWeight:700, letterSpacing:'0.1em', marginBottom:10, transition:'all 0.2s' }}>
+              {loading ? 'Creating…' : 'ACCEPT FATE'}
+            </button>
+
+            <button onClick={handleCreate} disabled={loading} style={{ width:'100%', padding:'13px', borderRadius:10, cursor: loading ? 'not-allowed' : 'pointer', background:'transparent', border:'1px solid var(--border)', color:'var(--text-3)', fontSize:12, letterSpacing:'0.08em', transition:'all 0.2s', marginBottom:8 }}>
+              {loading ? '…' : 'Skip — Enter the Codex'}
+            </button>
+
+            <button onClick={() => { setView('create'); setNarrative(null); setRerolls(0); }} style={{ background:'none', border:'none', color:'var(--text-3)', fontSize:11, cursor:'pointer', padding:'8px 0 0', letterSpacing:'0.05em', textAlign:'center' }}>
+              ← Back to name
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
