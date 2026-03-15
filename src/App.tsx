@@ -10,10 +10,13 @@ import { VenturesScreen } from '@/screens/VenturesScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { AlignmentModal } from '@/screens/AlignmentModal';
 import VeilTearsScreen from '@/screens/VeilTearsScreen';
+import { AwakeningScreen }                       from '@/screens/AwakeningScreen';
+import { MilestoneCeremony, checkMilestone } from '@/screens/MilestoneCeremony';
+import type { Milestone }                    from '@/screens/MilestoneCeremony';
 import { TierAscensionModal, checkTierAscension } from '@/screens/TierAscensionModal';
 import type { Tier } from '@/api/pik';
 
-type AppRoute = 'landing' | 'hero-select' | 'dashboard';
+type AppRoute = 'landing' | 'hero-select' | 'awakening' | 'dashboard';
 type DashTab = 'home' | 'training' | 'hunts' | 'archive' | 'veil';
 
 // ── Offline banner ────────────────────────────────────────────────────────────
@@ -107,12 +110,20 @@ function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void 
   const { isOnline, hero, showAlignmentModal, alignment, setAlignment, dismissAlignmentModal } = useAuth();
   const [tab, setTab]                     = useState<DashTab>('home');
   const [ascensionTier, setAscensionTier] = useState<Tier | null>(null);
+  const [milestone, setMilestone]         = useState<Milestone | null>(null);
 
   // Fire tier ascension modal once per tier per hero
   useEffect(() => {
     if (!hero) return;
     const pending = checkTierAscension(hero.root_id, hero.progression.hero_level);
     if (pending) setAscensionTier(pending);
+  }, [hero?.root_id, hero?.progression.hero_level]);
+
+  // Fire milestone ceremony (Level 1 Hero Awakening)
+  useEffect(() => {
+    if (!hero) return;
+    const m = checkMilestone(hero.root_id, hero.progression.hero_level);
+    if (m) setMilestone(m);
   }, [hero?.root_id, hero?.progression.hero_level]);
 
   if (!hero) return null;
@@ -142,6 +153,14 @@ function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void 
           onDismiss={() => setAscensionTier(null)}
         />
       )}
+      {milestone && (
+        <MilestoneCeremony
+          milestone={milestone}
+          heroName={hero.display_name}
+          rootId={hero.root_id}
+          onDismiss={() => setMilestone(null)}
+        />
+      )}
     </>
   );
 }
@@ -157,11 +176,24 @@ function Router() {
   useEffect(() => {
     if (!readyToRoute) return;
     if (!account) { setRoute('landing'); return; }
+    // ── OnboardingGate ────────────────────────────────────────────────────────
+    // Gate condition uses server state (hero from AuthContext), never localStorage.
+    // Existing heroes → dashboard directly. New heroes → awakening sequence.
     if (!hero)    { setRoute('hero-select'); return; }
+    if (route === 'landing' || route === 'hero-select') {
+      // Hero just created — check if they've completed onboarding
+      const onboardingKey = `onboarding_complete__${hero.root_id}`;
+      const hasOnboarded  = localStorage.getItem(onboardingKey);
+      if (!hasOnboarded) {
+        setRoute('awakening');
+        return;
+      }
+    }
     setRoute('dashboard');
   }, [readyToRoute, account, hero]);
 
   const goToHeroSelect = () => setRoute('hero-select');
+  const goToDashboard  = () => setRoute('dashboard');
 
   if (!readyToRoute) {
     return <SplashScreen onComplete={() => setSplashDone(true)} />;
@@ -174,8 +206,21 @@ function Router() {
   if (route === 'hero-select') {
     return (
       <HeroSelectScreen
-        onHeroSelected={() => setRoute('dashboard')}
+        onHeroSelected={() => setRoute('hero-select')}
         onSignOut={() => { signOut(); setRoute('landing'); }}
+      />
+    );
+  }
+
+  // ── Awakening sequence — new heroes only ──────────────────────────────────
+  if (route === 'awakening' && hero) {
+    return (
+      <AwakeningScreen
+        hero={hero}
+        onComplete={() => {
+          localStorage.setItem(`onboarding_complete__${hero.root_id}`, '1');
+          goToDashboard();
+        }}
       />
     );
   }
