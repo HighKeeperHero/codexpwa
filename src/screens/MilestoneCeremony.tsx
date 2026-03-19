@@ -63,7 +63,21 @@ const MILESTONES: Milestone[] = [
     ],
   },
   // Level 20 — Alignment Ceremony handled by AlignmentModal (Sprint 20.4)
-  // Level 40 — Job Awakening deferred to Sprint 22
+  {
+    id:       'job_awakening',
+    level:    40,
+    title:    'JOB AWAKENING',
+    subtitle: 'Your class is revealed',
+    lore:     'The Veil does not grant a class. It recognizes one. What you have done brought you here.',
+    glyph:    '✦',
+    color:    '#C9A24B',
+    unlocks: [
+      'Job Class selection unlocked',
+      'Class Crystals replace Rune Sigils',
+      'Post-40 progression begins',
+      'Class-specific gear drops enabled',
+    ],
+  },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -359,3 +373,119 @@ const styles: Record<string, React.CSSProperties> = {
     padding:     '4px',
   },
 };
+
+// ── Job Class Selection Shell (Sprint 22.4) ──────────────────────────────────
+// Displayed after the Level 40 MilestoneCeremony dismisses.
+// Full class logic (stat filtering, crystal unlock) implemented in Sprint 22.C.
+
+const JOB_CLASSES = [
+  { id: 'AEGIS',         name: 'Aegis',          role: 'Tank',    weapon: 'Sword & Shield',          glyph: '🛡',  desc: 'The wall that holds.' },
+  { id: 'SCALESWORN',    name: 'Scalesworn',     role: 'DPS',     weapon: 'Spear',                   glyph: '🐉',  desc: 'Scale and strike.' },
+  { id: 'DRYADIC',       name: 'Dryadic',        role: 'Healer',  weapon: 'Staff & Totem',           glyph: '🌿',  desc: 'Life where life should not be.' },
+  { id: 'HARVESTER',     name: 'Harvester',      role: 'Support', weapon: 'Bow & Dagger',            glyph: '🏹',  desc: 'Feed the line. Take the edge.' },
+  { id: 'CORSAIR',       name: 'Corsair',        role: 'DPS',     weapon: 'Sabre & Rune Pistol',     glyph: '⚓',  desc: 'No flag. No mercy.' },
+  { id: 'GAMBLER',       name: 'Gambler',        role: 'Support', weapon: 'Magic Cards & Dagger',    glyph: '🃏',  desc: 'Chance is a skill.' },
+  { id: 'ARTIFICER',     name: 'Artificer',      role: 'Support', weapon: 'Bandolier & Mini-Robot',  glyph: '⚙',  desc: 'Build it. Break it. Build it again.' },
+  { id: 'ARCANE_SCHOLAR',name: 'Arcane Scholar', role: 'DPS',     weapon: 'Tome & Wand',             glyph: '📖',  desc: 'The answer was always in the text.' },
+];
+
+interface JobClassSelectionProps {
+  rootId:    string;
+  heroName:  string;
+  onDismiss: () => void;
+}
+
+export function JobClassSelection({ rootId, heroName, onDismiss }: JobClassSelectionProps) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+
+  const handleConfirm = async () => {
+    if (!selected || confirming) return;
+    setConfirming(true);
+    // Sprint 22.C will wire this to the backend class selection endpoint
+    // For now — store locally and log
+    localStorage.setItem(`job_class__${rootId}`, selected);
+    setTimeout(() => {
+      setConfirmed(true);
+      setTimeout(onDismiss, 1200);
+    }, 600);
+  };
+
+  return createPortal(
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(0,0,0,0.96)',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'flex-start',
+      padding: '48px 16px 32px', overflowY: 'auto',
+    }}>
+      <p style={{ fontSize: 9, letterSpacing: '4px', color: '#C9A24B', margin: '0 0 8px', fontFamily: "'Cinzel', serif" }}>JOB AWAKENING</p>
+      <h2 style={{ fontSize: 24, fontWeight: 800, color: '#C9A24B', margin: '0 0 6px', fontFamily: "'Cinzel', serif", textAlign: 'center' }}>
+        {heroName}
+      </h2>
+      <p style={{ fontSize: 13, color: 'rgba(200,192,184,0.7)', margin: '0 0 32px', textAlign: 'center', fontFamily: "'Cinzel', serif", fontStyle: 'italic' }}>
+        Choose your class. This cannot be undone.
+      </p>
+
+      <div style={{ width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+        {JOB_CLASSES.map(cls => {
+          const isSelected = selected === cls.id;
+          return (
+            <div
+              key={cls.id}
+              onClick={() => setSelected(cls.id)}
+              style={{
+                padding: '14px 16px', borderRadius: 10, cursor: 'pointer',
+                background: isSelected ? 'rgba(201,162,75,0.12)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${isSelected ? 'rgba(201,162,75,0.6)' : 'rgba(255,255,255,0.08)'}`,
+                display: 'flex', alignItems: 'center', gap: 14,
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span style={{ fontSize: 24, flexShrink: 0 }}>{cls.glyph}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: isSelected ? '#C9A24B' : 'var(--text-1)', margin: 0, fontFamily: "'Cinzel', serif" }}>{cls.name}</p>
+                  <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'rgba(255,255,255,0.06)', borderRadius: 4, padding: '1px 5px' }}>{cls.role}</span>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', margin: '0 0 2px' }}>{cls.weapon}</p>
+                <p style={{ fontSize: 11, color: 'rgba(200,192,184,0.5)', margin: 0, fontStyle: 'italic' }}>{cls.desc}</p>
+              </div>
+              {isSelected && <span style={{ color: '#C9A24B', fontSize: 16 }}>✓</span>}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{ width: '100%', maxWidth: 420 }}>
+        {confirmed ? (
+          <p style={{ textAlign: 'center', fontSize: 14, color: '#C9A24B', fontFamily: "'Cinzel', serif" }}>
+            ✦ Class bound to your Fate ✦
+          </p>
+        ) : (
+          <>
+            <button
+              onClick={handleConfirm}
+              disabled={!selected || confirming}
+              style={{
+                width: '100%', padding: '15px', borderRadius: 10, marginBottom: 10,
+                background: selected ? '#C9A24B' : 'rgba(201,162,75,0.2)',
+                border: 'none', color: selected ? '#0B0F1A' : 'var(--text-3)',
+                fontSize: 13, fontWeight: 700, letterSpacing: '0.1em',
+                cursor: selected ? 'pointer' : 'not-allowed',
+                fontFamily: "'Cinzel', serif",
+              }}
+            >
+              {confirming ? 'Binding…' : 'ACCEPT CLASS'}
+            </button>
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>
+              Sprint 22.C — full class logic coming soon
+            </p>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+}

@@ -1,41 +1,130 @@
 // src/screens/ChronicleScreen.tsx
-// v2 fix: ModifierBar positive color is now var(--gold) to match Training header gold
-//   Previously used alignColor (alignment-dependent) which looked inconsistent
-import { useState, useEffect, useRef } from 'react';
+// Sprint 22.1 — Full Chronicle Timeline
+// - Dedicated timeline fetch from /api/users/:root_id/timeline
+// - Category filter tabs: All, Combat, Gear, Progression, Titles
+// - Milestone markers for level_up, tier_ascension, awakening events
+// - Shareable moments via tap → share (22.3)
+// - Full event type coverage for all Sprint 21+ events
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../AuthContext';
 import { TIER_FOR_LEVEL, ALIGNMENT_COLOR, ALIGNMENT_LABEL, MODIFIER_LABEL, xpProgress } from '@/api/pik';
+import { ShareFateCard } from './ShareFateCard';
 
+const BASE = 'https://pik-prd-production.up.railway.app';
 const LORE_CACHE = new Map<string, string>();
-type Section = 'identity' | 'modifiers' | 'venues' | 'feed';
 
+type Section  = 'identity' | 'modifiers' | 'venues' | 'feed';
+type Category = 'all' | 'combat' | 'gear' | 'progression' | 'titles';
+
+// ── Event metadata ────────────────────────────────────────────────────────────
 const EVENT_ICON: Record<string, string> = {
-  'progression.xp_granted':       '✦',
-  'progression.level_up':         '⬡',
-  'progression.session_completed':'◈',
-  'loot.cache_opened':            '⬡',
-  'loot.cache_granted':           '⬡',
-  'gear.item_equipped':           '⚔',
-  'gear.item_acquired':           '⊕',
-  'title.unlocked':               '◆',
-  'title.equipped':               '◆',
-  'fate_marker.added':            '◇',
-};
-const EVENT_LABEL: Record<string, string> = {
-  'progression.xp_granted':       'Fate XP gained',
-  'progression.level_up':         'Level up',
-  'progression.session_completed':'Session completed',
-  'loot.cache_opened':            'Cache opened',
-  'loot.cache_granted':           'Cache earned',
-  'gear.item_equipped':           'Gear equipped',
-  'gear.item_acquired':           'Gear acquired',
-  'title.unlocked':               'Title unlocked',
-  'title.equipped':               'Title equipped',
-  'fate_marker.added':            'Fate marker added',
+  'progression.xp_granted':        '✦',
+  'progression.level_up':          '⬡',
+  'progression.session_completed': '◈',
+  'loot.cache_opened':             '⬡',
+  'loot.cache_granted':            '⬡',
+  'gear.item_equipped':            '⚔',
+  'gear.item_acquired':            '⊕',
+  'gear.item_dismantled':          '◌',
+  'title.unlocked':                '◆',
+  'title.equipped':                '◆',
+  'identity.title_equipped':       '◆',
+  'identity.title_earned':         '◆',
+  'fate_marker.added':             '◇',
+  'veil.tear_sealed':              '⚡',
+  'veil.cache_earned':             '⬡',
+  'veil_quest_complete':           '✦',
+  'identity.hero_awakened':        '◈',
+  'identity.onboarding_complete':  '◈',
+  'identity.tier_ascension':       '⬡',
+  'identity.alignment_chosen':     '⚖',
 };
 
+const EVENT_LABEL: Record<string, string> = {
+  'progression.xp_granted':        'Fate XP gained',
+  'progression.level_up':          'Level up',
+  'progression.session_completed': 'Session completed',
+  'loot.cache_opened':             'Cache opened',
+  'loot.cache_granted':            'Cache earned',
+  'gear.item_equipped':            'Gear equipped',
+  'gear.item_acquired':            'Gear acquired',
+  'gear.item_dismantled':          'Gear dismantled',
+  'title.unlocked':                'Title unlocked',
+  'title.equipped':                'Title equipped',
+  'identity.title_equipped':       'Title equipped',
+  'identity.title_earned':         'Title earned',
+  'fate_marker.added':             'Fate marker added',
+  'veil.tear_sealed':              'Veil Tear sealed',
+  'veil.cache_earned':             'Cache from the Veil',
+  'veil_quest_complete':           'Veil quest complete',
+  'identity.hero_awakened':        'Hero Awakened',
+  'identity.onboarding_complete':  'Entered the Codex',
+  'identity.tier_ascension':       'Tier ascension',
+  'identity.alignment_chosen':     'Alignment chosen',
+};
+
+const MILESTONE_EVENTS = new Set([
+  'progression.level_up',
+  'identity.hero_awakened',
+  'identity.onboarding_complete',
+  'identity.tier_ascension',
+  'identity.alignment_chosen',
+  'identity.title_earned',
+  'veil_quest_complete',
+]);
+
+const CATEGORY_MAP: Record<string, Category> = {
+  'progression.xp_granted':        'progression',
+  'progression.level_up':          'progression',
+  'progression.session_completed': 'progression',
+  'identity.hero_awakened':        'progression',
+  'identity.onboarding_complete':  'progression',
+  'identity.tier_ascension':       'progression',
+  'identity.alignment_chosen':     'progression',
+  'loot.cache_opened':             'gear',
+  'loot.cache_granted':            'gear',
+  'gear.item_equipped':            'gear',
+  'gear.item_acquired':            'gear',
+  'gear.item_dismantled':          'gear',
+  'veil.tear_sealed':              'combat',
+  'veil.cache_earned':             'combat',
+  'veil_quest_complete':           'combat',
+  'title.unlocked':                'titles',
+  'title.equipped':                'titles',
+  'identity.title_equipped':       'titles',
+  'identity.title_earned':         'titles',
+};
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 export function ChronicleScreen() {
   const { hero } = useAuth();
-  const [section, setSection] = useState<Section>('identity');
+  const [section,   setSection]   = useState<Section>('identity');
+  const [category,  setCategory]  = useState<Category>('all');
+  const [timeline,  setTimeline]  = useState<any[]>([]);
+  const [tlLoading, setTlLoading] = useState(false);
+  const [tlLoaded,  setTlLoaded]  = useState(false);
+  const [shareEvent, setShareEvent] = useState<any | null>(null);
+
+  const fetchTimeline = useCallback(async () => {
+    if (!hero?.root_id || tlLoaded) return;
+    setTlLoading(true);
+    try {
+      const res  = await fetch(`${BASE}/api/users/${hero.root_id}/timeline`);
+      const json = await res.json();
+      const raw  = json?.data?.data ?? json?.data ?? json ?? [];
+      setTimeline(Array.isArray(raw) ? raw : []);
+      setTlLoaded(true);
+    } catch {
+      setTimeline([]);
+    } finally {
+      setTlLoading(false);
+    }
+  }, [hero?.root_id, tlLoaded]);
+
+  useEffect(() => {
+    if (section === 'feed') fetchTimeline();
+  }, [section, fetchTimeline]);
 
   if (!hero) return (
     <div style={{ textAlign: 'center', padding: '60px 24px' }}>
@@ -50,15 +139,27 @@ export function ChronicleScreen() {
   const modifiers  = hero.gear?.computed_modifiers;
   const hasModifiers = modifiers && Object.values(modifiers).some(v => v !== 0);
   const venues     = hero.source_progression ?? [];
-  const events     = hero.recent_events ?? [];
-  const markers    = prog.fate_markers ?? [];
   const narrative  = hero.narrative;
+
+  // Filter timeline by category
+  const filteredTimeline = timeline.filter(e => {
+    if (category === 'all') return true;
+    return CATEGORY_MAP[e.event_type] === category;
+  });
 
   const sectionLabels: { key: Section; label: string; count?: number }[] = [
     { key: 'identity',  label: 'Identity' },
     { key: 'modifiers', label: 'Power' },
-    { key: 'venues',    label: 'Venues',    count: venues.length },
-    { key: 'feed',      label: 'Chronicle', count: events.length > 0 ? events.length : undefined },
+    { key: 'venues',    label: 'Venues',    count: venues.length || undefined },
+    { key: 'feed',      label: 'Chronicle', count: timeline.length > 0 ? timeline.length : undefined },
+  ];
+
+  const categoryLabels: { key: Category; label: string }[] = [
+    { key: 'all',         label: 'All'         },
+    { key: 'combat',      label: 'Combat'      },
+    { key: 'gear',        label: 'Gear'        },
+    { key: 'progression', label: 'Progress'    },
+    { key: 'titles',      label: 'Titles'      },
   ];
 
   return (
@@ -91,6 +192,7 @@ export function ChronicleScreen() {
       </div>
 
       <div style={{ padding: '4px 16px 0' }}>
+
         {/* ── IDENTITY */}
         {section === 'identity' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -105,26 +207,13 @@ export function ChronicleScreen() {
                 </p>
               </div>
             )}
-            {markers.length > 0 && (
-              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
-                <Label>Fate Markers</Label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {markers.map((m: string, i: number) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                      <span style={{ color: alignColor, fontSize: 12, flexShrink: 0, marginTop: 2 }}>◇</span>
-                      <p style={{ fontSize: 12, color: 'rgba(240,237,230,0.7)', margin: 0, lineHeight: 1.5, fontStyle: 'italic' }}>"{m}"</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
-        {/* ── POWER (modifiers) */}
+        {/* ── POWER */}
         {section === 'modifiers' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
               <Label>Active Loadout</Label>
               {hero.gear?.equipment ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -142,18 +231,15 @@ export function ChronicleScreen() {
                 <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, fontStyle: 'italic' }}>No gear equipped</p>
               )}
             </div>
-
             {hasModifiers ? (
-              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
                 <Label>Gear Modifiers</Label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {Object.entries(modifiers!).map(([key, val]) => {
                     if (!val) return null;
                     const label = MODIFIER_LABEL[key] ?? key;
-                    const pct = Math.min(100, Math.abs(val as number));
+                    const pct   = Math.min(100, Math.abs(val as number));
                     const isPos = (val as number) > 0;
-                    // ← FIXED: positive modifier bars and values now use var(--gold)
-                    //   instead of alignColor, matching the Training section header gold
                     return <ModifierBar key={key} label={label} value={val as number} pct={pct} isPositive={isPos} />;
                   })}
                 </div>
@@ -173,20 +259,73 @@ export function ChronicleScreen() {
           </div>
         )}
 
-        {/* ── CHRONICLE (activity feed) */}
+        {/* ── CHRONICLE */}
         {section === 'feed' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {events.length === 0 ? (
-              <EmptySection icon="◇" title="Chronicle Empty" body="Complete a session to begin your chronicle." />
-            ) : events.map((e: any) => <EventCard key={e.event_id} event={e} alignColor={alignColor} />)}
+
+            {/* Category filter */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 4, overflowX: 'auto', paddingBottom: 2 }}>
+              {categoryLabels.map(({ key, label }) => {
+                const active = category === key;
+                return (
+                  <button key={key} onClick={() => setCategory(key)} style={{
+                    padding: '5px 10px', borderRadius: 20, border: `1px solid ${active ? alignColor : 'var(--border)'}`,
+                    background: active ? `${alignColor}22` : 'transparent',
+                    color: active ? alignColor : 'var(--text-3)',
+                    fontSize: 11, fontFamily: 'Cinzel, serif', letterSpacing: '0.05em',
+                    cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                  }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {tlLoading && (
+              <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                <p style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'Cinzel, serif', letterSpacing: '0.1em' }}>
+                  Reading the Chronicle…
+                </p>
+              </div>
+            )}
+
+            {!tlLoading && filteredTimeline.length === 0 && (
+              <EmptySection icon="◇" title="Chronicle Empty" body={
+                category === 'all'
+                  ? 'Your story has not yet been written.'
+                  : `No ${category} events recorded yet.`
+              } />
+            )}
+
+            {filteredTimeline.map((e: any, i: number) => (
+              <EventCard
+                key={e.event_id ?? i}
+                event={e}
+                alignColor={alignColor}
+                isMilestone={MILESTONE_EVENTS.has(e.event_type)}
+                onShare={() => setShareEvent(e)}
+              />
+            ))}
+
+            {!tlLoading && filteredTimeline.length > 0 && (
+              <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', padding: '8px 0 0', fontFamily: 'Cinzel, serif', letterSpacing: '0.08em' }}>
+                {filteredTimeline.length} record{filteredTimeline.length !== 1 ? 's' : ''} in your Chronicle
+              </p>
+            )}
           </div>
         )}
       </div>
+
+      {/* Share modal */}
+      {shareEvent && (
+        <ShareFateCard onClose={() => setShareEvent(null)} highlightEvent={shareEvent} />
+      )}
     </div>
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────
+// ── Sub-components ────────────────────────────────────────────────────────────
+
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.15em', textTransform: 'uppercase', margin: '0 0 10px' }}>
@@ -201,28 +340,22 @@ function TierCard({ tier, hero, alignColor }: { tier: any; hero: any; alignColor
   const pct = xpProgress(prog);
   const label = ALIGNMENT_LABEL[hero.alignment] ?? hero.alignment;
   return (
-    <div style={{ background: `linear-gradient(135deg, var(--surface), ${tier.color}12)`, border: `1px solid ${tier.color}60`, borderRadius: 'var(--radius)', padding: '16px 14px', boxShadow: `0 0 20px ${tier.color}18` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <div style={{ width: 48, height: 48, flexShrink: 0, background: `radial-gradient(circle, ${tier.color}30 0%, transparent 70%)`, border: `2px solid ${tier.color}`, borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cinzel, serif', fontSize: 18, fontWeight: 700, color: tier.color }}>
+    <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}50`, borderRadius: 'var(--radius)', padding: '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 10, background: `${alignColor}18`, border: `1px solid ${alignColor}40`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: alignColor, flexShrink: 0 }}>
           {tier.isJob ? '✦' : heroLevel}
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontFamily: 'Cinzel, serif', fontSize: 16, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>{hero.display_name}</p>
-          <p style={{ fontSize: 12, color: alignColor, margin: 0, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>{label} · {tier.name}</p>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: tier.color }}>{tier.name}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>·</span>
+            <span style={{ fontSize: 11, color: alignColor, fontWeight: 600 }}>{label}</span>
+          </div>
         </div>
       </div>
-      <div style={{ marginBottom: 6 }}>
-        <div style={{ height: 4, background: 'rgba(240,237,230,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${Math.round(pct * 100)}%`, background: `linear-gradient(90deg, ${tier.color}, ${tier.color}cc)`, borderRadius: 2, transition: 'width 1s ease' }} />
-        </div>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, fontFamily: 'monospace' }}>
-          {prog.xp_in_current_level.toLocaleString()} / {prog.xp_to_next_level.toLocaleString()} XP
-        </p>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0, fontFamily: 'monospace' }}>
-          {prog.sessions_completed} sessions
-        </p>
+      <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct * 100}%`, background: alignColor, borderRadius: 2, transition: 'width 0.6s ease' }} />
       </div>
     </div>
   );
@@ -239,152 +372,141 @@ function LoreExcerpt({ rootId, narrative, alignColor }: { rootId: string; narrat
     const generate = async () => {
       try {
         const res = await fetch('/api/lore', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rootId, region: narrative.region, class: narrative.class, origin: narrative.origin, wound: narrative.wound, calling: narrative.calling, virtue: narrative.virtue, vice: narrative.vice }),
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ narrative }),
         });
-        if (!res.ok) return;
         const data = await res.json();
-        if (data?.lore) { LORE_CACHE.set(rootId, data.lore); setLore(data.lore); }
-      } catch { } finally { setLoading(false); }
+        const text = data?.lore ?? data?.data?.lore ?? null;
+        if (text) { LORE_CACHE.set(rootId, text); setLore(text); }
+      } catch { /* silent */ } finally { setLoading(false); }
     };
     generate();
-  }, [rootId]);
+  }, [rootId, narrative]);
 
-  if (loading) {
-    return (
-      <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}25`, borderRadius: 'var(--radius)', padding: '16px 14px', overflow: 'hidden', position: 'relative' }}>
-        <style>{`@keyframes lore-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }`}</style>
-        {[100, 88, 94, 60].map((w, i) => (
-          <div key={i} style={{ height: 11, width: `${w}%`, borderRadius: 4, marginBottom: i < 3 ? 10 : 0, background: `linear-gradient(90deg, rgba(240,237,230,0.04) 0%, rgba(240,237,230,0.10) 40%, rgba(240,237,230,0.04) 80%)`, backgroundSize: '800px 100%', animation: `lore-shimmer 1.6s ${i * 0.1}s infinite linear` }} />
-        ))}
-      </div>
-    );
-  }
-  if (!lore) return null;
-
+  if (loading || !lore) return null;
   return (
-    <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}40`, borderRadius: 'var(--radius)', padding: '16px 14px', boxShadow: `0 0 24px ${alignColor}0a`, position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${alignColor}60, transparent)` }} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <span style={{ color: alignColor, fontSize: 12 }}>◈</span>
-        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: `${alignColor}99`, letterSpacing: '0.18em', textTransform: 'uppercase', margin: 0 }}>Fate Chronicle — First Entry</p>
-        <span style={{ marginLeft: 'auto', fontSize: 11, letterSpacing: '0.1em', color: 'rgba(240,237,230,0.2)', fontFamily: 'Cinzel, serif', textTransform: 'uppercase' }}>AI · Unique</span>
-      </div>
-      <p style={{ fontFamily: 'Georgia, serif', fontSize: 13, fontStyle: 'italic', color: 'rgba(240,237,230,0.80)', lineHeight: 1.75, margin: 0, letterSpacing: '0.01em' }}>
-        {lore}
-      </p>
+    <div style={{ background: `${alignColor}08`, border: `1px solid ${alignColor}25`, borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+      <Label>The Veil Speaks</Label>
+      <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, lineHeight: 1.7, fontStyle: 'italic' }}>"{lore}"</p>
     </div>
   );
 }
 
 function NarrativeCard({ narrative, alignColor }: { narrative: any; alignColor: string }) {
-  const rows = [
-    { label: 'Region', value: narrative.region },
-    { label: 'Class',  value: narrative.class  },
-    { label: 'Origin', value: narrative.origin },
-    { label: 'Wound',  value: narrative.wound  },
-    { label: 'Calling',value: narrative.calling},
-    { label: 'Virtue', value: narrative.virtue },
-    { label: 'Vice',   value: narrative.vice   },
-  ];
+  const fields = [
+    { label: 'Origin',   value: narrative.region  },
+    { label: 'History',  value: narrative.origin  },
+    { label: 'Wound',    value: narrative.wound   },
+    { label: 'Calling',  value: narrative.calling },
+  ].filter(f => f.value);
+
+  if (fields.length === 0) return null;
   return (
-    <div style={{ background: 'var(--surface)', border: `1px solid ${alignColor}40`, borderRadius: 'var(--radius)', padding: '14px 14px', boxShadow: `0 0 16px ${alignColor}10` }}>
-      <Label>Fate Codex</Label>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {rows.map(({ label, value }) => value ? (
-          <div key={label} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: 'var(--text-3)', letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0, minWidth: 52, paddingTop: 1 }}>{label}</p>
-            <p style={{ fontSize: 12, color: 'var(--text-1)', margin: 0, lineHeight: 1.4, flex: 1 }}>{value}</p>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+      <Label>Fate Record</Label>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {fields.map(f => (
+          <div key={f.label} style={{ borderLeft: `2px solid ${alignColor}40`, paddingLeft: 10 }}>
+            <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '2px', color: 'var(--text-3)', margin: '0 0 2px', fontFamily: 'Cinzel, serif', textTransform: 'uppercase' }}>{f.label}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-1)', margin: 0, lineHeight: 1.5 }}>{f.value}</p>
           </div>
-        ) : null)}
+        ))}
       </div>
     </div>
   );
 }
 
-// ── ModifierBar — FIXED: positive uses var(--gold) to match training gold header
-function ModifierBar({ label, value, pct, isPositive }: {
-  label: string; value: number; pct: number; isPositive: boolean;
-}) {
-  // Positive modifiers → gold (matches Training section header)
-  // Negative modifiers → ember (still reads as a loss/penalty, which it is)
+function ModifierBar({ label, value, pct, isPositive }: { label: string; value: number; pct: number; isPositive: boolean }) {
   const barColor = isPositive ? 'var(--gold)' : 'var(--ember)';
-  const sign = isPositive ? '+' : '';
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, fontFamily: 'Cinzel, serif', letterSpacing: '0.05em' }}>
-          {label}
-        </p>
-        <p style={{ fontFamily: 'monospace', fontSize: 12, color: barColor, fontWeight: 700, margin: 0 }}>
-          {sign}{value}%
-        </p>
+        <span style={{ fontSize: 11, color: 'var(--text-2)', fontFamily: 'Cinzel, serif', letterSpacing: '0.04em' }}>{label}</span>
+        <span style={{ fontSize: 11, color: barColor, fontWeight: 700 }}>{isPositive ? '+' : ''}{value}%</span>
       </div>
-      <div style={{ height: 3, background: 'rgba(240,237,230,0.06)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: isPositive ? `linear-gradient(90deg, var(--gold-dim), var(--gold))` : `linear-gradient(90deg, var(--ember-dim), var(--ember))`, borderRadius: 2 }} />
+      <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 2 }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 2 }} />
       </div>
     </div>
   );
 }
 
 function VenueCard({ venue, alignColor }: { venue: any; alignColor: string }) {
-  const lastDate = venue.last_activity
-    ? new Date(venue.last_activity).toLocaleDateString([], { month: 'short', day: 'numeric', year: '2-digit' }) : null;
-  const stats = [
-    { label: 'Sessions', value: venue.sessions },
-    { label: 'XP',       value: venue.xp_contributed?.toLocaleString() },
-    { label: 'Boss Kills',value: venue.boss_kills },
-    { label: 'Caches',   value: venue.caches_granted },
-  ].filter(s => s.value != null && s.value !== 0);
-
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-        <div style={{ width: 36, height: 36, flexShrink: 0, background: `${alignColor}20`, border: `1px solid ${alignColor}60`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: alignColor }}>◈</div>
-        <div style={{ flex: 1 }}>
-          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 2px' }}>
-            {venue.source_name ?? venue.source_id}
-          </p>
-          {lastDate && <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>Last visit {lastDate}</p>}
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700, color: 'var(--text-1)', margin: '0 0 4px' }}>{venue.source_name ?? 'Heroes Veritas'}</p>
+          <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>{venue.sessions ?? 0} sessions · {venue.total_xp?.toLocaleString() ?? 0} XP</p>
         </div>
-        {venue.best_boss_pct > 0 && (
-          <div style={{ flexShrink: 0, textAlign: 'right' }}>
-            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 12, fontWeight: 700, color: 'var(--gold)', margin: '0 0 1px' }}>{venue.best_boss_pct}%</p>
-            <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>best boss</p>
-          </div>
+        {venue.caches_granted > 0 && (
+          <span style={{ fontSize: 11, color: alignColor, fontWeight: 700, background: `${alignColor}18`, border: `1px solid ${alignColor}35`, borderRadius: 4, padding: '2px 7px' }}>
+            {venue.caches_granted} caches
+          </span>
         )}
       </div>
-      {stats.length > 0 && (
-        <div style={{ display: 'flex', gap: 8 }}>
-          {stats.map(({ label, value }) => (
-            <div key={label} style={{ flex: 1, background: 'rgba(240,237,230,0.04)', borderRadius: 6, padding: '6px 8px', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700, color: alignColor, margin: '0 0 2px' }}>{value}</p>
-              <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, fontFamily: 'Cinzel, serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</p>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
 
-function EventCard({ event, alignColor }: { event: any; alignColor: string }) {
-  const icon  = EVENT_ICON[event.event_type] ?? '◇';
-  const label = EVENT_LABEL[event.event_type] ?? event.event_type.replace(/\./g, ' ').replace(/_/g, ' ');
-  const timeStr = event.ts ? new Date(event.ts).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '';
+function EventCard({ event, alignColor, isMilestone, onShare }: {
+  event: any; alignColor: string; isMilestone: boolean; onShare: () => void;
+}) {
+  const icon    = EVENT_ICON[event.event_type]  ?? '◇';
+  const label   = EVENT_LABEL[event.event_type] ?? event.event_type.replace(/\./g, ' ').replace(/_/g, ' ');
+  const timeStr = event.ts
+    ? new Date(event.ts).toLocaleDateString([], { month: 'short', day: 'numeric' })
+    : event.created_at
+    ? new Date(event.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })
+    : '';
   const detail: string[] = [];
-  if (event.payload?.xp) detail.push(`+${event.payload.xp} XP`);
-  if (event.changes?.reward_name) detail.push(String(event.changes.reward_name));
-  if (event.changes?.reward_rarity) detail.push(String(event.changes.reward_rarity));
+  if (event.payload?.xp)              detail.push(`+${event.payload.xp} XP`);
+  if (event.payload?.xp_granted)      detail.push(`+${event.payload.xp_granted} XP`);
+  if (event.changes?.reward_name)     detail.push(String(event.changes.reward_name));
+  if (event.changes?.reward_rarity)   detail.push(String(event.changes.reward_rarity));
+  if (event.payload?.hero_name)       detail.push(String(event.payload.hero_name));
+  if (event.payload?.tear_name)       detail.push(String(event.payload.tear_name));
+  if (event.changes?.level)           detail.push(`Level ${event.changes.level}`);
+
+  const cardBg     = isMilestone ? `${alignColor}10` : 'var(--surface)';
+  const cardBorder = isMilestone ? `1px solid ${alignColor}50` : '1px solid var(--border)';
+
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)', borderRadius: 8, padding: '10px 12px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-      <div style={{ width: 28, height: 28, flexShrink: 0, background: `${alignColor}18`, border: `1px solid ${alignColor}40`, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: alignColor }}>
+    <div
+      onClick={isMilestone ? onShare : undefined}
+      style={{
+        background: cardBg, border: cardBorder,
+        borderRadius: 8, padding: '10px 12px',
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        cursor: isMilestone ? 'pointer' : 'default',
+        position: 'relative',
+      }}
+    >
+      {/* Milestone accent bar */}
+      {isMilestone && (
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: alignColor, borderRadius: '8px 0 0 8px' }} />
+      )}
+      <div style={{
+        width: 28, height: 28, flexShrink: 0,
+        background: isMilestone ? `${alignColor}25` : `${alignColor}18`,
+        border: `1px solid ${alignColor}40`,
+        borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 12, color: alignColor,
+      }}>
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 12, color: 'var(--text-1)', margin: '0 0 2px', textTransform: 'capitalize' }}>{label}</p>
-        {detail.length > 0 && <p style={{ fontSize: 12, color: 'var(--gold)', margin: '0 0 2px', fontWeight: 700 }}>{detail.join(' · ')}</p>}
-        {timeStr && <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>{timeStr}</p>}
+        <p style={{ fontSize: 12, color: isMilestone ? 'var(--text-1)' : 'var(--text-2)', margin: '0 0 2px', textTransform: 'capitalize', fontWeight: isMilestone ? 700 : 400 }}>
+          {label}
+        </p>
+        {detail.length > 0 && (
+          <p style={{ fontSize: 12, color: 'var(--gold)', margin: '0 0 2px', fontWeight: 700 }}>{detail.join(' · ')}</p>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {timeStr && <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0 }}>{timeStr}</p>}
+          {isMilestone && <p style={{ fontSize: 10, color: alignColor, margin: 0, letterSpacing: '0.08em' }}>TAP TO SHARE</p>}
+        </div>
       </div>
     </div>
   );

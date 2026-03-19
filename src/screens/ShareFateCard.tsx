@@ -20,7 +20,7 @@ const CREAM       = '#F0EDE6';          // brighter text-1
 const CREAM_DIM   = 'rgba(240,237,230,0.50)';
 const CREAM_FAINT = 'rgba(240,237,230,0.18)';
 
-export function ShareFateCard({ onClose }: { onClose: () => void }) {
+export function ShareFateCard({ onClose, highlightEvent }: { onClose: () => void; highlightEvent?: any }) {
   const { hero } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
@@ -103,6 +103,22 @@ export function ShareFateCard({ onClose }: { onClose: () => void }) {
   if (!hero) return null;
   const ac = ALIGNMENT_COLOR[hero.alignment] ?? '#FFA500';
 
+  const EVENT_LABEL_MAP: Record<string, string> = {
+    'progression.level_up':       'Level Up',
+    'identity.hero_awakened':     'Hero Awakened',
+    'identity.tier_ascension':    'Tier Ascension',
+    'identity.alignment_chosen':  'Alignment Chosen',
+    'identity.title_earned':      'Title Earned',
+    'veil_quest_complete':        'Quest Complete',
+  };
+  const momentLabel = highlightEvent
+    ? (EVENT_LABEL_MAP[highlightEvent.event_type] ?? 'Chronicle Moment')
+    : null;
+  const momentDetail = highlightEvent?.changes?.reward_name
+    ?? highlightEvent?.payload?.title_id?.replace(/_/g, ' ')
+    ?? highlightEvent?.payload?.tear_name
+    ?? null;
+
   return createPortal(
     <div
       onClick={onClose}
@@ -148,7 +164,24 @@ export function ShareFateCard({ onClose }: { onClose: () => void }) {
             borderRadius: 16, overflow: 'hidden',
             aspectRatio: '9/16', background: BG_DARK, position: 'relative',
           }}>
-            <canvas ref={canvasRef} width={W} height={H}
+            {momentLabel && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          background: 'rgba(200,144,10,0.15)', borderBottom: '1px solid rgba(200,144,10,0.4)',
+          padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: 16, color: '#C8900A' }}>◈</span>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '2px', color: '#C8900A', margin: 0, fontFamily: 'Cinzel, serif' }}>
+              {momentLabel.toUpperCase()}
+            </p>
+            {momentDetail && (
+              <p style={{ fontSize: 12, color: 'rgba(240,237,230,0.7)', margin: 0 }}>{momentDetail}</p>
+            )}
+          </div>
+        </div>
+      )}
+      <canvas ref={canvasRef} width={W} height={H}
               style={{ width: '100%', height: '100%', display: 'block', opacity: ready ? 1 : 0, transition: 'opacity 0.4s ease' }} />
             {!ready && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
