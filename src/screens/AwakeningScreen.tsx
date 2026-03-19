@@ -21,6 +21,8 @@ import { createPortal } from 'react-dom';
 import { generateNarrative } from '../api/pik';
 import type { Hero } from '../api/pik';
 
+const BASE = 'https://pik-prd-production.up.railway.app';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -347,9 +349,28 @@ function StepHeroRecognition({ hero, onComplete }: { hero: Hero; onComplete: () 
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function AwakeningScreen({ hero, onComplete }: Props) {
-  const [step, setStep] = useState<Step>(1);
+  const [step,             setStep]             = useState<Step>(1);
+  const [battleCompleted,  setBattleCompleted]  = useState(false);
 
   const next = () => setStep(s => Math.min(s + 1, 4) as Step);
+
+  const handleComplete = async () => {
+    // 21.5 — fire telemetry before completing onboarding
+    try {
+      await fetch(`${BASE}/api/users/${hero.root_id}/awakening`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          skipped_backstory: false,
+          rerolls_used:      0,
+          completed_battle:  battleCompleted,
+        }),
+      });
+    } catch {
+      // Telemetry failure must never block onboarding completion
+    }
+    onComplete();
+  };
 
   return createPortal(
     <>
@@ -386,8 +407,8 @@ export function AwakeningScreen({ hero, onComplete }: Props) {
 
         {step === 1 && <StepVeilDisturbance onNext={next} />}
         {step === 2 && <StepVeilDetection   onNext={next} />}
-        {step === 3 && <StepFirstEncounter  onNext={next} />}
-        {step === 4 && <StepHeroRecognition hero={hero} onComplete={onComplete} />}
+        {step === 3 && <StepFirstEncounter  onNext={() => { setBattleCompleted(true); next(); }} />}
+        {step === 4 && <StepHeroRecognition hero={hero} onComplete={handleComplete} />}
       </div>
     </>,
     document.body
