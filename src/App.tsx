@@ -10,6 +10,7 @@ import { VenturesScreen } from '@/screens/VenturesScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { AlignmentModal } from '@/screens/AlignmentModal';
 import VeilTearsScreen from '@/screens/VeilTearsScreen';
+import { WarbandScreen } from '@/screens/WarbandScreen';
 import { AwakeningScreen }                       from '@/screens/AwakeningScreen';
 import { MilestoneCeremony, checkMilestone } from '@/screens/MilestoneCeremony';
 import type { Milestone }                    from '@/screens/MilestoneCeremony';
@@ -17,7 +18,7 @@ import { TierAscensionModal, checkTierAscension } from '@/screens/TierAscensionM
 import type { Tier } from '@/api/pik';
 
 type AppRoute = 'landing' | 'hero-select' | 'awakening' | 'dashboard';
-type DashTab = 'home' | 'training' | 'hunts' | 'archive' | 'veil';
+type DashTab = 'home' | 'training' | 'hunts' | 'warband' | 'archive' | 'veil';
 
 // ── Offline banner ────────────────────────────────────────────────────────────
 function OfflineBanner({ show }: { show: boolean }) {
@@ -40,6 +41,7 @@ const TABS: { id: DashTab; label: string; icon: string }[] = [
   { id: 'home',     label: 'Home',     icon: '◈'  },
   { id: 'training', label: 'Training', icon: '✦'  },
   { id: 'hunts',    label: 'Ventures', icon: '◉'  },
+  { id: 'warband',  label: 'Warband',  icon: '⚔'  },
   { id: 'archive',  label: 'Hero',     icon: '★'  },
   { id: 'veil',     label: 'Veil',     icon: '⚡' },
 ];
@@ -51,7 +53,7 @@ function TabBar({ active, onChange }: { active: DashTab; onChange: (t: DashTab) 
       width:'100%', maxWidth:480,
       background:'rgba(11,10,8,0.96)',
       borderTop:'1px solid var(--border)',
-      display:'grid', gridTemplateColumns:'repeat(5,1fr)',
+      display:'grid', gridTemplateColumns:'repeat(6,1fr)',
       paddingBottom:'max(env(safe-area-inset-bottom),8px)',
       zIndex:100, backdropFilter:'blur(12px)',
     }}>
@@ -135,6 +137,7 @@ function Dashboard({ onReturnToHeroSelect }: { onReturnToHeroSelect: () => void 
         {tab === 'home'     && <HomeScreen onSwitchHero={onReturnToHeroSelect} onNavigateToVeil={() => setTab('veil')} onNavigateToChronicle={() => setTab('archive')} onNavigateToTraining={() => setTab('training')} />}
         {tab === 'training' && <TrainingScreen />}
         {tab === 'hunts'    && <VenturesScreen />}
+        {tab === 'warband'  && <WarbandScreen />}
         {tab === 'archive'  && <ProfileScreen onReturnToHeroSelect={onReturnToHeroSelect} />}
         {tab === 'veil'     && <VeilTearsScreen />}
       </div>
