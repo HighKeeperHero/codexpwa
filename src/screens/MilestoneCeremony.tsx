@@ -400,16 +400,31 @@ export function JobClassSelection({ rootId, heroName, onDismiss }: JobClassSelec
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleConfirm = async () => {
     if (!selected || confirming) return;
     setConfirming(true);
-    // Sprint 22.C will wire this to the backend class selection endpoint
-    // For now — store locally and log
-    localStorage.setItem(`job_class__${rootId}`, selected);
-    setTimeout(() => {
+    setError(null);
+    try {
+      const res = await fetch(
+        `https://pik-prd-production.up.railway.app/api/users/${rootId}/class`,
+        {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ hero_class: selected }),
+        }
+      );
+      const json = await res.json();
+      if (json.status === 'error') throw new Error(json.message);
+      // Store locally as confirmed signal for App.tsx
+      localStorage.setItem(`job_class__${rootId}`, selected);
       setConfirmed(true);
-      setTimeout(onDismiss, 1200);
-    }, 600);
+      setTimeout(onDismiss, 1400);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Selection failed — try again');
+      setConfirming(false);
+    }
   };
 
   return createPortal(
@@ -460,8 +475,8 @@ export function JobClassSelection({ rootId, heroName, onDismiss }: JobClassSelec
 
       <div style={{ width: '100%', maxWidth: 420 }}>
         {confirmed ? (
-          <p style={{ textAlign: 'center', fontSize: 14, color: '#C9A24B', fontFamily: "'Cinzel', serif" }}>
-            ✦ Class bound to your Fate ✦
+          <p style={{ textAlign: 'center', fontSize: 14, color: '#C9A24B', fontFamily: "'Cinzel', serif", letterSpacing: '0.1em' }}>
+            ✦ {selected?.replace(/_/g, ' ')} bound to your Fate ✦
           </p>
         ) : (
           <>
@@ -479,9 +494,11 @@ export function JobClassSelection({ rootId, heroName, onDismiss }: JobClassSelec
             >
               {confirming ? 'Binding…' : 'ACCEPT CLASS'}
             </button>
-            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>
-              Sprint 22.C — full class logic coming soon
-            </p>
+            {error && (
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--ember)', marginBottom: 8 }}>
+                {error}
+              </p>
+            )}
           </>
         )}
       </div>
