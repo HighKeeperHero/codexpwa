@@ -1,6 +1,6 @@
 // src/screens/HomeScreen.tsx
 // Sprint 12: Added VeilActivitySection — reads vt_battles from localStorage
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/AuthContext';
 import { xpProgress, ALIGNMENT_COLOR, ALIGNMENT_LABEL } from '@/api/pik';
 import { ShareFateCard } from '@/screens/ShareFateCard';
@@ -293,6 +293,112 @@ function LiveSessionFeed({ rootId, wearable }: { rootId: string; wearable: any }
 }
 
 // ── Main ────────────────────────────────────────────────────────────────────────
+
+// ── Sprint 24: Convergence Event Banner ───────────────────────────────────────
+// Fetches active events with global progress and displays a live counter.
+// Replaces the static VEIL WEAKENING badge from earlier sprints.
+function ConvergenceEventBanner({ onNavigateToVeil }: { onNavigateToVeil?: () => void }) {
+  const [events, setEvents] = React.useState<any[]>([]);
+  const [loaded, setLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch(`${BASE}/api/veil/events/progress`)
+      .then(r => r.json())
+      .then(json => {
+        const data = json?.data?.data ?? json?.data ?? json;
+        setEvents(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setEvents([]))
+      .finally(() => setLoaded(true));
+  }, []);
+
+  if (!loaded || events.length === 0) return null;
+
+  const event = events[0];
+  const pct   = event.progress_pct ?? 0;
+  const timeLeft = event.ends_at ? Math.max(0, event.ends_at - Date.now()) : 0;
+  const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+  const timeStr = hoursLeft > 48
+    ? `${Math.floor(hoursLeft / 24)}d remaining`
+    : `${hoursLeft}h remaining`;
+
+  const multiplierStr = event.shard_multiplier > 1
+    ? `${event.shard_multiplier}× Shards`
+    : null;
+
+  return (
+    <div
+      onClick={onNavigateToVeil}
+      style={{
+        marginBottom: 12,
+        background: 'linear-gradient(135deg, rgba(30,46,72,0.9), rgba(16,24,48,0.95))',
+        border: '1px solid rgba(30,144,255,0.35)',
+        borderRadius: 12,
+        padding: '12px 14px',
+        cursor: onNavigateToVeil ? 'pointer' : 'default',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Ambient glow */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+        background: 'linear-gradient(90deg, transparent, rgba(30,144,255,0.6), transparent)',
+      }} />
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{ fontSize: 14, color: '#1E90FF', filter: 'drop-shadow(0 0 6px rgba(30,144,255,0.7))' }}>⚡</span>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#1E90FF', margin: 0, fontFamily: 'var(--font-serif)', textTransform: 'uppercase' }}>
+              {event.name}
+            </p>
+            {event.flavor_text && (
+              <p style={{ fontSize: 10, color: 'rgba(30,144,255,0.6)', margin: 0, fontStyle: 'italic' }}>
+                {event.flavor_text}
+              </p>
+            )}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          {multiplierStr && (
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)', margin: '0 0 1px' }}>{multiplierStr}</p>
+          )}
+          <p style={{ fontSize: 10, color: 'rgba(200,192,184,0.4)', margin: 0 }}>{timeStr}</p>
+        </div>
+      </div>
+
+      {/* Global progress bar */}
+      <div style={{ marginBottom: 4 }}>
+        <div style={{ height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${pct}%`,
+            background: 'linear-gradient(90deg, #1E4A9A, #1E90FF)',
+            borderRadius: 3,
+            transition: 'width 1s ease',
+            boxShadow: '0 0 8px rgba(30,144,255,0.5)',
+          }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+          <p style={{ fontSize: 10, color: 'rgba(30,144,255,0.7)', margin: 0 }}>
+            {event.contribution_count?.toLocaleString() ?? 0} seals
+          </p>
+          <p style={{ fontSize: 10, color: 'rgba(200,192,184,0.35)', margin: 0 }}>
+            {pct}% · {event.target_count?.toLocaleString() ?? 0} goal
+          </p>
+        </div>
+      </div>
+
+      {event.cache_bonus && (
+        <p style={{ fontSize: 10, color: 'rgba(30,144,255,0.5)', margin: 0, letterSpacing: '0.06em' }}>
+          ◈ Cache bonus active — all Veil victories may earn a Cache
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVeil, onNavigateToTraining }: { onSwitchHero?: () => void; onNavigateToChronicle?: () => void; onNavigateToVeil?: () => void; onNavigateToTraining?: () => void }) {
   const { hero, isMock, isRefreshing, refreshHero, signOut, lastUpdated } = useAuth() as any;
   const [pullDist, setPullDist] = useState(0);
@@ -554,6 +660,9 @@ export function HomeScreen({ onSwitchHero, onNavigateToChronicle, onNavigateToVe
             <span style={{ fontSize: 14 }}>◈</span> Share Fate Card
           </button>
         </div>
+
+        {/* ── Sprint 24: Convergence Event Banner */}
+        <ConvergenceEventBanner onNavigateToVeil={onNavigateToVeil} />
 
         {/* ── Veil Activity (appears once there's history) */}
         <VeilActivitySection onViewAll={onNavigateToChronicle} />
