@@ -5,6 +5,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../AuthContext';
+import { LandmarkCard } from './LandmarkCard';      // Sprint 25
+import type { NearbyLandmark } from './LandmarkCard'; // Sprint 25
 
 const PIK_BASE = 'https://pik-prd-production.up.railway.app';
 
@@ -44,6 +46,23 @@ async function fetchActiveEvents(): Promise<ActiveEvent[]> {
     const res = await fetch(`${PIK_BASE}/api/veil/events/active`);
     if (!res.ok) return [];
     return await res.json();
+  } catch { return []; }
+}
+
+// Sprint 25 — Fetches landmarks within GPS range that still have fragments to reveal.
+async function fetchNearbyLandmarks(
+  lat: number,
+  lon: number,
+  rootId: string | undefined,
+): Promise<NearbyLandmark[]> {
+  if (!rootId) return [];
+  try {
+    const res = await fetch(
+      `${PIK_BASE}/api/landmarks/nearby?lat=${lat}&lon=${lon}&root_id=${rootId}`,
+    );
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.data ?? []).filter((lm: NearbyLandmark) => lm.fragment_index !== null);
   } catch { return []; }
 }
 
@@ -292,10 +311,30 @@ export default function VeilTearsScreen() {
   const [serverResult, setServerResult]     = useState<ServerResult | null>(null);
   const [activeEvents, setActiveEvents]     = useState<ActiveEvent[]>([]);
 
+  // Sprint 25 — Landmark proximity
+  const [activeLandmark, setActiveLandmark] = useState<NearbyLandmark | null>(null);
+  const dismissedLandmarksRef               = useRef<Set<string>>(new Set());
+
   // Load convergence events on mount
   useEffect(() => {
     fetchActiveEvents().then(setActiveEvents);
   }, []);
+
+  // Sprint 25 — Landmark proximity poll.
+  // Runs once location is ready, then every 45s.
+  // Only triggers while on the map screen; dismissed landmarks are suppressed for the session.
+  useEffect(() => {
+    if (!locationReady || !hero?.root_id) return;
+    const check = async () => {
+      if (screen !== 'map') return;
+      const nearby = await fetchNearbyLandmarks(coords[0], coords[1], hero?.root_id);
+      const candidate = nearby.find(lm => !dismissedLandmarksRef.current.has(lm.landmark_id));
+      if (candidate) setActiveLandmark(candidate);
+    };
+    check();
+    const interval = setInterval(check, 45000);
+    return () => clearInterval(interval);
+  }, [locationReady, coords, hero?.root_id, screen]);
 
   // Quest progress
   const [questProgress, setQuestProgress]   = useState<Record<string, number>>({
@@ -905,6 +944,18 @@ export default function VeilTearsScreen() {
           )}
         </div>,
         document.body
+      )}
+
+      {/* ── LANDMARK CARD (Sprint 25) ── */}
+      {activeLandmark && screen === 'map' && (
+        <LandmarkCard
+          landmark={activeLandmark}
+          rootId={hero?.root_id ?? ''}
+          onDismiss={() => {
+            dismissedLandmarksRef.current.add(activeLandmark.landmark_id);
+            setActiveLandmark(null);
+          }}
+        />
       )}
     </div>
   );
