@@ -327,7 +327,7 @@ export default function VeilTearsScreen() {
   const heroRootIdRef  = useRef<string | undefined>(undefined);
   const coordsRef      = useRef<[number, number]>([DEMO_LAT, DEMO_LON]);
   const screenRef      = useRef<ScreenState>('map');
-  heroRootIdRef.current = hero?.root_id;
+  heroRootIdRef.current = hero?.identity?.root_id ?? hero?.root_id;
   coordsRef.current     = coords;
   screenRef.current     = screen;
 
@@ -973,7 +973,7 @@ export default function VeilTearsScreen() {
       {activeLandmark && screen === 'map' && (
         <LandmarkCard
           landmark={activeLandmark}
-          rootId={hero?.root_id ?? ''}
+          rootId={hero?.identity?.root_id ?? hero?.root_id ?? ''}
           onDismiss={() => {
             dismissedLandmarksRef.current.add(activeLandmark.landmark_id);
             setActiveLandmark(null);
