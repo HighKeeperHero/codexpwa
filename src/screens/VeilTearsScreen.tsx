@@ -320,27 +320,35 @@ export default function VeilTearsScreen() {
     fetchActiveEvents().then(setActiveEvents);
   }, []);
 
-  // Sprint 25 — Landmark proximity poll.
-  // Runs once location is ready, then every 45s.
-  // Uses a ref for rootId so the interval always reads the latest value
-  // even if hero loads after locationReady fires (demo mode timing).
+  // Sprint 25 — Landmark proximity.
+  // Two effects, two responsibilities:
+  //   Effect A — fires whenever hero.root_id becomes available AND locationReady is true.
+  //              Handles demo mode where locationReady fires before hero loads.
+  //   Effect B — interval poll every 45s after location is ready.
   const heroRootIdRef = useRef<string | undefined>(undefined);
   heroRootIdRef.current = hero?.root_id;
 
+  const checkLandmarks = useCallback(async () => {
+    if (screen !== 'map') return;
+    const rootId = heroRootIdRef.current;
+    if (!rootId) return;
+    const nearby = await fetchNearbyLandmarks(coords[0], coords[1], rootId);
+    const candidate = nearby.find(lm => !dismissedLandmarksRef.current.has(lm.landmark_id));
+    if (candidate) setActiveLandmark(candidate);
+  }, [coords, screen]);
+
+  // Effect A: fire immediately when both hero and location are ready
+  useEffect(() => {
+    if (!locationReady || !hero?.root_id) return;
+    checkLandmarks();
+  }, [locationReady, hero?.root_id, checkLandmarks]);
+
+  // Effect B: poll every 45s (catches location changes and re-polls after dismissal)
   useEffect(() => {
     if (!locationReady) return;
-    const check = async () => {
-      if (screen !== 'map') return;
-      const rootId = heroRootIdRef.current;
-      if (!rootId) return;
-      const nearby = await fetchNearbyLandmarks(coords[0], coords[1], rootId);
-      const candidate = nearby.find(lm => !dismissedLandmarksRef.current.has(lm.landmark_id));
-      if (candidate) setActiveLandmark(candidate);
-    };
-    check();
-    const interval = setInterval(check, 45000);
+    const interval = setInterval(checkLandmarks, 45000);
     return () => clearInterval(interval);
-  }, [locationReady, coords, screen]);
+  }, [locationReady, checkLandmarks]);
 
   // Quest progress
   const [questProgress, setQuestProgress]   = useState<Record<string, number>>({
