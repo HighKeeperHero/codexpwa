@@ -322,19 +322,25 @@ export default function VeilTearsScreen() {
 
   // Sprint 25 — Landmark proximity poll.
   // Runs once location is ready, then every 45s.
-  // Only triggers while on the map screen; dismissed landmarks are suppressed for the session.
+  // Uses a ref for rootId so the interval always reads the latest value
+  // even if hero loads after locationReady fires (demo mode timing).
+  const heroRootIdRef = useRef<string | undefined>(undefined);
+  heroRootIdRef.current = hero?.root_id;
+
   useEffect(() => {
-    if (!locationReady || !hero?.root_id) return;
+    if (!locationReady) return;
     const check = async () => {
       if (screen !== 'map') return;
-      const nearby = await fetchNearbyLandmarks(coords[0], coords[1], hero?.root_id);
+      const rootId = heroRootIdRef.current;
+      if (!rootId) return;
+      const nearby = await fetchNearbyLandmarks(coords[0], coords[1], rootId);
       const candidate = nearby.find(lm => !dismissedLandmarksRef.current.has(lm.landmark_id));
       if (candidate) setActiveLandmark(candidate);
     };
     check();
     const interval = setInterval(check, 45000);
     return () => clearInterval(interval);
-  }, [locationReady, coords, hero?.root_id, screen]);
+  }, [locationReady, coords, screen]);
 
   // Quest progress
   const [questProgress, setQuestProgress]   = useState<Record<string, number>>({
