@@ -103,7 +103,10 @@ export function LandmarkCard({ landmark, rootId, onDismiss }: Props) {
       const json = await res.json();
       if (json.status !== 'ok') throw new Error(json.message ?? 'Unknown error');
 
-      const text: string = json.data.fragment_text;
+      // Unwrap: response may be double-wrapped as { status, data: { status, data: {...} } }
+      const result = json.data?.fragment_text !== undefined ? json.data : (json.data?.data ?? json.data);
+      const text: string = result.fragment_text;
+      if (!text) throw new Error('No fragment text');
       const parts = splitIntoSentences(text);
       setSentences(parts);
       setVisibleCount(0);

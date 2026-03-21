@@ -62,7 +62,9 @@ async function fetchNearbyLandmarks(
     );
     if (!res.ok) return [];
     const json = await res.json();
-    return (json.data ?? []).filter((lm: NearbyLandmark) => lm.fragment_index !== null);
+    // Unwrap: response may be { status, data: { status, data: [...] } } or { status, data: [...] }
+    const raw = Array.isArray(json.data) ? json.data : (json.data?.data ?? []);
+    return raw.filter((lm: NearbyLandmark) => lm.fragment_index !== null);
   } catch { return []; }
 }
 
