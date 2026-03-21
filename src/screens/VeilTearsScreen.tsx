@@ -321,34 +321,43 @@ export default function VeilTearsScreen() {
   }, []);
 
   // Sprint 25 — Landmark proximity.
-  // Two effects, two responsibilities:
-  //   Effect A — fires whenever hero.root_id becomes available AND locationReady is true.
-  //              Handles demo mode where locationReady fires before hero loads.
-  //   Effect B — interval poll every 45s after location is ready.
-  const heroRootIdRef = useRef<string | undefined>(undefined);
+  // Single polling loop: starts when locationReady fires, retries every 3s.
+  // All mutable values (rootId, coords, screen) read from refs at call time
+  // so there are no stale closure issues regardless of load order.
+  const heroRootIdRef  = useRef<string | undefined>(undefined);
+  const coordsRef      = useRef<[number, number]>([DEMO_LAT, DEMO_LON]);
+  const screenRef      = useRef<ScreenState>('map');
   heroRootIdRef.current = hero?.root_id;
+  coordsRef.current     = coords;
+  screenRef.current     = screen;
 
-  const checkLandmarks = useCallback(async () => {
-    if (screen !== 'map') return;
-    const rootId = heroRootIdRef.current;
-    if (!rootId) return;
-    const nearby = await fetchNearbyLandmarks(coords[0], coords[1], rootId);
-    const candidate = nearby.find(lm => !dismissedLandmarksRef.current.has(lm.landmark_id));
-    if (candidate) setActiveLandmark(candidate);
-  }, [coords, screen]);
-
-  // Effect A: fire immediately when both hero and location are ready
-  useEffect(() => {
-    if (!locationReady || !hero?.root_id) return;
-    checkLandmarks();
-  }, [locationReady, hero?.root_id, checkLandmarks]);
-
-  // Effect B: poll every 45s (catches location changes and re-polls after dismissal)
   useEffect(() => {
     if (!locationReady) return;
-    const interval = setInterval(checkLandmarks, 45000);
-    return () => clearInterval(interval);
-  }, [locationReady, checkLandmarks]);
+
+    let cancelled = false;
+
+    const check = async () => {
+      if (cancelled) return;
+      if (screenRef.current !== 'map') return;
+      const rootId = heroRootIdRef.current;
+      if (!rootId) return;                          // hero not loaded yet — retry next tick
+      const [lat, lon] = coordsRef.current;
+      const nearby = await fetchNearbyLandmarks(lat, lon, rootId);
+      const candidate = nearby.find(lm => !dismissedLandmarksRef.current.has(lm.landmark_id));
+      if (candidate && !cancelled) setActiveLandmark(candidate);
+    };
+
+    // Initial check after a short delay to let hero context settle
+    const initial = setTimeout(check, 1500);
+    // Retry every 3s until a landmark is found or component unmounts
+    const interval = setInterval(check, 3000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [locationReady]); // intentionally minimal deps — everything else via refs
 
   // Quest progress
   const [questProgress, setQuestProgress]   = useState<Record<string, number>>({
