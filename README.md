@@ -1,46 +1,48 @@
-# Codex — Sprint 5: Splash · Landing · Registration · Alignment
+# CodexPWA — Deprecated
 
-## Files in this sprint
+This repository is retired as of **May 2026**.
 
-### NEW files (create these)
-- src/screens/SplashScreen.tsx    — Cinematic CSS splash, auto-advances at 3.5s, tap-to-skip
-- src/screens/LandingScreen.tsx   — "New to the Codex" vs "I Have a Fate ID" landing
-- src/screens/RegisterScreen.tsx  — Hero name enrollment: uniqueness check + POST /api/users/enroll
-- src/screens/AlignmentModal.tsx  — ORDER / CHAOS / LIGHT / DARK pledge modal
+The web client that lived here was the original Heroes Veritas POC.
+It proved the core loop — Awakening, Veil Tears via Mapbox GPS,
+Convergence events, battle, caches — and is preserved here as a
+legacy artifact.
 
-### REPLACE files (overwrite these)
-- src/App.tsx                     — New routing: splash → landing → register/login → dashboard
-- src/AuthContext.tsx              — Alignment localStorage, signIn accepts new registrants
-- src/screens/LoginScreen.tsx     — Added onBack prop for back-navigation from landing
-- src/screens/QuestsScreen.tsx    — Full alignment-gated hunt system (4 hunts × 4 alignments)
+The active product is the iOS native app:
+- **Repo**: [heroes-veritas-native](https://github.com/HighKeeperHero/heroes-veritas-native)
+- **Distribution**: TestFlight (request access at `developer@heroesveritas.com`)
+- **App Store**: coming soon
 
-### UNTOUCHED (keep your sprint 4 versions)
-- src/index.css                   — DO NOT REPLACE
-- src/main.tsx                    — DO NOT REPLACE
-- src/api/pik.ts                  — DO NOT REPLACE (sprint 4 version still used)
-- src/screens/HomeScreen.tsx      — DO NOT REPLACE
-- src/screens/ProfileScreen.tsx   — DO NOT REPLACE
-- src/screens/LeaderboardScreen.tsx — DO NOT REPLACE
+## What this repo serves now
 
-## Deploy
-git add .
-git commit -m "Sprint 5: splash, landing, registration, alignment system"
-git push
+A single static landing page (`index.html`) directing visitors to
+TestFlight access. Hosted on Vercel under the same domain that
+previously served the web app.
 
-## Alignment note
-PUT /api/users/:root_id/profile requires SessionGuard in PIK-PRD.
-Alignment is stored in localStorage keyed as:  codex_alignment_<root_id>
-It reads PIK-stored alignment first; falls back to local.
-When you implement passkey sessions, wire setAlignment() to also PATCH the backend.
+## Recovering the legacy source
 
-## New user flow
-POST /api/users/enroll  —  no auth required
-Body: { hero_name, fate_alignment: "", enrolled_by: "self:codex-pwa" }
-Response: { status: "ok", data: { root_id, persona_id, hero_name, ... } }
+The full pre-retirement state is preserved at:
 
-## Alignment unlock
-Triggers automatically on HomeScreen mount when:
-  - fate_level >= 20
-  - No alignment in PIK-PRD (NONE / empty)
-  - No alignment in localStorage
-Will re-prompt on next login until confirmed.
+- **Tag**: `archive/codexpwa-v0`
+- **Branch**: `archive/codexpwa-v0`
+
+To inspect or fork:
+
+```bash
+git checkout archive/codexpwa-v0
+# or
+git checkout -b legacy-work archive/codexpwa-v0
+```
+
+Last commit before retirement: `Sprint 25 feat hotfix 8` (`e3565d1`).
+The web client used React 18 + Vite, with Mapbox GL for the Veil
+Tears map and a Vercel serverless `/api/lore` endpoint.
+
+## Backend
+
+The pik-prd backend that the web client used is still the active
+backend for the iOS app. See:
+[pik-prd](https://github.com/HighKeeperHero/pik-prd).
+
+The web-specific endpoints (`/api/veil/encounter`, `/api/users/:id/awakening`,
+etc.) remain wired and will be retired in a separate sweep as the
+iOS app stops needing them.
